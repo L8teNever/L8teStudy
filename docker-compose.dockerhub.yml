@@ -1,0 +1,13 @@
+services:
+  l8testudy:
+    image: DEIN_DOCKERHUB_USERNAME/l8testudy:latest
+    container_name: l8testudy
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/data
+    environment:
+      - DATABASE_URL=sqlite:////data/l8testudy.db
+      - SECRET_KEY=ein-sicheres-passwort-hier-einfuegen
+      - UPLOAD_FOLDER=/data/uploads
+    restart: always
