@@ -1239,13 +1239,17 @@
                         <div class="item-content">
                             <div class="item-title">${u.username} ${u.is_admin ? '<span style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ADMIN</span>' : ''}</div>
                         </div>
-                        ${u.id !== {{ user.id | tojson }} ? `<div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteUser(${u.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>` : ''}
+                        ${u.id !== {{ user.id | tojson }} ? `
+                        <div style="display:flex;">
+                            <div style="color:var(--accent); padding:10px; cursor:pointer;" onclick="resetUserPassword(${u.id})"><i data-lucide="key" style="width:20px;"></i></div>
+                            <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteUser(${u.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>
+                        </div>` : ''}
                     </div>
                 `).join('');
 
                 document.getElementById('app-container').innerHTML = `
                     <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${listHtml}</div>
-                    <button class="fab visible" onclick="openCreateUserMenu()" style="position:fixed; bottom:30px; z-index:100;"><i data-lucide="plus"></i></button>
+                    <button class="fab visible" onclick="openCreateUserMenu()" style="position:fixed; bottom:90px; z-index:100;"><i data-lucide="plus"></i></button>
                 `;
                 lucide.createIcons();
             } catch (e) {
@@ -1305,6 +1309,22 @@
                 await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
                 renderUserManagement();
             } catch (e) { alert('Fehler'); }
+        }
+
+        async function resetUserPassword(id) {
+            const newPw = prompt('Neues Passwort für diesen Benutzer eingeben:');
+            if (!newPw) return;
+            
+            try {
+                const res = await fetch(`/api/admin/users/${id}/reset_password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: newPw })
+                });
+                const data = await res.json();
+                if (data.success) alert('Passwort erfolgreich geändert.');
+                else alert(data.message || 'Fehler');
+            } catch (e) { alert('Verbindungsfehler'); }
         }
 
         async function saveNewPassword() {
