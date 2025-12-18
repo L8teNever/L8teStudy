@@ -18,12 +18,12 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         // Global Fetch Wrapper for CSRF
-        (function() {
+        (function () {
             const originalFetch = window.fetch;
-            window.fetch = async function(input, init) {
+            window.fetch = async function (input, init) {
                 init = init || {};
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                
+
                 if (csrfToken && init.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(init.method.toUpperCase())) {
                     init.headers = init.headers || {};
                     // Handle Headers object or plain object
@@ -762,6 +762,7 @@
         let viewDate = new Date();
         let isSearchActive = false;
         let isAdmin = {{ 'true' if user.is_admin else 'false' }};
+        window.currentUserId = {{ user.id | tojson }};
         window.currentUser = { name: "{{ user.username }}", email: "{{ user.username }}@l8testudy.app", darkMode: {{ 'true' if user.dark_mode else 'false' }} };
 
         async function toggleTheme() {
@@ -1254,14 +1255,14 @@
             try {
                 const res = await fetch('/api/admin/users');
                 const users = await res.json();
-                
+
                 const listHtml = users.map(u => `
                     <div class="list-item">
                         <div class="account-item-icon"><i data-lucide="user"></i></div>
                         <div class="item-content">
                             <div class="item-title">${u.username} ${u.is_admin ? '<span style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ADMIN</span>' : ''}</div>
                         </div>
-                        ${u.id !== {{ user.id | tojson }} ? `
+                        ${u.id !== window.currentUserId ? `
                         <div style="display:flex;">
                             <div style="color:var(--accent); padding:10px; cursor:pointer;" onclick="resetUserPassword(${u.id})"><i data-lucide="key" style="width:20px;"></i></div>
                             <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteUser(${u.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>
@@ -1281,7 +1282,7 @@
         }
 
         function openCreateUserMenu() {
-             document.getElementById('sheet-content').innerHTML = `
+            document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
                     <h2 style="margin:0; font-size:20px; font-weight:700;">Neuer Benutzer</h2>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
@@ -1336,7 +1337,7 @@
         async function resetUserPassword(id) {
             const newPw = prompt('Neues Passwort für diesen Benutzer eingeben:');
             if (!newPw) return;
-            
+
             try {
                 const res = await fetch(`/api/admin/users/${id}/reset_password`, {
                     method: 'POST',
