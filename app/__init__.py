@@ -72,7 +72,7 @@ def create_app():
     @app.context_processor
     def inject_version():
         # Default fallback
-        version = "1.1.0"
+        version = "1.1.15"
         
         # 1. Try to read from version.txt (pre-generated for production/Docker)
         version_file = os.path.join(app.root_path, '..', 'version.txt')

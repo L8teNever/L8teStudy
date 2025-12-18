@@ -718,6 +718,71 @@
         .ios-toggle.active .ios-toggle-knob {
             transform: translateX(20px);
         }
+
+        /* --- Desktop Responsive --- */
+        @media (min-width: 1024px) {
+            body {
+                padding-top: 100px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #app-container {
+                width: 100%;
+                max-width: 900px;
+            }
+
+            header {
+                max-width: 900px;
+                left: 50% !important;
+                transform: translateX(-50%);
+            }
+
+            .bottom-nav {
+                max-width: 600px;
+                left: 50% !important;
+                transform: translateX(-50%);
+                bottom: 40px;
+            }
+
+            .fab {
+                right: calc(50% - 450px + 25px);
+                bottom: 125px;
+            }
+
+            /* Desktop Modals instead of Bottom Sheets */
+            .sheet-overlay {
+                align-items: center;
+                justify-content: center;
+            }
+
+            .sheet {
+                max-width: 500px;
+                border-radius: 24px;
+                transform: scale(0.9) translateY(20px);
+                border: 1px solid var(--border);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+                padding: 30px;
+            }
+
+            .sheet-overlay.active .sheet {
+                transform: scale(1) translateY(0);
+            }
+
+            /* Hover Effects for Desktop */
+            .floating-card:hover {
+                transform: translateY(-2px);
+            }
+
+            .ios-btn:hover {
+                filter: brightness(1.1);
+            }
+
+            .nav-link:hover {
+                opacity: 0.8;
+            }
+        }
     </style>
 </head>
 
