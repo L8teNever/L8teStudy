@@ -1210,6 +1210,275 @@
         }
 
         function updateMainCalendarGrid(events = []) {
+            const grid = document.getElementById('main-calendar-grid');
+            const title = document.getElementById('main-calendar-month-year');
+            if (!grid || !title) return;
+            title.innerText = viewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            grid.innerHTML = '';
+            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
+            const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+            const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+            const offset = firstDay === 0 ? 6 : firstDay - 1;
+            for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>';
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
+                const dateStr = dayDate.toISOString().split('T')[0];
+                const dayEvents = events.filter(e => e.date === dateStr);
+                const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
+                const dotHtml = dayEvents.length > 0 ? `<div class="event-dot"></div>` : '';
+                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotHtml}</div>`;
+            }
+        }
+
+        function changeViewMonth(delta) { viewDate.setMonth(viewDate.getMonth() + delta); renderCalendar('monat'); }
+
+        function openDayDetails(day, eventsJson) {
+            const events = JSON.parse(eventsJson);
+            if (events.length === 0) {
+                const dateStr = new Date(viewDate.getFullYear(), viewDate.getMonth(), day, 12).toISOString().split('T')[0];
+                openCreateMenu('Termin', '', null, dateStr);
+            } else {
+                let listHtml = events.map(e => `
+                     <div class="list-item" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                         <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
+                            <i data-lucide="calendar" style="width:18px; height:18px;"></i>
+                         </div>
+                         <div class="item-content"><div class="item-title">${e.title}</div><div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE')}</div></div>
+                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                     </div>`).join('');
+
+                document.getElementById('sheet-content').innerHTML = `
+                    <div class="sheet-header">
+                        <h2 style="margin:0; font-size:20px;">${day}. ${viewDate.toLocaleDateString('de-DE', { month: 'long' })}</h2>
+                        <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
+                    </div>
+                    <div class="floating-card" style="padding:0 24px; margin-bottom:20px;">${listHtml}</div>
+                    <button class="ios-btn" onclick="openCreateMenu('Termin', '', null, '${events[0].date}')">Neuer Termin</button>
+                    <button class="ios-btn btn-sec" onclick="closeSheet()">Fertig</button>
+                `;
+                document.getElementById('sheet-overlay').classList.add('active');
+                lucide.createIcons();
+            }
+        }
+
+        async function renderGrades() {
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Noten...</div>`;
+            try {
+                const res = await fetch('/api/grades');
+                const grades = await res.json();
+                const subjects = {};
+                grades.forEach(g => {
+                    if (!subjects[g.subject]) subjects[g.subject] = { sum: 0, count: 0, grades: [] };
+                    subjects[g.subject].sum += (g.value * g.weight);
+                    subjects[g.subject].count += g.weight;
+                    subjects[g.subject].grades.push(g);
+                });
+                let totalSum = 0, totalCount = 0, listHtml = '';
+                for (let sub in subjects) {
+                    const avg = subjects[sub].count > 0 ? (subjects[sub].sum / subjects[sub].count).toFixed(1) : '-';
+                    if (subjects[sub].count > 0) {
+                        totalSum += (subjects[sub].sum / subjects[sub].count);
+                        totalCount++;
+                    }
+                    listHtml += `<div class="floating-card" onclick="renderSubjectDetails('${sub}', '${avg}', '${JSON.stringify(subjects[sub].grades).replace(/"/g, '&quot;')}')">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div><h3 style="margin:0">${sub}</h3><p class="item-sub">${subjects[sub].grades.length} Note${subjects[sub].grades.length !== 1 ? 'n' : ''}</p></div>
+                            <div style="display:flex; align-items:center; gap:10px;"><div style="font-size: 20px; font-weight: 700; color: var(--accent);">${avg}</div><i data-lucide="chevron-right" style="width:18px"></i></div>
+                        </div>
+                    </div>`;
+                }
+                const totalAvg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : null;
+                document.getElementById('app-container').innerHTML = `
+                    ${totalAvg !== null ? `
+                    <div class="floating-card" style="text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;">
+                        <p style="opacity:0.8; font-size:14px;">Gesamtdurchschnitt</p>
+                        <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">${totalAvg}</div>
+                    </div>` : ''}
+                    ${listHtml || '<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Noch keine Noten eingetragen.</p></div>'}
+                `;
+                lucide.createIcons();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderSubjectDetails(subject, avg, gradesJson) {
+            const grades = JSON.parse(gradesJson);
+            const listHtml = grades.map(g => `
+                <div class="list-item" onclick="openDetails('Note', '${g.title || 'Note'}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id})">
+                    <div class="item-content">
+                        <div class="item-title">${g.title || 'Note'}</div>
+                        <div class="item-sub">${new Date(g.date).toLocaleDateString('de-DE')} • Gewichtung: ${g.weight}x</div>
+                    </div>
+                    <div style="font-weight:700; font-size:18px; color:var(--text-main);">${g.value}</div>
+                </div>`).join('');
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card" style="text-align:center;">
+                    <h2 style="margin:0">${subject}</h2>
+                    <div style="color:var(--accent); font-size:32px; font-weight:700; margin:10px 0;">${avg}</div>
+                </div>
+                <h3 style="margin:30px 0 10px 5px; font-size:18px;">Einzelnoten</h3>
+                <div class="floating-card" style="padding:10px; margin-bottom: 40px;">${listHtml}</div>`;
+            document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => renderGrades();
+        }
+
+        function openAccountMenu() {
+            renderAccountHub();
+            if (currentView !== 'account') navigate('account', document.querySelector('.profile-btn'), 'Account');
+        }
+
+        function renderAccountHub() {
+            const user = window.currentUser || { name: 'User', email: 'user@example.com' };
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card" style="text-align:center; padding:30px 20px;">
+                    <div style="width:80px; height:80px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; margin:0 auto 15px auto;">
+                        <i data-lucide="user" style="width:40px; height:40px;"></i>
+                    </div>
+                    <h2 style="margin:0; font-size:22px;">${user.name}</h2>
+                    <p class="item-sub">${user.email}</p>
+                </div>
+                
+                <div class="floating-card">
+                    <div class="account-item" onclick="renderSettingsPage()">
+                        <div class="account-item-icon"><i data-lucide="settings"></i></div>
+                        <div class="account-item-text">Einstellungen</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    ${isAdmin ? `
+                    <div class="account-item" onclick="renderUserManagement()">
+                        <div class="account-item-icon"><i data-lucide="users"></i></div>
+                        <div class="account-item-text">Benutzerverwaltung</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>` : ''}
+                    <div class="account-item" onclick="window.location.href='mailto:support@l8testudy.app?subject=Bug Report'">
+                        <div class="account-item-icon"><i data-lucide="bug"></i></div>
+                        <div class="account-item-text">Bug melden</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                </div>
+
+                ${deferredPrompt ? `
+                <div class="floating-card" style="background: var(--accent); color: white; border: none;" onclick="installApp()">
+                    <div class="account-item" style="border:none;">
+                        <div class="account-item-icon" style="background:rgba(255,255,255,0.2); color:white;"><i data-lucide="download"></i></div>
+                        <div class="account-item-text" style="color:white; font-weight:700;">App installieren</div>
+                    </div>
+                </div>` : ''}
+
+                <div class="floating-card">
+                    <div class="account-item" onclick="location.href='/logout'">
+                        <div class="account-item-icon" style="color:var(--danger); background:rgba(255,59,48,0.1)"><i data-lucide="log-out"></i></div>
+                        <div class="account-item-text" style="color:var(--danger)">Abmelden</div>
+                    </div>
+                </div>
+                <!-- Version -->
+            `;
+            // Update header title
+            document.getElementById('current-page-title').innerText = 'Account';
+            document.getElementById('header-back-btn').style.display = 'none'; // Top level
+            lucide.createIcons();
+        }
+
+        function toggleSearch(e, force) {
+            if (e) e.stopPropagation();
+            isSearchActive = force !== undefined ? force : !isSearchActive;
+            renderTasks(currentTaskTab).then(() => {
+                const searchInput = document.querySelector('.search-input');
+                if (searchInput) {
+                    if (isSearchActive) {
+                        searchInput.focus();
+                        searchInput.addEventListener('input', filterTasks);
+                    }
+                }
+            });
+        }
+
+        async function filterTasks() {
+            const searchInput = document.querySelector('.search-input');
+            if (!searchInput) return;
+            const searchTerm = searchInput.value.toLowerCase();
+            const tab = currentTaskTab === 'open' ? 'open' : 'done';
+
+            try {
+                // Use cached tasks instead of fetching
+                const tasks = cachedTasks;
+
+                const filteredTasks = tasks.filter(t => {
+                    const matchesTab = tab === 'open' ? !t.is_done : t.is_done;
+                    const matchesSearch = searchTerm === '' ||
+                        t.title.toLowerCase().includes(searchTerm) ||
+                        (t.subject && t.subject.toLowerCase().includes(searchTerm)) ||
+                        (t.description && t.description.toLowerCase().includes(searchTerm));
+                    return matchesTab && matchesSearch;
+                });
+
+                const listContainer = document.getElementById('tasks-list-container');
+                if (!listContainer) return;
+
+                if (filteredTasks.length === 0) {
+                    listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Keine Ergebnisse.</p></div>`;
+                    return;
+                }
+
+                const listHtml = filteredTasks.map(t => `
+                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${t.title}', '${t.subject || ''}', '${t.due_date || ''}', null, '${t.description || ''}', ${t.id}, '${JSON.stringify(t.images || []).replace(/"/g, '&quot;')}')">
+                        <div class="check-circle ${t.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${t.id}, ${t.is_done})">
+                            <i data-lucide="check" style="width:14px; opacity:${t.is_done ? 1 : 0}"></i>
+                        </div>
+                        <div class="item-content">
+                            <div class="item-title">${t.title}</div>
+                            <div class="item-sub">${t.subject || 'Allgemein'} • ${t.due_date ? new Date(t.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
+                        </div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>`).join('');
+                listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}</div>`;
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function renderCalendar(tab = 'termine') {
+            const container = document.getElementById('app-container');
+            container.innerHTML = `<div class="controls-row"><div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">Termine</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">Monat</button></div></div>
+            <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">Lade Termine...</div>`;
+            lucide.createIcons();
+
+            try {
+                const response = await fetch('/api/events');
+                const events = await response.json();
+                if (tab === 'termine') {
+                    const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    const listHtml = sortedEvents.map(e => `
+                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                             <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
+                                <i data-lucide="calendar" style="width:20px; height:20px;"></i>
+                            </div>
+                            <div class="item-content">
+                                <div class="item-title">${e.title}</div>
+                                <div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
+                            </div>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        </div>`).join('');
+                    document.getElementById('calendar-content').innerHTML = listHtml ?
+                        `<div class="floating-card" style="padding:0 24px">${listHtml}</div>` :
+                        `<div class="floating-card" style="padding:40px; text-align:center"><p class="item-sub">Keine anstehenden Termine.</p></div>`;
+                } else {
+                    document.getElementById('calendar-content').innerHTML = `
+                        <div class="floating-card">
+                            <div class="calendar-header">
+                                <div style="padding:10px" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
+                                <span id="main-calendar-month-year" style="font-weight:700"></span>
+                                <div style="padding:10px" onclick="changeViewMonth(1)"><i data-lucide="chevron-right"></i></div>
+                            </div>
+                            <div class="calendar-days-grid" id="main-calendar-grid"></div>
+                        </div>`;
+                    updateMainCalendarGrid(events);
+                }
+                lucide.createIcons();
+            } catch (err) { console.error(err); }
+        }
+
+        function updateMainCalendarGrid(events = []) {
             // Note: This logic for the main calendar grid differs slightly from the custom picker grid
             const grid = document.getElementById('main-calendar-grid');
             const title = document.getElementById('main-calendar-month-year');
