@@ -10,4 +10,4 @@ COPY . .
 # Create directory for data volume
 RUN mkdir -p /data
 
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "run:app"]
+CMD ["gunicorn", "-w", "4", "--preload", "-b", "0.0.0.0:5000", "run:app"]

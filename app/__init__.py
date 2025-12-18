@@ -87,6 +87,14 @@ def create_app():
         return dict(version=version)
 
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            # If multiple workers try to create the tables at the same time,
+            # one might fail with "table already exists". We can safely ignore this.
+            if 'already exists' in str(e):
+                pass
+            else:
+                raise e
 
     return app
