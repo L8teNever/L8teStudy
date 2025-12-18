@@ -1,4 +1,4 @@
-# 📋 L8teStudy
+# 📋 L8teStudy v1.1.25
 
 Eine minimalistische, offline-fähige Schul-Organisations-App im iOS-Design.
 
