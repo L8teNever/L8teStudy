@@ -1651,11 +1651,17 @@
 
         function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
             let type = editType || (currentView === 'tasks' ? "Aufgabe" : (currentView === 'calendar' ? "Termin" : "Note"));
-            if (editDate) selectedDate = new Date(editDate);
-            else selectedDate = new Date(); // Default today
+
+            // Fix date parsing
+            if (editDate && editDate !== 'null' && editDate !== 'undefined') {
+                selectedDate = new Date(editDate);
+                if (isNaN(selectedDate.getTime())) selectedDate = new Date(); // Fallback if invalid
+            } else {
+                selectedDate = new Date(); // Default today
+            }
 
             // If string "null" or empty passed
-            if (editSubject && editSubject !== 'null') selectedSubject = editSubject;
+            if (editSubject && editSubject !== 'null' && editSubject !== 'undefined') selectedSubject = editSubject;
             else selectedSubject = null;
 
             const safeId = id ? id : 'null';
