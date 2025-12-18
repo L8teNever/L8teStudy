@@ -1398,10 +1398,14 @@
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
-                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Erscheinungsbild</h4>
+                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Erscheinungsbild & Benachrichtigungen</h4>
                     <div class="account-item" onclick="toggleTheme()">
                         <div class="account-item-text">Dunkelmodus</div>
                         <div class="ios-toggle ${isDark ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
+                    </div>
+                    <div class="account-item" onclick="renderNotificationSettings()">
+                        <div class="account-item-text">Benachrichtigungen</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                 </div>
 
@@ -1420,7 +1424,144 @@
 
 
 
-        // Sub-page: Change Password
+        async function renderNotificationSettings() {
+            document.getElementById('current-page-title').innerText = 'Benachrichtigungen';
+            document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => renderSettingsPage();
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px;">Lade Einstellungen...</div>`;
+
+            try {
+                // Get Settings
+                const res = await fetch('/api/settings/notifications');
+                const settings = await res.json();
+
+                // Get Push Status
+                let isSubscribed = false;
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    const reg = await navigator.serviceWorker.ready;
+                    const sub = await reg.pushManager.getSubscription();
+                    isSubscribed = !!sub;
+                }
+
+                document.getElementById('app-container').innerHTML = `
+                   <div class="floating-card">
+                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Browser Push</h4>
+                        <div class="account-item" onclick="${isSubscribed ? '' : 'subscribePush()'}">
+                            <div class="account-item-text">Push erlauben</div>
+                            <div class="ios-toggle ${isSubscribed ? 'active' : ''}" style="${isSubscribed ? 'opacity:0.6' : ''}"><div class="ios-toggle-knob"></div></div>
+                        </div>
+                        <p class="item-sub" style="margin-top:10px; font-size:13px;">${isSubscribed ? 'Benachrichtigungen sind aktiviert.' : 'Tippe, um Benachrichtigungen zu aktivieren.'}</p>
+                   </div>
+                   
+                   <div class="floating-card">
+                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Neuigkeiten</h4>
+                        <div class="account-item" onclick="toggleNotifySetting('notify_new_task', ${!settings.notify_new_task})">
+                            <div class="account-item-text">Neue Aufgaben (von anderen)</div>
+                            <div class="ios-toggle ${settings.notify_new_task ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
+                        </div>
+                         <div class="account-item" onclick="toggleNotifySetting('notify_new_event', ${!settings.notify_new_event})">
+                            <div class="account-item-text">Neue Termine (von anderen)</div>
+                            <div class="ios-toggle ${settings.notify_new_event ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
+                        </div>
+                   </div>
+
+                   <div class="floating-card">
+                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Tägliche Erinnerung</h4>
+                        
+                        <div class="list-item" style="border-bottom: 1px solid var(--border);">
+                             <div class="item-content"><div class="item-title">Hausaufgaben (Morgen)</div></div>
+                             <input type="time" value="${settings.reminder_homework || ''}" onchange="saveNotifyTime('reminder_homework', this.value)" style="background:transparent; border:1px solid var(--border); color:var(--text-main); padding:5px; border-radius:8px;">
+                        </div>
+
+                        <div class="list-item">
+                             <div class="item-content"><div class="item-title">Klausuren/Termine (Morgen)</div></div>
+                             <input type="time" value="${settings.reminder_exam || ''}" onchange="saveNotifyTime('reminder_exam', this.value)" style="background:transparent; border:1px solid var(--border); color:var(--text-main); padding:5px; border-radius:8px;">
+                        </div>
+                        <p class="item-sub" style="margin-top:10px; font-size:13px;">Wähle eine Uhrzeit für die Erinnerung. Leer lassen zum Deaktivieren.</p>
+                   </div>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                alert('Fehler beim Laden');
+            }
+        }
+
+        async function toggleNotifySetting(key, value) {
+            try {
+                const payload = {};
+                payload[key] = value;
+                await fetch('/api/settings/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                renderNotificationSettings(); // Refresh UI
+            } catch (e) { console.error(e); }
+        }
+
+        async function saveNotifyTime(key, value) {
+            try {
+                const payload = {};
+                payload[key] = value;
+                await fetch('/api/settings/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function subscribePush() {
+            if (!('serviceWorker' in navigator)) return alert('Browser unterstützt keine Push Notifications.');
+
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                // Get Key
+                const keyRes = await fetch('/api/vapid_public_key');
+                const keyData = await keyRes.json();
+                const convertedVapidKey = urlBase64ToUint8Array(keyData.publicKey);
+
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
+
+                // Send to Server
+                await fetch('/api/notifications/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub)
+                });
+
+                alert('Benachrichtigungen aktiviert!');
+                renderNotificationSettings();
+            } catch (e) {
+                console.error(e);
+                alert('Aktivierung fehlgeschlagen: ' + e);
+            }
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        // SW Register
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('SW Registered'))
+                    .catch(err => console.log('SW Failed', err));
+            });
+        }
         function renderChangePassword() {
             previousView = 'settings'; // Virtual history
             currentView = 'sub_password';

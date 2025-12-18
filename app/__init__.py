@@ -17,6 +17,10 @@ csrf = CSRFProtect()
 talisman = Talisman()
 limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
+# Initialize Scheduler global instance
+from flask_apscheduler import APScheduler
+scheduler = APScheduler()
+
 def create_app():
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
     
@@ -148,5 +152,16 @@ def create_app():
             # If another worker already created the admin, rollback and continue
             db.session.rollback()
             app.logger.debug(f"Admin account creation skipped: {str(e)}")
+
+    # Initialize Scheduler
+    scheduler.init_app(app)
+    
+    # Register Jobs
+    from app.notifications import check_reminders
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        if not scheduler.get_job('check_reminders'):
+            scheduler.add_job(id='check_reminders', func=check_reminders, trigger='interval', minutes=1)
+        scheduler.start()
+        app.logger.info("Scheduler started for notifications")
 
     return app

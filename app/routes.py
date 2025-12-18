@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Task, TaskImage, Event, Grade, db
+from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, PushSubscription, db
+from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
 import os
 from flask import send_from_directory
@@ -151,6 +152,10 @@ def create_task():
         db.session.add(log)
         
         db.session.commit()
+        
+        # Trigger Notification
+        notify_new_task(new_task)
+        
         return jsonify({'success': True, 'id': new_task.id})
     except Exception as e:
         db.session.rollback()
@@ -292,6 +297,10 @@ def create_event():
         db.session.add(log)
         
         db.session.commit()
+        
+        # Trigger Notification
+        notify_new_event(new_event)
+        
         return jsonify({'success': True, 'id': new_event.id})
     except Exception as e:
         db.session.rollback()
@@ -537,6 +546,69 @@ def delete_user(id):
     db.session.delete(user)
     db.session.commit()
     return jsonify({'success': True})
+
+# --- Notification Routes ---
+
+@api_bp.route('/notifications/subscribe', methods=['POST'])
+@login_required
+def subscribe_push():
+    data = request.json
+    try:
+        # Check if already exists
+        exists = PushSubscription.query.filter_by(endpoint=data['endpoint']).first()
+        if not exists:
+            sub = PushSubscription(
+                user_id=current_user.id,
+                endpoint=data['endpoint'],
+                auth_key=data['keys']['auth'],
+                p256dh_key=data['keys']['p256dh']
+            )
+            db.session.add(sub)
+            db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@api_bp.route('/settings/notifications', methods=['GET'])
+@login_required
+def get_notification_settings():
+    settings = current_user.notification_settings
+    if not settings:
+        settings = NotificationSetting(user_id=current_user.id)
+        db.session.add(settings)
+        db.session.commit()
+    
+    return jsonify({
+        'notify_new_task': settings.notify_new_task,
+        'notify_new_event': settings.notify_new_event,
+        'reminder_homework': settings.reminder_homework or "",
+        'reminder_exam': settings.reminder_exam or ""
+    })
+
+@api_bp.route('/settings/notifications', methods=['POST'])
+@login_required
+def update_notification_settings():
+    data = request.json
+    settings = current_user.notification_settings
+    if not settings:
+        settings = NotificationSetting(user_id=current_user.id)
+        db.session.add(settings)
+    
+    settings.notify_new_task = bool(data.get('notify_new_task', True))
+    settings.notify_new_event = bool(data.get('notify_new_event', True))
+    settings.reminder_homework = data.get('reminder_homework') # "HH:MM" or ""
+    settings.reminder_exam = data.get('reminder_exam')
+    
+    if settings.reminder_homework == "": settings.reminder_homework = None
+    if settings.reminder_exam == "": settings.reminder_exam = None
+    
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/vapid_public_key')
+def get_vapid_key():
+    from app.notifications import VAPID_PUBLIC_KEY
+    return jsonify({'publicKey': VAPID_PUBLIC_KEY})
 
 
 
