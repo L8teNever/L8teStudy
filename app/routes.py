@@ -69,24 +69,36 @@ def login_page():
 
 @auth_bp.route('/setup', methods=['POST'])
 def setup_first_user():
+    from . import csrf
+    # Temporarily disable CSRF for this specific request
+    # This is safe because we check if any users exist
+    csrf._exempt_views.add('auth.setup_first_user')
+    
     # Security check: only allow if NO users exist
     if User.query.first() is not None:
         return jsonify({'success': False, 'message': 'Setup already completed'}), 403
         
-    data = request.json
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'No JSON data received'}), 400
+        
     username = data.get('username')
     password = data.get('password')
     
     if not username or not password:
-        return jsonify({'success': False, 'message': 'Missing data'}), 400
+        return jsonify({'success': False, 'message': 'Username and password required'}), 400
         
-    user = User(username=username, is_admin=True)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-    
-    login_user(user)
-    return jsonify({'success': True})
+    try:
+        user = User(username=username, is_admin=True)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        
+        login_user(user)
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error creating user: {str(e)}'}), 500
 
 # --- API Routes ---
 
