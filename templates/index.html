@@ -24,13 +24,17 @@
                 init = init || {};
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-                if (csrfToken && init.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(init.method.toUpperCase())) {
-                    init.headers = init.headers || {};
-                    // Handle Headers object or plain object
+                if (init.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(init.method.toUpperCase())) {
+                    if (!init.headers) {
+                        init.headers = {};
+                    }
+
                     if (init.headers instanceof Headers) {
-                        init.headers.append('X-CSRFToken', csrfToken);
+                        if (csrfToken) init.headers.append('X-CSRFToken', csrfToken);
+                        init.headers.append('X-Requested-With', 'XMLHttpRequest');
                     } else {
-                        init.headers['X-CSRFToken'] = csrfToken;
+                        if (csrfToken) init.headers['X-CSRFToken'] = csrfToken;
+                        init.headers['X-Requested-With'] = 'XMLHttpRequest';
                     }
                 }
                 return originalFetch(input, init);
