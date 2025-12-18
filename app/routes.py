@@ -4,7 +4,7 @@ from .models import User, Task, TaskImage, Event, Grade, db
 from werkzeug.utils import secure_filename
 import os
 from flask import send_from_directory
-from . import login_manager, limiter
+from . import login_manager, limiter, csrf
 
 main_bp = Blueprint('main', __name__)
 auth_bp = Blueprint('auth', __name__)
@@ -40,11 +40,18 @@ def catch_all(path):
 
 # --- Auth Routes ---
 @auth_bp.route('/login', methods=['POST'])
+@csrf.exempt
 @limiter.limit("5 per minute")
 def login():
     data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'message': 'No data received'}), 400
+    
     username = data.get('username')
     password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Username and password required'}), 400
     
     user = User.query.filter_by(username=username).first()
     if user and user.check_password(password):
