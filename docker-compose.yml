@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     build: .
@@ -10,5 +8,5 @@ services:
       - ./static/uploads:/app/static/uploads
     environment:
       - DATABASE_URL=sqlite:////data/l8testudy.db
-      - SECRET_KEY=your-secret-key
+      - SECRET_KEY=${SECRET_KEY:-your-default-dev-secret}
     restart: always
