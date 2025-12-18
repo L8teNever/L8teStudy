@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>L8teStudy - Login</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --text-main: #1d1d1f;
+            --text-sec: #86868b;
+            --accent: #0071e3;
+            --glass-blur: blur(25px);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+            --border: rgba(255, 255, 255, 0.4);
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #000000 0%, #1c1c1e 100%);
+            --card-bg: rgba(28, 28, 30, 0.6);
+            --text-main: #f5f5f7;
+            --text-sec: #86868b;
+            --accent: #0a84ff;
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: var(--text-main);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        p {
+            margin: 0 0 30px 0;
+            color: var(--text-sec);
+            font-size: 15px;
+        }
+
+        .ios-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            color: var(--text-main);
+            font-size: 16px;
+            outline: none;
+        }
+
+        .ios-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: opacity 0.2s;
+        }
+
+        .ios-btn:hover {
+            opacity: 0.9;
+        }
+
+        .error-msg {
+            color: #ff3b30;
+            font-size: 14px;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <div class="login-card">
+        <h1>Anmelden</h1>
+        <p>Willkommen bei L8teStudy</p>
+
+        <div id="error-msg" class="error-msg">Ungültige Zugangsdaten</div>
+
+        <form onsubmit="handleLogin(event)">
+            <input type="text" id="username" class="ios-input" placeholder="Benutzername" required>
+            <input type="password" id="password" class="ios-input" placeholder="Passwort" required>
+            <button type="submit" class="ios-btn">Anmelden</button>
+        </form>
+    </div>
+
+    <script>
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    errorMsg.style.display = 'block';
+                    errorMsg.innerText = data.message || 'Login fehlgeschlagen';
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = 'Verbindungsfehler';
+            }
+        }
+    </script>
+</body>
+
+</html>

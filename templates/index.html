@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>L8teStudy - Minimal Plus</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0071e3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="L8teStudy">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="icon" href="/static/icon-192.png">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --text-main: #000000;
+            --text-sec: #5a5a5e;
+            --accent: #0071e3;
+            --danger: #ff3b30;
+            --glass-blur: blur(25px);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+            --border: rgba(255, 255, 255, 0.4);
+            --tab-bg: rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #000000 0%, #1c1c1e 100%);
+            --card-bg: rgba(28, 28, 30, 0.6);
+            --text-main: #f5f5f7;
+            --text-sec: #86868b;
+            --accent: #0a84ff;
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --tab-bg: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            background-size: cover;
+            color: var(--text-main);
+            padding-bottom: 140px;
+            padding-top: 90px;
+            transition: all 0.4s ease;
+            overflow-x: hidden;
+        }
+
+        header {
+            position: fixed;
+            top: 15px;
+            left: 20px;
+            right: 20px;
+            height: 60px;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #header-back-btn {
+            display: none;
+            cursor: pointer;
+            color: var(--accent);
+            padding: 5px;
+            margin-left: -5px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .header-title {
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+            transition: opacity 0.3s ease;
+        }
+
+        .profile-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .profile-btn:active {
+            transform: scale(0.9);
+        }
+
+        .floating-card {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: transform 0.2s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .controls-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            position: relative;
+            height: 48px;
+        }
+
+        .tab-bar {
+            display: flex;
+            background: var(--tab-bg);
+            padding: 4px;
+            border-radius: 16px;
+            flex: 1;
+            height: 100%;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border);
+        }
+
+        .search-active .tab-bar {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0 8px;
+            border: none;
+            background: transparent;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-sec);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: var(--text-main);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="dark"] .tab-btn.active {
+            background: var(--card-bg);
+        }
+
+        .search-container {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 48px;
+            width: 48px;
+            background: var(--tab-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            z-index: 20;
+            cursor: pointer;
+        }
+
+        .search-container.active {
+            width: 100%;
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+        }
+
+        .search-icon-box {
+            min-width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-sec);
+            transition: color 0.3s;
+        }
+
+        .search-container.active .search-icon-box {
+            color: var(--accent);
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-main);
+            font-size: 16px;
+            outline: none;
+            opacity: 0;
+            transform: translateX(10px);
+            transition: all 0.3s ease;
+            padding-right: 15px;
+        }
+
+        .search-container.active .search-input {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .search-close-btn {
+            padding: 0 15px;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 14px;
+            opacity: 0;
+            display: none;
+            cursor: pointer;
+        }
+
+        .search-container.active .search-close-btn {
+            display: block;
+            opacity: 1;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            background: transparent;
+            border-bottom: 0.5px solid var(--border);
+            border-radius: 0;
+            margin-bottom: 0;
+            transition: opacity 0.2s;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item:active {
+            transform: scale(0.98);
+        }
+
+        .check-circle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            margin-right: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .check-circle.checked {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .item-content {
+            flex: 1;
+        }
+
+        .item-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-main);
+        }
+
+        .item-sub {
+            color: var(--text-sec);
+            font-size: 13px;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 115px;
+            right: 25px;
+            width: 56px;
+            height: 56px;
+            background: var(--accent);
+            color: white;
+            border-radius: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(0, 113, 227, 0.3);
+            border: none;
+            z-index: 1100;
+            transition: transform 0.2s;
+        }
+
+        .fab.visible {
+            display: flex;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0) rotate(-45deg);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) rotate(0);
+                opacity: 1;
+            }
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 30px;
+            left: 20px;
+            right: 20px;
+            height: 70px;
+            background: var(--nav-bg, var(--card-bg));
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 25px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+        }
+
+        .nav-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-sec);
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .nav-link.active {
+            color: var(--accent);
+            transform: translateY(-2px);
+            transition: all 0.3s;
+        }
+
+        .sheet-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: flex-end;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.25s ease;
+        }
+
+        .sheet-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .sheet {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            width: 100%;
+            border-radius: 30px 30px 0 0;
+            padding: 20px 25px 40px 25px;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            border-top: 1px solid var(--border);
+            max-height: 95vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .sheet-drag-indicator {
+            width: 36px;
+            height: 5px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+            margin: 0 auto 20px auto;
+        }
+
+        [data-theme="dark"] .sheet-drag-indicator {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .sheet-close-btn {
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-sec);
+            cursor: pointer;
+        }
+
+        [data-theme="dark"] .sheet-close-btn {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .sheet-overlay.active .sheet {
+            transform: translateY(0);
+        }
+
+        .ios-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            color: var(--text-main);
+            font-size: 16px;
+            outline: none;
+        }
+
+        textarea.ios-input {
+            resize: none;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        /* --- Custom Pickers --- */
+        .custom-picker-trigger {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #subject-list.picker-options {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #calendar-picker-view.picker-options {
+            max-height: none;
+            overflow: visible;
+        }
+
+        .picker-options {
+            display: none;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            animation: fadeIn 0.2s ease;
+            border: 1px solid var(--border);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .picker-option {
+            padding: 15px;
+            border-bottom: 0.5px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+        }
+
+        .picker-option:last-child {
+            border-bottom: none;
+        }
+
+        .picker-option:active {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 0 10px;
+        }
+
+        .calendar-days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+
+        .day-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-sec);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .calendar-day.selected {
+            background: var(--accent);
+            color: white;
+            font-weight: 700;
+        }
+
+        .calendar-day.today {
+            color: var(--accent);
+            font-weight: 700;
+            background: rgba(0, 113, 227, 0.1);
+        }
+
+        .event-dot {
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 6px;
+        }
+
+        .ios-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .btn-sec {
+            background: var(--tab-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-small {
+            padding: 10px 16px;
+            font-size: 14px;
+            border-radius: 12px;
+            width: auto;
+            min-width: 100px;
+            margin-bottom: 0;
+        }
+
+        .btn-danger-light {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--danger);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .account-item {
+            display: flex;
+            align-items: center;
+            padding: 18px 0;
+            border-bottom: 0.5px solid var(--border);
+            cursor: pointer;
+        }
+
+        .account-item-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--tab-bg);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: var(--accent);
+        }
+
+        .account-item-text {
+            flex: 1;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .ios-toggle {
+            width: 46px;
+            height: 26px;
+            background: #e9e9eb;
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        [data-theme="dark"] .ios-toggle {
+            background: #39393d;
+        }
+
+        .ios-toggle.active {
+            background: #34c759;
+        }
+
+        .ios-toggle-knob {
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .ios-toggle.active .ios-toggle-knob {
+            transform: translateX(20px);
+        }
+    </style>
+</head>
+
+<body data-theme="{{ 'dark' if user.dark_mode else 'light' }}">
+
+    <header>
+        <div class="header-left">
+            <div id="header-back-btn" onclick="goBackToPrevious()"><i data-lucide="chevron-left"></i></div>
+            <div class="header-title" id="current-page-title">Home</div>
+        </div>
+        <div class="profile-btn" onclick="openAccountMenu()"><i data-lucide="user"></i></div>
+    </header>
+
+    <main id="app-container"></main>
+
+    <button class="fab" id="main-fab" onclick="openCreateMenu()"><i data-lucide="plus"></i></button>
+
+    <nav class="bottom-nav">
+        <a class="nav-link active" onclick="navigate('home', this, 'Home')"><i
+                data-lucide="house"></i><span>Home</span></a>
+        <a class="nav-link" onclick="navigate('tasks', this, 'Aufgaben')"><i
+                data-lucide="check-circle-2"></i><span>Aufgaben</span></a>
+        <a class="nav-link" onclick="navigate('calendar', this, 'Plan')"><i
+                data-lucide="calendar-days"></i><span>Plan</span></a>
+        <a class="nav-link" onclick="navigate('grades', this, 'Noten')"><i
+                data-lucide="bar-chart-3"></i><span>Noten</span></a>
+    </nav>
+
+    <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()">
+        <div class="sheet" onclick="event.stopPropagation()">
+            <div class="sheet-drag-indicator"></div>
+            <div id="sheet-content"></div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let currentView = 'home';
+        let previousView = 'home';
+        let selectedSubject = null;
+        let selectedDate = new Date();
+        let viewDate = new Date();
+        let isSearchActive = false;
+        let isAdmin = {{ 'true' if user.is_admin else 'false' }};
+        window.currentUser = { name: "{{ user.username }}", email: "{{ user.username }}@l8testudy.app", darkMode: {{ 'true' if user.dark_mode else 'false' }} };
+
+        async function toggleTheme() {
+            const body = document.body;
+            const isDark = body.getAttribute('data-theme') === 'dark';
+            const nextMode = !isDark;
+            body.setAttribute('data-theme', nextMode ? 'dark' : 'light');
+
+            // Persist to server
+            try {
+                await fetch('/api/settings/theme', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dark_mode: nextMode })
+                });
+                if (window.currentUser) window.currentUser.darkMode = nextMode;
+            } catch (e) {
+                console.error("Failed to sync theme to server:", e);
+            }
+
+            if (currentView === 'settings') renderSettingsPage();
+        }
+
+        function goBackToPrevious() {
+            navigate(previousView, document.querySelector(`.nav-link[onclick*="'${previousView}'"]`) || document.querySelectorAll('.nav-link')[0], previousView.charAt(0).toUpperCase() + previousView.slice(1));
+        }
+
+        function navigate(view, el, title) {
+            previousView = (currentView === 'settings' || currentView.startsWith('sub_')) ? previousView : currentView;
+            currentView = view;
+            isSearchActive = false;
+            document.getElementById('header-back-btn').style.display = (view === 'settings' || view.startsWith('sub_')) ? 'block' : 'none';
+            const headerTitle = document.getElementById('current-page-title');
+            headerTitle.innerText = title;
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            if (el) el.classList.add('active');
+
+            // Update URL
+            let path = '/';
+            if (view === 'tasks') path = '/tasks';
+            else if (view === 'calendar') path = '/calendar';
+            else if (view === 'grades') path = '/grades';
+            window.history.replaceState({}, '', path);
+
+            if (view === 'tasks') renderTasks();
+            else if (view === 'calendar') renderCalendar();
+            else if (view === 'home') renderHome();
+            else if (view === 'grades') renderGrades();
+            else if (view === 'settings') renderSettings();
+
+            const fab = document.getElementById('main-fab');
+            if (view !== 'home' && view !== 'settings') fab.classList.add('visible');
+            else fab.classList.remove('visible');
+            lucide.createIcons();
+            closeSheet();
+        }
+
+        /* --- API LOGIC INTEGRATED --- */
+        // --- PWA Installation Logic ---
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // If we are currently on the account hub, re-render to show the install button
+            if (currentView === 'account') renderAccountHub();
+        });
+
+        async function installApp() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') deferredPrompt = null;
+            renderAccountHub();
+        }
+
+        async function renderHome() {
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: 'long' });
+
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card"><h3 style="margin:0">Guten Morgen.</h3><p class="item-sub">Heute ist der ${dateStr}.</p></div>
+                <div id="home-next-event"></div>
+                <div class="floating-card"><h4 style="margin:0 0 15px 0; font-size:17px;">Fällige Aufgaben</h4>
+                   <div id="home-due-tasks" style="padding:10px; color:var(--text-sec); text-align:center;">Lade Aufgaben...</div>
+                </div>`;
+            lucide.createIcons();
+
+            // 1. Fetch Next Event
+            try {
+                const res = await fetch('/api/events');
+                const events = await res.json();
+                const upcoming = events
+                    .filter(e => new Date(e.date) >= new Date().setHours(0, 0, 0, 0))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                if (upcoming.length > 0) {
+                    const e = upcoming[0];
+                    const dateObj = new Date(e.date);
+                    const isTomorrow = new Date().getDate() + 1 === dateObj.getDate();
+                    const isToday = new Date().getDate() === dateObj.getDate();
+                    let timeText = dateObj.toLocaleDateString('de-DE');
+                    if (isToday) timeText = 'Heute';
+                    if (isTomorrow) timeText = 'Morgen';
+
+                    document.getElementById('home-next-event').innerHTML = `
+                        <div class="floating-card" style="padding: 20px 24px 10px 24px;">
+                            <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Nächster Termin</h4>
+                            <div class="list-item" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                                <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
+                                    <i data-lucide="calendar" style="width:18px; height:18px;"></i>
+                                </div>
+                                <div class="item-content"><div class="item-title">${e.title}</div><div class="item-sub">${timeText}</div></div><i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                            </div>
+                        </div>`;
+                    lucide.createIcons();
+                } else {
+                    document.getElementById('home-next-event').innerHTML = `
+                        <div class="floating-card" onclick="navigate('calendar', document.querySelectorAll('.nav-link')[2], 'Plan')">
+                            <h4 style="margin:0 0 5px 0; font-size:17px; color:var(--accent);">Nächster Termin</h4>
+                            <p class="item-sub">Keine anstehenden Termine.</p>
+                        </div>`;
+                }
+            } catch (e) { console.error(e); }
+
+            // 3. Fetch Tasks
+            try {
+                const res = await fetch('/api/tasks');
+                const tasks = await res.json();
+                const dueTasks = tasks.filter(t => !t.is_done).slice(0, 3);
+                const container = document.getElementById('home-due-tasks');
+                if (!container) return; // Exit if user navigated away
+                if (dueTasks.length > 0) {
+                    const listHtml = dueTasks.map(t => `
+                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${t.title}', '${t.subject || ''}', '${t.due_date || ''}', null, '${t.description || ''}', ${t.id}, '${JSON.stringify(t.images || []).replace(/"/g, '&quot;')}')">
+                            <div class="check-circle" onclick="event.stopPropagation(); toggleTaskStatus(${t.id}, false, true)"><i data-lucide="circle" style="width:14px; opacity:0"></i></div>
+                            <div class="item-content"><div class="item-title">${t.title}</div><div class="item-sub">Fällig: ${t.due_date ? new Date(t.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div></div>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        </div>`).join('');
+                    container.parentElement.style.background = "";
+                    container.parentElement.style.border = "";
+                    container.parentElement.style.boxShadow = "";
+                    container.parentElement.style.padding = "24px";
+                    container.parentElement.innerHTML = `<h4 style="margin:0 0 15px 0; font-size:17px;">Fällige Aufgaben</h4>${listHtml}`;
+                    lucide.createIcons();
+                } else {
+                    container.innerHTML = `<p class="item-sub">Alles erledigt!</p>`;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function renderTasks(tab = 'open') {
+            document.getElementById('app-container').innerHTML = `
+                <div class="controls-row ${isSearchActive ? 'search-active' : ''}">
+                    <div class="tab-bar">
+                        <button class="tab-btn ${tab === 'open' ? 'active' : ''}" onclick="renderTasks('open')">Offen</button>
+                        <button class="tab-btn ${tab === 'done' ? 'active' : ''}" onclick="renderTasks('done')">Erledigt</button>
+                    </div>
+                    <div class="search-container ${isSearchActive ? 'active' : ''}" onclick="if(!isSearchActive) toggleSearch(event)">
+                        <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
+                        <input type="text" class="search-input" placeholder="Suchen...">
+                        <div class="search-close-btn" onmousedown="toggleSearch(event, false)">Abbrechen</div>
+                    </div>
+                </div>
+                <div id="tasks-list-container" style="padding-top: 20px; padding-bottom: 40px;"><div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Aufgaben...</div></div>`;
+            lucide.createIcons();
+
+            try {
+                const response = await fetch('/api/tasks');
+                const tasks = await response.json();
+                const filteredTasks = tasks.filter(t => tab === 'open' ? !t.is_done : t.is_done);
+                const listContainer = document.getElementById('tasks-list-container');
+                if (filteredTasks.length === 0) {
+                    listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Keine ${tab === 'open' ? 'offenen' : 'erledigten'} Aufgaben.</p></div>`;
+                    return;
+                }
+                const listHtml = filteredTasks.map(t => `
+                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${t.title}', '${t.subject || ''}', '${t.due_date || ''}', null, '${t.description || ''}', ${t.id}, '${JSON.stringify(t.images || []).replace(/"/g, '&quot;')}')">
+                        <div class="check-circle ${t.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${t.id}, ${t.is_done})">
+                            <i data-lucide="check" style="width:14px; opacity:${t.is_done ? 1 : 0}"></i>
+                        </div>
+                        <div class="item-content">
+                            <div class="item-title">${t.title}</div>
+                            <div class="item-sub">${t.subject || 'Allgemein'} • ${t.due_date ? new Date(t.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
+                        </div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>`).join('');
+                listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}</div>`;
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('tasks-list-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">Fehler beim Laden.</div>`;
+            }
+        }
+
+        async function toggleTaskStatus(id, currentStatus, refreshHome = false) {
+            try {
+                const res = await fetch(`/api/tasks/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_done: !currentStatus })
+                });
+                if (res.ok) {
+                    if (refreshHome) renderHome();
+                    else renderTasks(currentStatus ? 'done' : 'open');
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function renderCalendar(tab = 'termine') {
+            const container = document.getElementById('app-container');
+            container.innerHTML = `<div class="controls-row"><div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">Termine</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">Monat</button></div></div>
+            <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">Lade Termine...</div>`;
+            lucide.createIcons();
+
+            try {
+                const response = await fetch('/api/events');
+                const events = await response.json();
+                if (tab === 'termine') {
+                    const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    const listHtml = sortedEvents.map(e => `
+                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                             <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
+                                <i data-lucide="calendar" style="width:20px; height:20px;"></i>
+                            </div>
+                            <div class="item-content">
+                                <div class="item-title">${e.title}</div>
+                                <div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
+                            </div>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        </div>`).join('');
+                    document.getElementById('calendar-content').innerHTML = listHtml ?
+                        `<div class="floating-card" style="padding:0 24px">${listHtml}</div>` :
+                        `<div class="floating-card" style="padding:40px; text-align:center"><p class="item-sub">Keine anstehenden Termine.</p></div>`;
+                } else {
+                    document.getElementById('calendar-content').innerHTML = `
+                        <div class="floating-card">
+                            <div class="calendar-header">
+                                <div style="padding:10px" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
+                                <span id="main-calendar-month-year" style="font-weight:700"></span>
+                                <div style="padding:10px" onclick="changeViewMonth(1)"><i data-lucide="chevron-right"></i></div>
+                            </div>
+                            <div class="calendar-days-grid" id="main-calendar-grid"></div>
+                        </div>`;
+                    updateMainCalendarGrid(events);
+                }
+                lucide.createIcons();
+            } catch (err) { console.error(err); }
+        }
+
+        function updateMainCalendarGrid(events = []) {
+            // Note: This logic for the main calendar grid differs slightly from the custom picker grid
+            const grid = document.getElementById('main-calendar-grid');
+            const title = document.getElementById('main-calendar-month-year');
+            if (!grid || !title) return;
+            title.innerText = viewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            grid.innerHTML = '';
+            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
+            const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+            const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+            const offset = firstDay === 0 ? 6 : firstDay - 1;
+            for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>';
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
+                const dateStr = dayDate.toISOString().split('T')[0];
+                const dayEvents = events.filter(e => e.date === dateStr);
+                const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
+                const dotHtml = dayEvents.length > 0 ? `<div class="event-dot"></div>` : '';
+                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotHtml}</div>`;
+            }
+        }
+
+        function changeViewMonth(delta) { viewDate.setMonth(viewDate.getMonth() + delta); renderCalendar('monat'); }
+
+        function openDayDetails(day, eventsJson) {
+            const events = JSON.parse(eventsJson);
+            if (events.length === 0) {
+                const dateStr = new Date(viewDate.getFullYear(), viewDate.getMonth(), day, 12).toISOString().split('T')[0];
+                openCreateMenu('Termin', '', null, dateStr);
+            } else {
+                let listHtml = events.map(e => `
+                     <div class="list-item" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                         <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
+                            <i data-lucide="calendar" style="width:18px; height:18px;"></i>
+                         </div>
+                         <div class="item-content"><div class="item-title">${e.title}</div><div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE')}</div></div>
+                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                     </div>`).join('');
+
+                document.getElementById('sheet-content').innerHTML = `
+                    <div class="sheet-header">
+                        <h2 style="margin:0; font-size:20px;">${day}. ${viewDate.toLocaleDateString('de-DE', { month: 'long' })}</h2>
+                        <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
+                    </div>
+                    <div class="floating-card" style="padding:0 24px; margin-bottom:20px;">${listHtml}</div>
+                    <button class="ios-btn" onclick="openCreateMenu('Termin', '', null, '${events[0].date}')">Neuer Termin</button>
+                    <button class="ios-btn btn-sec" onclick="closeSheet()">Fertig</button>
+                `;
+                document.getElementById('sheet-overlay').classList.add('active');
+                lucide.createIcons();
+            }
+        }
+
+        async function renderGrades() {
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Noten...</div>`;
+            try {
+                const res = await fetch('/api/grades');
+                const grades = await res.json();
+                const subjects = {};
+                grades.forEach(g => {
+                    if (!subjects[g.subject]) subjects[g.subject] = { sum: 0, count: 0, grades: [] };
+                    subjects[g.subject].sum += (g.value * g.weight);
+                    subjects[g.subject].count += g.weight;
+                    subjects[g.subject].grades.push(g);
+                });
+                let totalSum = 0, totalCount = 0, listHtml = '';
+                for (let sub in subjects) {
+                    const avg = subjects[sub].count > 0 ? (subjects[sub].sum / subjects[sub].count).toFixed(1) : '-';
+                    if (subjects[sub].count > 0) {
+                        totalSum += (subjects[sub].sum / subjects[sub].count);
+                        totalCount++;
+                    }
+                    listHtml += `<div class="floating-card" onclick="renderSubjectDetails('${sub}', '${avg}', '${JSON.stringify(subjects[sub].grades).replace(/"/g, '&quot;')}')">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div><h3 style="margin:0">${sub}</h3><p class="item-sub">${subjects[sub].grades.length} Note${subjects[sub].grades.length !== 1 ? 'n' : ''}</p></div>
+                            <div style="display:flex; align-items:center; gap:10px;"><div style="font-size: 20px; font-weight: 700; color: var(--accent);">${avg}</div><i data-lucide="chevron-right" style="width:18px"></i></div>
+                        </div>
+                    </div>`;
+                }
+                const totalAvg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : null;
+                document.getElementById('app-container').innerHTML = `
+                    ${totalAvg !== null ? `
+                    <div class="floating-card" style="text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;">
+                        <p style="opacity:0.8; font-size:14px;">Gesamtdurchschnitt</p>
+                        <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">${totalAvg}</div>
+                    </div>` : ''}
+                    ${listHtml || '<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Noch keine Noten eingetragen.</p></div>'}
+                `;
+                lucide.createIcons();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderSubjectDetails(subject, avg, gradesJson) {
+            const grades = JSON.parse(gradesJson);
+            const listHtml = grades.map(g => `
+                <div class="list-item" onclick="openDetails('Note', '${g.title || 'Note'}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id})">
+                    <div class="item-content">
+                        <div class="item-title">${g.title || 'Note'}</div>
+                        <div class="item-sub">${new Date(g.date).toLocaleDateString('de-DE')} • Gewichtung: ${g.weight}x</div>
+                    </div>
+                    <div style="font-weight:700; font-size:18px; color:var(--text-main);">${g.value}</div>
+                </div>`).join('');
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card" style="text-align:center;">
+                    <h2 style="margin:0">${subject}</h2>
+                    <div style="color:var(--accent); font-size:32px; font-weight:700; margin:10px 0;">${avg}</div>
+                </div>
+                <h3 style="margin:30px 0 10px 5px; font-size:18px;">Einzelnoten</h3>
+                <div class="floating-card" style="padding:10px; margin-bottom: 40px;">${listHtml}</div>`;
+            document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => renderGrades();
+        }
+
+        // --- Account & Settings Logic ---
+
+        // Main Account Menu (Hub)
+        function openAccountMenu() {
+            // If already in settings or deeper, just navigate there, but standard behavior for user icon is usually to open the main menu
+            renderAccountHub();
+            // We use the same container as other views, or we can use the sheet. 
+            // The prompt says "when clicking acc, first a page with settings, bugs, logout".
+            // So we treat this as a view 'account'.
+            if (currentView !== 'account') navigate('account', document.querySelector('.profile-btn'), 'Account');
+        }
+
+        function renderAccountHub() {
+            const user = window.currentUser || { name: 'User', email: 'user@example.com' };
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card" style="text-align:center; padding:30px 20px;">
+                    <div style="width:80px; height:80px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; margin:0 auto 15px auto;">
+                        <i data-lucide="user" style="width:40px; height:40px;"></i>
+                    </div>
+                    <h2 style="margin:0; font-size:22px;">${user.name}</h2>
+                    <p class="item-sub">${user.email}</p>
+                </div>
+                
+                <div class="floating-card">
+                    <div class="account-item" onclick="renderSettingsPage()">
+                        <div class="account-item-icon"><i data-lucide="settings"></i></div>
+                        <div class="account-item-text">Einstellungen</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    <div class="account-item" onclick="window.location.href='mailto:support@l8testudy.app?subject=Bug Report'">
+                        <div class="account-item-icon"><i data-lucide="bug"></i></div>
+                        <div class="account-item-text">Bug melden</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                </div>
+
+                ${deferredPrompt ? `
+                <div class="floating-card" style="background: var(--accent); color: white; border: none;" onclick="installApp()">
+                    <div class="account-item" style="border:none;">
+                        <div class="account-item-icon" style="background:rgba(255,255,255,0.2); color:white;"><i data-lucide="download"></i></div>
+                        <div class="account-item-text" style="color:white; font-weight:700;">App installieren</div>
+                    </div>
+                </div>` : ''}
+
+                <div class="floating-card">
+                    <div class="account-item" onclick="location.href='/logout'">
+                        <div class="account-item-icon" style="color:var(--danger); background:rgba(255,59,48,0.1)"><i data-lucide="log-out"></i></div>
+                        <div class="account-item-text" style="color:var(--danger)">Abmelden</div>
+                    </div>
+                </div>
+                <p class="item-sub" style="text-align:center;">L8teStudy v1.1.0</p>
+            `;
+            // Update header title
+            document.getElementById('current-page-title').innerText = 'Account';
+            document.getElementById('header-back-btn').style.display = 'none'; // Top level
+            lucide.createIcons();
+        }
+
+        // Sub-page: Settings
+        async function renderSettingsPage() {
+            previousView = 'account';
+            currentView = 'settings';
+            document.getElementById('current-page-title').innerText = 'Einstellungen';
+            document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => { renderAccountHub(); currentView = 'account'; document.getElementById('header-back-btn').style.display = 'none'; };
+
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card">
+                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Erscheinungsbild</h4>
+                    <div class="account-item" onclick="toggleTheme()">
+                        <div class="account-item-text">Dunkelmodus</div>
+                        <div class="ios-toggle ${isDark ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
+                    </div>
+                </div>
+
+                <div class="floating-card">
+                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Sicherheit</h4>
+                    <div class="account-item" onclick="renderChangePassword()">
+                        <div class="account-item-text">Passwort ändern</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+
+
+
+
+        // Sub-page: Change Password
+        function renderChangePassword() {
+            previousView = 'settings'; // Virtual history
+            currentView = 'sub_password';
+            document.getElementById('current-page-title').innerText = 'Passwort';
+            document.getElementById('header-back-btn').onclick = () => { renderSettingsPage(); }; // Back to Settings
+
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card">
+                    <h4 style="margin:0 0 15px 0; font-size:17px;">Neues Passwort</h4>
+                    <input type="password" id="old-pw" class="ios-input" placeholder="Aktuelles Passwort">
+                    <input type="password" id="new-pw" class="ios-input" placeholder="Neues Passwort">
+                    <input type="password" id="confirm-pw" class="ios-input" placeholder="Passwort wiederholen">
+                    <button class="ios-btn" onclick="saveNewPassword()">Speichern</button>
+                    <p id="pw-error" style="color:var(--danger); font-size:13px; margin-top:10px; display:none;"></p>
+                </div>
+            `;
+        }
+
+        async function saveNewPassword() {
+            const oldPw = document.getElementById('old-pw').value;
+            const newPw = document.getElementById('new-pw').value;
+            const confirmPw = document.getElementById('confirm-pw').value;
+            const errEl = document.getElementById('pw-error');
+
+            if (newPw !== confirmPw) {
+                errEl.innerText = "Die neuen Passwörter stimmen nicht überein.";
+                errEl.style.display = 'block';
+                return;
+            }
+            if (!newPw) {
+                errEl.innerText = "Bitte ein neues Passwort eingeben.";
+                errEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/change_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: oldPw, new_password: newPw })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Passwort erfolgreich geändert.');
+                    renderSettingsPage();
+                } else {
+                    errEl.innerText = data.message || "Fehler beim Ändern.";
+                    errEl.style.display = 'block';
+                }
+            } catch (e) {
+                errEl.innerText = "Verbindungsfehler.";
+                errEl.style.display = 'block';
+            }
+        }
+
+        // Placeholder for the old renderSettings to avoid errors if referenced elsewhere (though we replaced calls)
+        function renderSettings() { renderSettingsPage(); }
+
+
+
+
+
+
+        function openDetails(type, title, subject, date, value = null, desc = '', id = null, imagesJson = '[]') {
+            const hasDesc = desc && desc.trim() !== '' && desc !== 'null' && desc !== 'undefined';
+            let images = [];
+            try { images = JSON.parse(imagesJson); } catch (e) { console.error(e); }
+
+            let actionBtns = '';
+            if (id) {
+                actionBtns = `
+                    <div style="display: flex; gap: 10px; margin-top: 30px;">
+                        <button class="ios-btn btn-sec" style="flex: 1; margin-bottom: 0;" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date}', '${value || ''}', '${desc.replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">Bearbeiten</button>
+                        ${type === 'Aufgabe' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteTask(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                        ${type === 'Termin' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteEvent(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                        ${type === 'Note' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteGrade(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                    </div>`;
+            }
+
+            let imagesHtml = '';
+            if (images && images.length > 0) {
+                imagesHtml = `<div style="padding:0 5px; margin-top:20px;">
+                   <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); margin-bottom:8px;">Bilder</div>
+                    <div style="display:flex; overflow-x:auto; gap:10px; padding-bottom:10px;">
+                        ${images.map(img => `<img src="${img.url}" onclick="window.open('${img.url}', '_blank')" style="height:120px; border-radius:12px; border:1px solid var(--border); object-fit:cover; cursor:pointer;">`).join('')}
+                    </div>
+               </div>`;
+            }
+
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">${type} Details</h2>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
+                </div>
+
+                <div class="floating-card" style="background:var(--tab-bg); border:none; padding:20px; margin-bottom: 20px;">
+                    <div style="font-size:22px; font-weight:800; line-height:1.2; color:var(--text-main);">${title}</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:10px; color:var(--text-sec); font-size:14px; font-weight:500;">
+                        ${subject ? `<span>${subject}</span><span style="opacity:0.3">•</span>` : ''}
+                        <span>${new Date(date).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                        ${value ? `<span style="opacity:0.3">•</span><span style="color:var(--accent); font-weight:700;">Note: ${value}</span>` : ''}
+                    </div>
+                </div>
+
+                ${imagesHtml}
+
+                ${hasDesc ? `
+                    <div style="padding: 0 5px;">
+                        <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); margin-bottom:8px;">Beschreibung</div>
+                        <div style="font-size:16px; line-height:1.6; color:var(--text-main); white-space:pre-wrap;">${desc}</div>
+                    </div>
+                ` : ''}
+
+                ${actionBtns}
+                
+                <div style="margin-top: 15px;">
+                    <button class="ios-btn" style="background:var(--text-main); color:var(--card-bg); font-weight:700;" onclick="closeSheet()">Fertig</button>
+                </div>
+            `;
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
+
+        async function deleteTask(id) {
+            if (!confirm('Wirklich löschen?')) return;
+            await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+            closeSheet();
+            if (currentView === 'tasks') renderTasks();
+            else renderHome();
+        }
+        async function deleteEvent(id) {
+            if (!confirm('Wirklich löschen?')) return;
+            await fetch(`/api/events/${id}`, { method: 'DELETE' });
+            closeSheet();
+            renderCalendar();
+        }
+        async function deleteGrade(id) {
+            if (!confirm('Wirklich löschen?')) return;
+            await fetch(`/api/grades/${id}`, { method: 'DELETE' });
+            closeSheet();
+            renderGrades();
+        }
+
+        function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
+            let type = editType || (currentView === 'tasks' ? "Aufgabe" : (currentView === 'calendar' ? "Termin" : "Note"));
+            if (editDate) selectedDate = new Date(editDate);
+            else selectedDate = new Date(); // Default today
+
+            // If string "null" or empty passed
+            if (editSubject && editSubject !== 'null') selectedSubject = editSubject;
+            else selectedSubject = null;
+
+            const safeId = id ? id : 'null';
+            const saveFunction = (type === 'Aufgabe') ? `saveTask(${safeId})` : (type === 'Termin' ? `saveEvent(${safeId})` : `saveGrade(${safeId})`);
+
+            const titleVal = editTitle === 'undefined' ? '' : editTitle;
+            const descVal = editDesc === 'undefined' ? '' : editDesc;
+            const valVal = editValue === 'null' || editValue === 'undefined' ? '' : editValue;
+
+            let existingImagesHtml = '';
+            // Render existing images if editing
+            if (id && currentView === 'tasks' && editSubject) { // check if task by param or context. Usually 'editSubject' is passed for tasks.
+                // We need existing images. Since we don't pass them to openCreateMenu, we need to pass them or fetch them.
+                // Correction: openCreateMenu is called from openDetails. I should update openDetails to pass images to openCreateMenu.
+                // But openCreateMenu doesn't have an argument for images. I should add it.
+            }
+            // Wait, I need to update the signature first.
+
+            // Let's assume I update the signature in the next step.
+            // But I am in multi_replace.
+
+            // Let's actually update openCreateMenu signature and usage right here.
+
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">${id ? 'Bearbeiten' : type}</h2>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
+                </div>
+                ${(type === 'Aufgabe' || type === 'Note') ? `
+                    <div class="custom-picker-trigger" onclick="toggleOptionList('subject-list')"><span id="selected-subject-display">${selectedSubject || 'Fach wählen...'}</span><i data-lucide="chevron-down" style="width:18px"></i></div>
+                    <div class="picker-options" id="subject-list">
+                        <div class="picker-option" onclick="selectSubject('Mathematik')">Mathematik</div>
+                        <div class="picker-option" onclick="selectSubject('Deutsch')">Deutsch</div>
+                        <div class="picker-option" onclick="selectSubject('Englisch')">Englisch</div>
+                        <div class="picker-option" onclick="selectSubject('Physik')">Physik</div>
+                        <div class="picker-option" onclick="selectSubject('Biologie')">Biologie</div>
+                        <div class="picker-option" onclick="selectSubject('Geschichte')">Geschichte</div>
+                        <div class="picker-option" onclick="selectSubject('Kunst')">Kunst</div>
+                        <div class="picker-option" onclick="selectSubject('Sport')">Sport</div>
+                        <div class="picker-option" onclick="selectSubject('Chemie')">Chemie</div>
+                        <div class="picker-option" onclick="selectSubject('Religion')">Religion</div>
+                    </div>
+                ` : ''}
+                <input type="text" id="input-title" class="ios-input" placeholder="Titel" value="${titleVal}">
+                ${type === 'Aufgabe' ? `
+                    ${(id && existingImagesJson !== '[]') ? (() => {
+                        let imgs = [];
+                        try { imgs = JSON.parse(existingImagesJson.replace(/&quot;/g, '"')); } catch (e) { }
+                        if (imgs.length > 0) {
+                            return `<div style="margin-bottom:10px;">
+                                <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">Vorhandene Bilder - zum Löschen antippen</label>
+                                <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;">
+                                    ${imgs.map(img => {
+                                // extracting filename/id might be needed if url is full path. 
+                                // But wait, the API returns full path.
+                                // We need the ID to delete it.
+                                // The current API structure for images in tasks list is just URL strings. 
+                                // I need to change the API to return object {id, url} to support deletion by ID.
+                                // OR, I can delete by filename, but ID is safer.
+                                // Let's assume for now I only have URL. I can't delete easily without ID.
+                                // I will assume for this step that I can't delete individual existing images yet unless I update the API GET.
+                                // BUT, the user explicitly asked for "delete some".
+
+                                // Quick fix: Update API GET to return objects.
+                                // But for now, let's render them. 
+                                return `<div id="img-container-${img.id}" onclick="toggleDeleteImage(${img.id})" style="position:relative; flex-shrink:0; cursor:pointer;">
+                                            <img src="${img.url}" style="height:80px; border-radius:10px; border:1px solid var(--border); transition: opacity 0.2s;">
+                                            <div id="del-overlay-${img.id}" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,59,48,0.6); border-radius:10px; display:none; align-items:center; justify-content:center;">
+                                                <i data-lucide="trash-2" style="color:white; width:24px;"></i>
+                                            </div>
+                                        </div>`
+                            }).join('')}
+                                </div>
+                            </div>`
+                        }
+                        return '';
+                    })() : ''}
+                    <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">Bilder hinzufügen</label>
+                    <input type="file" id="input-images" class="ios-input" multiple accept="image/*" style="padding:10px;">
+                ` : ''}
+                ${type === 'Note' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="Note" value="${valVal}">` : ''}
+                <div class="custom-picker-trigger" onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span id="selected-date-display">${selectedDate.toLocaleDateString('de-DE')}</span><i data-lucide="calendar" style="width:18px"></i></div>
+                <div class="picker-options" id="calendar-picker-view" style="padding:15px">
+                    <div class="calendar-header"><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(-1)"><i data-lucide="chevron-left"></i></div><span id="calendar-month-year" style="font-weight:600"></span><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(1)"><i data-lucide="chevron-right"></i></div></div>
+                    <div class="calendar-days-grid" id="calendar-grid"></div>
+                </div>
+                <textarea id="input-desc" class="ios-input" placeholder="Beschreibung">${descVal}</textarea>
+                <button class="ios-btn" onclick="${saveFunction}">Speichern</button>
+                <button class="ios-btn btn-sec" onclick="closeSheet()">Abbrechen</button>`;
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
+
+        let imagesToDelete = new Set();
+        function toggleDeleteImage(id) {
+            if (imagesToDelete.has(id)) {
+                imagesToDelete.delete(id);
+                document.getElementById(`del-overlay-${id}`).style.display = 'none';
+            } else {
+                imagesToDelete.add(id);
+                document.getElementById(`del-overlay-${id}`).style.display = 'flex';
+            }
+        }
+
+        async function saveTask(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const desc = document.getElementById('input-desc').value;
+            const subject = selectedSubject;
+            const date = selectedDate.toISOString().split('T')[0];
+            if (!title) return;
+
+            const url = updateId ? `/api/tasks/${updateId}` : '/api/tasks';
+
+            try {
+                let body, headers;
+                // Always use FormData if there are images to upload or delete (if updateId is present but we want to use form data for consistent image handling? 
+                // Wait, update_task supports FormData.
+                // It is simpler to always use FormData for tasks now.
+
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('description', desc);
+                formData.append('subject', subject || '');
+                formData.append('due_date', date);
+
+                const fileInput = document.getElementById('input-images');
+                if (fileInput && fileInput.files.length > 0) {
+                    for (let i = 0; i < fileInput.files.length; i++) {
+                        formData.append('images', fileInput.files[i]);
+                    }
+                }
+
+                if (updateId && imagesToDelete.size > 0) {
+                    formData.append('deleted_images', Array.from(imagesToDelete).join(','));
+                }
+
+                body = formData;
+                // Headers auto
+
+                const res = await fetch(url, {
+                    method: updateId ? 'PUT' : 'POST',
+                    body: body
+                });
+                if (res.ok) {
+                    imagesToDelete.clear();
+                    closeSheet();
+                    if (currentView === 'tasks') renderTasks(); else renderHome();
+                } else { alert('Fehler'); }
+            } catch (err) { alert('Verbindungsfehler'); }
+        }
+
+        async function saveEvent(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const desc = document.getElementById('input-desc').value;
+            const date = selectedDate.toISOString().split('T')[0];
+            if (!title) return;
+
+            const method = updateId ? 'PUT' : 'POST';
+            const url = updateId ? `/api/events/${updateId}` : '/api/events';
+
+            try {
+                await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description: desc, date })
+                });
+                closeSheet(); renderCalendar(currentView === 'calendar' ? 'termine' : 'monat');
+            } catch (e) { alert('Fehler'); }
+        }
+
+        async function saveGrade(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const value = document.getElementById('input-value').value;
+            const date = selectedDate.toISOString().split('T')[0];
+            if (!selectedSubject || !value) { alert('Bitte Fach und Note ausfüllen.'); return; }
+
+            const method = updateId ? 'PUT' : 'POST';
+            const url = updateId ? `/api/grades/${updateId}` : '/api/grades';
+
+            try {
+                await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'), date })
+                });
+                closeSheet(); renderGrades();
+            } catch (e) { alert('Fehler'); }
+        }
+
+        /* --- NAVIGATION HELPERS --- */
+        function openAccountMenu() {
+            // Manually handle navigation since Profile isn't a bottom tab
+            previousView = currentView;
+            currentView = 'account';
+
+            // Uncheck all bottom tabs
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            renderAccountHub();
+        }
+
+
+
+        function toggleSearch(e, force) { if (e) e.stopPropagation(); isSearchActive = force !== undefined ? force : !isSearchActive; renderTasks(); }
+        function closeSheet() { document.getElementById('sheet-overlay').classList.remove('active'); }
+
+        /* --- PICKER HELPERS --- */
+        function toggleOptionList(id) {
+            const el = document.getElementById(id);
+            const isVisible = el.style.display === 'block';
+            document.querySelectorAll('.picker-options').forEach(p => p.style.display = 'none');
+            el.style.display = isVisible ? 'none' : 'block';
+        }
+
+        function selectSubject(name) {
+            selectedSubject = name;
+            const display = document.getElementById('selected-subject-display');
+            if (display) display.innerText = name;
+            toggleOptionList('subject-list');
+        }
+
+        function selectPickerDate(day) {
+            selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+            const display = document.getElementById('selected-date-display');
+            if (display) display.innerText = selectedDate.toLocaleDateString('de-DE');
+            toggleOptionList('calendar-picker-view');
+        }
+
+        function changeMonth(delta) {
+            viewDate.setMonth(viewDate.getMonth() + delta);
+            updateCalendarGrid();
+        }
+
+        function updateCalendarGrid() {
+            const grid = document.getElementById('calendar-grid');
+            const title = document.getElementById('calendar-month-year');
+            if (!grid || !title) return;
+
+            title.innerText = viewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            grid.innerHTML = '';
+
+            const weekdays = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
+            weekdays.forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
+
+            const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+            const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+
+            // Adjust for Monday start (JS 0=Sun, 1=Mon...6=Sat)
+            const offset = firstDay === 0 ? 6 : firstDay - 1;
+
+            for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>';
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const isSelected = selectedDate.getDate() === i &&
+                    selectedDate.getMonth() === viewDate.getMonth() &&
+                    selectedDate.getFullYear() === viewDate.getFullYear();
+                const isToday = i === new Date().getDate() &&
+                    viewDate.getMonth() === new Date().getMonth() &&
+                    viewDate.getFullYear() === new Date().getFullYear();
+
+                grid.innerHTML += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" onclick="event.stopPropagation(); selectPickerDate(${i})">${i}</div>`;
+            }
+        }
+
+        window.onload = () => {
+            const path = window.location.pathname;
+            if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], 'Aufgaben');
+            else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], 'Plan');
+            else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], 'Noten');
+            else renderHome();
+        };
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed: ', err));
+            });
+        }
+    </script>
+</body>
+
+</html>

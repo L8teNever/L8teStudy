@@ -1,0 +1,28 @@
+# Python / Flask
+venv/
+__pycache__/
+*.pyc
+instance/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment Variables
+.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE / System
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Docker
+.dockerignore
+
+# User Data
+static/uploads/

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./instance:/data
+      - ./static/uploads:/app/static/uploads
+    environment:
+      - DATABASE_URL=sqlite:////data/l8testudy.db
+      - SECRET_KEY=your-secret-key
+    restart: always
