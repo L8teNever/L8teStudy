@@ -1855,7 +1855,63 @@
 
 
 
-        function toggleSearch(e, force) { if (e) e.stopPropagation(); isSearchActive = force !== undefined ? force : !isSearchActive; renderTasks(); }
+        function toggleSearch(e, force) {
+            if (e) e.stopPropagation();
+            isSearchActive = force !== undefined ? force : !isSearchActive;
+            renderTasks().then(() => {
+                const searchInput = document.querySelector('.search-input');
+                if (searchInput) {
+                    // Remove existing listener to prevent duplicates
+                    searchInput.removeEventListener('input', filterTasks);
+                    if (isSearchActive) {
+                        searchInput.focus();
+                        searchInput.addEventListener('input', filterTasks);
+                    }
+                }
+            });
+        }
+
+        async function filterTasks() {
+            const searchTerm = document.querySelector('.search-input').value.toLowerCase();
+            const currentTab = document.querySelector('.tab-btn.active').textContent.toLowerCase();
+            const tab = currentTab === 'offen' ? 'open' : 'done';
+
+            try {
+                const response = await fetch('/api/tasks');
+                const tasks = await response.json();
+                const filteredTasks = tasks.filter(t => {
+                    const matchesTab = tab === 'open' ? !t.is_done : t.is_done;
+                    const matchesSearch = searchTerm === '' ||
+                        t.title.toLowerCase().includes(searchTerm) ||
+                        (t.subject && t.subject.toLowerCase().includes(searchTerm)) ||
+                        (t.description && t.description.toLowerCase().includes(searchTerm));
+                    return matchesTab && matchesSearch;
+                });
+
+                const listContainer = document.getElementById('tasks-list-container');
+                if (filteredTasks.length === 0) {
+                    listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Keine ${tab === 'open' ? 'offenen' : 'erledigten'} Aufgaben gefunden.</p></div>`;
+                    return;
+                }
+
+                const listHtml = filteredTasks.map(t => `
+                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${t.title}', '${t.subject || ''}', '${t.due_date || ''}', null, '${t.description || ''}', ${t.id}, '${JSON.stringify(t.images || []).replace(/"/g, '&quot;')}')">
+                        <div class="check-circle ${t.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${t.id}, ${t.is_done})">
+                            <i data-lucide="check" style="width:14px; opacity:${t.is_done ? 1 : 0}"></i>
+                        </div>
+                        <div class="item-content">
+                            <div class="item-title">${t.title}</div>
+                            <div class="item-sub">${t.subject || 'Allgemein'} • ${t.due_date ? new Date(t.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
+                        </div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>`).join('');
+                listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}</div>`;
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
         function closeSheet() { document.getElementById('sheet-overlay').classList.remove('active'); }
 
         /* --- PICKER HELPERS --- */

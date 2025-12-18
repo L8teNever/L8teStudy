@@ -78,6 +78,14 @@ Perfekt für Homeserver oder einfache Updates.
 3.  Starte den Stack. Der Container wird **direkt von GitHub** gebaut.
 4.  Für Updates einfach im Tool auf "Update" / "Rebuild" klicken.
 
+> **Automatische Datenbank-Initialisierung**: Die Datenbank und alle benötigten Tabellen werden beim ersten Start automatisch erstellt. Du musst nichts manuell einrichten!
+
+> **Standard-Admin-Account**: Beim ersten Start wird automatisch ein Admin-Account erstellt:
+> - **Benutzername**: `admin`
+> - **Passwort**: `admin`
+> - ⚠️ **WICHTIG**: Ändere dieses Passwort sofort nach dem ersten Login in den Einstellungen!
+
+
 ## ⚙️ Konfiguration
 
 Erstelle optional eine `.env` Datei (bei lokaler Nutzung) oder setze Umgebungsvariablen in Docker:

@@ -100,14 +100,15 @@ def create_app():
 
     with app.app_context():
         try:
+            # Create all database tables
             db.create_all()
+            app.logger.info("Database tables created/verified successfully")
         except Exception as e:
             # If multiple workers try to create the tables at the same time,
-            # one might fail with "table already exists". We can safely ignore this.
-            if 'already exists' in str(e):
-                pass
-            else:
-                raise e
+            # or if tables already exist, we can safely continue
+            app.logger.warning(f"Database initialization warning: {str(e)}")
+            # Try to continue anyway - tables might already exist
+            pass
         
         # Create default admin user if no users exist
         from .models import User

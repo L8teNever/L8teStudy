@@ -79,29 +79,33 @@ def login_page():
 @api_bp.route('/tasks', methods=['GET'])
 @login_required
 def get_tasks():
-    # Return ALL tasks that represent shared homework
-    # Filter by user_id only if we wanted private tasks, but user requested all tasks be shared.
-    tasks = Task.query.filter(Task.deleted_at == None).order_by(Task.due_date).all()
-    
-    from .models import TaskCompletion
-    
-    results = []
-    for t in tasks:
-        # Check completion status for THIS user
-        completion = TaskCompletion.query.filter_by(user_id=current_user.id, task_id=t.id).first()
-        is_done = completion.is_done if completion else False
+    try:
+        # Return ALL tasks that represent shared homework
+        # Filter by user_id only if we wanted private tasks, but user requested all tasks be shared.
+        tasks = Task.query.filter(Task.deleted_at.is_(None)).order_by(Task.due_date).all()
         
-        results.append({
-            'id': t.id,
-            'title': t.title,
-            'subject': t.subject,
-            'due_date': t.due_date.strftime('%Y-%m-%d') if t.due_date else None,
-            'description': t.description,
-            'is_done': is_done,
-            # Updated to use secure route /uploads/<filename>
-            'images': [{'id': img.id, 'url': f"/uploads/{img.filename}"} for img in t.images]
-        })
-    return jsonify(results)
+        from .models import TaskCompletion
+        
+        results = []
+        for t in tasks:
+            # Check completion status for THIS user
+            completion = TaskCompletion.query.filter_by(user_id=current_user.id, task_id=t.id).first()
+            is_done = completion.is_done if completion else False
+            
+            results.append({
+                'id': t.id,
+                'title': t.title,
+                'subject': t.subject,
+                'due_date': t.due_date.strftime('%Y-%m-%d') if t.due_date else None,
+                'description': t.description,
+                'is_done': is_done,
+                # Updated to use secure route /uploads/<filename>
+                'images': [{'id': img.id, 'url': f"/uploads/{img.filename}"} for img in t.images]
+            })
+        return jsonify(results)
+    except Exception as e:
+        current_app.logger.error(f"Error in get_tasks: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @api_bp.route('/tasks', methods=['POST'])
 @login_required

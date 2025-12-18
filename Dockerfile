@@ -10,4 +10,8 @@ COPY . .
 # Create directory for data volume
 RUN mkdir -p /data
 
-CMD ["gunicorn", "-w", "4", "--preload", "-b", "0.0.0.0:5000", "run:app"]
+# Copy and set permissions for entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
