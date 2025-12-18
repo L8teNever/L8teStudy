@@ -237,14 +237,18 @@ def delete_task(id):
 @api_bp.route('/events', methods=['GET'])
 @login_required
 def get_events():
-    # Make events shared for everyone
-    events = Event.query.filter(Event.deleted_at == None).order_by(Event.date).all()
-    return jsonify([{
-        'id': e.id,
-        'title': e.title,
-        'date': e.date.strftime('%Y-%m-%d'),
-        'description': e.description
-    } for e in events])
+    try:
+        # Make events shared for everyone
+        events = Event.query.filter(Event.deleted_at.is_(None)).order_by(Event.date).all()
+        return jsonify([{
+            'id': e.id,
+            'title': e.title,
+            'date': e.date.strftime('%Y-%m-%d'),
+            'description': e.description
+        } for e in events])
+    except Exception as e:
+        current_app.logger.error(f"Error in get_events: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @api_bp.route('/events', methods=['POST'])
 @login_required
@@ -252,6 +256,11 @@ def create_event():
     data = request.json
     try:
         from datetime import datetime
+        
+        # Validate required fields
+        if not data or not data.get('title'):
+            return jsonify({'success': False, 'message': 'Title is required'}), 400
+        
         event_date = datetime.utcnow()
         if data.get('date'):
             event_date = datetime.strptime(data['date'], '%Y-%m-%d')
@@ -272,6 +281,8 @@ def create_event():
         db.session.commit()
         return jsonify({'success': True, 'id': new_event.id})
     except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in create_event: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 400
 
 @api_bp.route('/events/<int:id>', methods=['PUT'])
@@ -306,25 +317,32 @@ def update_event(id):
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in update_event: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 400
 
 @api_bp.route('/events/<int:id>', methods=['DELETE'])
 @login_required
 def delete_event(id):
-    event = Event.query.get_or_404(id)
-    if event.user_id != current_user.id:
-        return jsonify({'success': False}), 403
+    try:
+        event = Event.query.get_or_404(id)
+        if event.user_id != current_user.id:
+            return jsonify({'success': False}), 403
+            
+        from datetime import datetime
+        event.deleted_at = datetime.utcnow()
         
-    from datetime import datetime
-    event.deleted_at = datetime.utcnow()
-    
-    # Audit Log
-    from .models import AuditLog
-    log = AuditLog(user_id=current_user.id, action=f"Deleted event: {event.id}")
-    db.session.add(log)
-    
-    db.session.commit()
-    return jsonify({'success': True})
+        # Audit Log
+        from .models import AuditLog
+        log = AuditLog(user_id=current_user.id, action=f"Deleted event: {event.id}")
+        db.session.add(log)
+        
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in delete_event: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 # Grades
 @api_bp.route('/grades', methods=['GET'])

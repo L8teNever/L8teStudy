@@ -1,6 +1,6 @@
 services:
   l8testudy:
-    image: DEIN_DOCKERHUB_USERNAME/l8testudy:latest
+    image: L8teNever/l8testudy:latest
     container_name: l8testudy
     ports:
       - "5000:5000"

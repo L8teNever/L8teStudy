@@ -18,4 +18,5 @@ fi
 
 # Start the application
 # The database tables will be created automatically by app/__init__.py
-exec gunicorn -w 4 --preload -b 0.0.0.0:5000 run:app
+# Note: Removed --preload to avoid race conditions with multiple workers
+exec gunicorn -w 4 -b 0.0.0.0:5000 --access-logfile - --error-logfile - run:app

@@ -111,20 +111,23 @@ def create_app():
             pass
         
         # Create default admin user if no users exist
+        # Use a try-except to handle race conditions when multiple workers start simultaneously
         from .models import User
-        if User.query.first() is None:
-            default_admin = User(username='admin', is_admin=True)
-            default_admin.set_password('admin')
-            db.session.add(default_admin)
-            try:
+        try:
+            if User.query.first() is None:
+                default_admin = User(username='admin', is_admin=True)
+                default_admin.set_password('admin')
+                db.session.add(default_admin)
                 db.session.commit()
-                print("\n" + "="*60)
-                print("  DEFAULT ADMIN ACCOUNT CREATED")
-                print("  Username: admin")
-                print("  Password: admin")
-                print("  ⚠️  PLEASE CHANGE THIS PASSWORD IMMEDIATELY!")
-                print("="*60 + "\n")
-            except Exception:
-                db.session.rollback()
+                app.logger.info("="*60)
+                app.logger.info("  DEFAULT ADMIN ACCOUNT CREATED")
+                app.logger.info("  Username: admin")
+                app.logger.info("  Password: admin")
+                app.logger.info("  ⚠️  PLEASE CHANGE THIS PASSWORD IMMEDIATELY!")
+                app.logger.info("="*60)
+        except Exception as e:
+            # If another worker already created the admin, rollback and continue
+            db.session.rollback()
+            app.logger.debug(f"Admin account creation skipped: {str(e)}")
 
     return app
