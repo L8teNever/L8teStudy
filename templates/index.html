@@ -724,8 +724,8 @@
                 data-lucide="bar-chart-3"></i><span>Noten</span></a>
     </nav>
 
-    <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()">
-        <div class="sheet" onclick="event.stopPropagation()">
+    <div id="sheet-overlay" class="sheet-overlay" onclick="closeSheet()">
+        <div class="sheet" id="sheet" onclick="event.stopPropagation()">
             <div class="sheet-drag-indicator"></div>
             <div id="sheet-content"></div>
         </div>
@@ -1249,7 +1249,7 @@
 
                 document.getElementById('app-container').innerHTML = `
                     <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${listHtml}</div>
-                    <button class="fab visible" onclick="openCreateUserMenu()" style="position:fixed; bottom:90px; z-index:100;"><i data-lucide="plus"></i></button>
+                    <button class="fab visible" onclick="openCreateUserMenu()" style="position:fixed; bottom:115px; z-index:1100;"><i data-lucide="plus"></i></button>
                 `;
                 lucide.createIcons();
             } catch (e) {
