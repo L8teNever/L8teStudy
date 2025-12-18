@@ -924,8 +924,12 @@
         let viewDate = new Date();
         let isSearchActive = false;
         let isAdmin = {{ 'true' if user.is_admin else 'false' }};
-        window.currentUserId = {{ user.id | tojson }};
-        window.currentUser = { name: "{{ user.username }}", email: "{{ user.username }}@l8testudy.app", darkMode: {{ 'true' if user.dark_mode else 'false' }} };
+        window.currentUserId = Number("{{ user.id }}");
+        window.currentUser = {
+            name: "{{ user.username }}",
+            email: "{{ user.username }}@l8testudy.app",
+            darkMode: {{ 'true' if user.dark_mode else 'false' }} 
+        };
 
         async function toggleTheme() {
             const body = document.body;
