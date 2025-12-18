@@ -15,7 +15,7 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 talisman = Talisman()
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
 def create_app():
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
