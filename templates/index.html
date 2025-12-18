@@ -1239,7 +1239,7 @@
                         <div class="item-content">
                             <div class="item-title">${u.username} ${u.is_admin ? '<span style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ADMIN</span>' : ''}</div>
                         </div>
-                        ${u.id !== {{ user.id }} ? `<div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteUser(${u.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>` : ''}
+                        ${u.id !== {{ user.id | tojson }} ? `<div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteUser(${u.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>` : ''}
                     </div>
                 `).join('');
 
@@ -1302,7 +1302,7 @@
         async function deleteUser(id) {
             if (!confirm('Benutzer wirklich löschen?')) return;
             try {
-                await fetch(\`/api/admin/users/\${id}\`, { method: 'DELETE' });
+                await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
                 renderUserManagement();
             } catch (e) { alert('Fehler'); }
         }

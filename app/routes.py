@@ -480,6 +480,23 @@ def create_user():
     db.session.commit()
     return jsonify({'success': True})
 
+@api_bp.route('/admin/users/<int:id>/reset_password', methods=['POST'])
+@login_required
+def reset_user_password(id):
+    if not current_user.is_admin:
+        return jsonify({'success': False}), 403
+        
+    user = User.query.get_or_404(id)
+    data = request.json
+    new_pw = data.get('password')
+    
+    if not new_pw:
+        return jsonify({'success': False, 'message': 'Missing password'}), 400
+        
+    user.set_password(new_pw)
+    db.session.commit()
+    return jsonify({'success': True})
+
 @api_bp.route('/admin/users/<int:id>', methods=['DELETE'])
 @login_required
 def delete_user(id):
