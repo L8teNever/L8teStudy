@@ -1,3 +1,6 @@
+import os
+import subprocess
+from dotenv import load_dotenv
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -56,6 +59,32 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
+
+    @app.context_processor
+    def inject_version():
+        # Default fallback
+        version = "1.1.0"
+        
+        # 1. Try to read from version.txt (pre-generated for production/Docker)
+        version_file = os.path.join(app.root_path, '..', 'version.txt')
+        if os.path.exists(version_file):
+            try:
+                with open(version_file, 'r') as f:
+                    return dict(version=f.read().strip())
+            except Exception:
+                pass
+        
+        # 2. Try to get it from git (for development)
+        try:
+            # Use app.root_path to ensure we are in the right directory for git
+            commit_count = subprocess.check_output(['git', 'rev-list', '--count', 'HEAD'], 
+                                                   stderr=subprocess.STDOUT,
+                                                   cwd=app.root_path).decode('utf-8').strip()
+            version = f"1.1.{commit_count}"
+        except Exception:
+            pass
+            
+        return dict(version=version)
 
     with app.app_context():
         db.create_all()
