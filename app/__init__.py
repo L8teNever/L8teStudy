@@ -96,5 +96,22 @@ def create_app():
                 pass
             else:
                 raise e
+        
+        # Create default admin user if no users exist
+        from .models import User
+        if User.query.first() is None:
+            default_admin = User(username='admin', is_admin=True)
+            default_admin.set_password('admin')
+            db.session.add(default_admin)
+            try:
+                db.session.commit()
+                print("\n" + "="*60)
+                print("  DEFAULT ADMIN ACCOUNT CREATED")
+                print("  Username: admin")
+                print("  Password: admin")
+                print("  ⚠️  PLEASE CHANGE THIS PASSWORD IMMEDIATELY!")
+                print("="*60 + "\n")
+            except Exception:
+                db.session.rollback()
 
     return app
