@@ -51,12 +51,35 @@ def logout():
     logout_user()
     return redirect(url_for('auth.login_page')) # Assuming we have a standalone login page or handle it via index
 
-@auth_bp.route('/login-page') # Temporary standalone login page if needed, or index handles it
+@auth_bp.route('/login-page') 
 def login_page():
-     # If user is already logged in, redirect to index
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
-    return render_template('login.html') # We need to create this
+    
+    # Check if any user exists
+    setup_needed = User.query.first() is None
+    return render_template('login.html', setup_needed=setup_needed)
+
+@auth_bp.route('/setup', methods=['POST'])
+def setup_first_user():
+    # Security check: only allow if NO users exist
+    if User.query.first() is not None:
+        return jsonify({'success': False, 'message': 'Setup already completed'}), 403
+        
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Missing data'}), 400
+        
+    user = User(username=username, is_admin=True)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    
+    login_user(user)
+    return jsonify({'success': True})
 
 # --- API Routes ---
 
@@ -428,6 +451,47 @@ def update_theme():
         db.session.commit()
         return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Missing dark_mode value'}), 400
+
+# --- Admin Routes ---
+@api_bp.route('/admin/users', methods=['GET'])
+@login_required
+def get_users():
+    if not current_user.is_admin:
+        return jsonify({'success': False}), 403
+    users = User.query.all()
+    return jsonify([{'id': u.id, 'username': u.username, 'is_admin': u.is_admin} for u in users])
+
+@api_bp.route('/admin/users', methods=['POST'])
+@login_required
+def create_user():
+    if not current_user.is_admin:
+        return jsonify({'success': False}), 403
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    is_admin = data.get('is_admin', False)
+    
+    if User.query.filter_by(username=username).first():
+        return jsonify({'success': False, 'message': 'User exists'}), 400
+        
+    new_user = User(username=username, is_admin=is_admin)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/admin/users/<int:id>', methods=['DELETE'])
+@login_required
+def delete_user(id):
+    if not current_user.is_admin:
+        return jsonify({'success': False}), 403
+    if id == current_user.id:
+        return jsonify({'success': False, 'message': 'Cannot delete self'}), 400
+        
+    user = User.query.get_or_404(id)
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 

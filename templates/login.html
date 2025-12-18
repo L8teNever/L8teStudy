@@ -110,27 +110,35 @@
 
 <body data-theme="light">
     <div class="login-card">
-        <h1>Anmelden</h1>
-        <p>Willkommen bei L8teStudy</p>
+        <h1 id="page-title">{{ 'Setup Admin' if setup_needed else 'Anmelden' }}</h1>
+        <p id="page-subtitle">{{ 'Erstelle den ersten Benutzer' if setup_needed else 'Willkommen bei L8teStudy' }}</p>
 
         <div id="error-msg" class="error-msg">Ungültige Zugangsdaten</div>
 
-        <form onsubmit="handleLogin(event)">
+        <form onsubmit="handleSubmit(event)">
             <input type="text" id="username" class="ios-input" placeholder="Benutzername" required>
             <input type="password" id="password" class="ios-input" placeholder="Passwort" required>
-            <button type="submit" class="ios-btn">Anmelden</button>
+            <button type="submit" class="ios-btn" id="submit-btn">{{ 'Registrieren' if setup_needed else 'Anmelden'
+                }}</button>
         </form>
     </div>
 
     <script>
-        async function handleLogin(e) {
+        const isSetup = {{ 'true' if setup_needed else 'false' }};
+
+        async function handleSubmit(e) {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('error-msg');
+            const submitBtn = document.getElementById('submit-btn');
+
+            const endpoint = isSetup ? '/setup' : '/login';
+
+            submitBtn.disabled = true;
 
             try {
-                const response = await fetch('/login', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -141,12 +149,14 @@
                     window.location.href = '/';
                 } else {
                     errorMsg.style.display = 'block';
-                    errorMsg.innerText = data.message || 'Login fehlgeschlagen';
+                    errorMsg.innerText = data.message || (isSetup ? 'Setup fehlgeschlagen' : 'Login fehlgeschlagen');
+                    submitBtn.disabled = false;
                 }
             } catch (err) {
                 console.error(err);
                 errorMsg.style.display = 'block';
                 errorMsg.innerText = 'Verbindungsfehler';
+                submitBtn.disabled = false;
             }
         }
     </script>

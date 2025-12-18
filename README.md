@@ -41,25 +41,74 @@ Voraussetzung: Python 3.9+ ist installiert.
     ```
 5.  Öffne [http://localhost:5000](http://localhost:5000) im Browser.
 
-### Option 2: Docker
+### Option 2: Docker (Manuell)
 
 Voraussetzung: Docker Desktop ist installiert und läuft.
 
-1.  **Container starten**:
+1.  **Repository klonen** und in den Ordner wechseln.
+2.  **Container starten**:
     ```powershell
     docker-compose up -d --build
     ```
-2.  Öffne [http://localhost:5000](http://localhost:5000) im Browser.
+3.  Öffne [http://localhost:5000](http://localhost:5000) im Browser.
+
+> **Daten-Sicherheit**: Deine Datenbank und hochgeladenen Bilder werden in den Ordnern `./instance` und `./static/uploads` auf deinem PC gespeichert. Sie gehen bei einem Update nicht verloren.
+
+### Option 3: Deployment Tools (Dockge / Portainer) 🚀
+
+Perfekt für Homeserver oder einfache Updates.
+
+1.  Erstelle einen neuen Stack in Dockge oder Portainer.
+2.  Kopiere den Inhalt der `docker-compose.github.yml` (siehe Repo) oder nutze diesen:
+    ```yaml
+    services:
+      l8testudy:
+        build: https://github.com/L8teNever/L8teStudy.git#main
+        container_name: l8testudy
+        ports:
+          - "5000:5000"
+        volumes:
+          - ./data:/data
+          - ./uploads:/app/static/uploads
+        environment:
+          - DATABASE_URL=sqlite:////data/l8testudy.db
+          - SECRET_KEY=ein-sicheres-passwort-hier-einfuegen
+        restart: always
+    ```
+3.  Starte den Stack. Der Container wird **direkt von GitHub** gebaut.
+4.  Für Updates einfach im Tool auf "Update" / "Rebuild" klicken.
+
+## ⚙️ Konfiguration
+
+Erstelle optional eine `.env` Datei (bei lokaler Nutzung) oder setze Umgebungsvariablen in Docker:
+
+*   `SECRET_KEY`: Ein zufälliger Schlüssel zur Absicherung von Sessions (WICHTIG für Produktion!).
+*   `DATABASE_URL`: Pfad zur Datenbank (Standard: SQLite).
 
 ## 🔐 Login
 
-Das System ist geschlossen. Standard-Login:
+Das System ist geschlossen. Du musst erst einen Benutzer erstellen.
 
-*   **Benutzername**: `admin`
-*   **Passwort**: `secret`
+### Benutzer erstellen
 
-> **Hinweis**: Neue Benutzer können über das Skript `create_admin.py` erstellt werden:
-> `python create_admin.py wunschname wunschpasswort`
+**Option A: Lokal (Python)**
+```powershell
+python create_admin.py DeinName DeinPasswort
+```
+
+**Option B: Docker (laufender Container)**
+```powershell
+docker compose exec web python create_admin.py DeinName "DeinPasswort!"
+```
+*(Hinweis: Bei Sonderzeichen das Passwort in Anführungszeichen setzen!)*
+
+**Option C: Dockge / Portainer**
+Öffne die Konsole des Containers ("Exec" oder ">_") und tippe:
+```bash
+python create_admin.py DeinName DeinPasswort
+```
+> **Wichtig**: Wenn du die GitHub-Version nutzt, heißt der Service evtl. `l8testudy` statt `web`. 
+> Befehl dann: `docker compose exec l8testudy python create_admin.py ...`
 
 ## 📱 Als App installieren
 

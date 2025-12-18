@@ -1131,6 +1131,12 @@
                         <div class="account-item-text">Einstellungen</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    ${isAdmin ? `
+                    <div class="account-item" onclick="renderUserManagement()">
+                        <div class="account-item-icon"><i data-lucide="users"></i></div>
+                        <div class="account-item-text">Benutzerverwaltung</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>` : ''}
                     <div class="account-item" onclick="window.location.href='mailto:support@l8testudy.app?subject=Bug Report'">
                         <div class="account-item-icon"><i data-lucide="bug"></i></div>
                         <div class="account-item-text">Bug melden</div>
@@ -1211,6 +1217,94 @@
                     <p id="pw-error" style="color:var(--danger); font-size:13px; margin-top:10px; display:none;"></p>
                 </div>
             `;
+        }
+
+        // Sub-page: User Management
+        async function renderUserManagement() {
+            previousView = 'account';
+            currentView = 'sub_users';
+            document.getElementById('current-page-title').innerText = 'Benutzer';
+            document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => { renderAccountHub(); currentView = 'account'; document.getElementById('header-back-btn').style.display = 'none'; };
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Benutzer...</div>`;
+
+            try {
+                const res = await fetch('/api/admin/users');
+                const users = await res.json();
+                
+                const listHtml = users.map(u => `
+                    <div class="list-item">
+                        <div class="account-item-icon"><i data-lucide="user"></i></div>
+                        <div class="item-content">
+                            <div class="item-title">${u.username} ${u.is_admin ? '<span style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ADMIN</span>' : ''}</div>
+                        </div>
+                        ${u.id !== {{ user.id }} ? `<div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteUser(${u.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>` : ''}
+                    </div>
+                `).join('');
+
+                document.getElementById('app-container').innerHTML = `
+                    <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${listHtml}</div>
+                    <button class="fab visible" onclick="openCreateUserMenu()" style="position:fixed; bottom:30px; z-index:100;"><i data-lucide="plus"></i></button>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">Fehler beim Laden.</div>`;
+            }
+        }
+
+        function openCreateUserMenu() {
+             document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">Neuer Benutzer</h2>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
+                </div>
+                <input type="text" id="new-user-name" class="ios-input" placeholder="Benutzername">
+                <input type="password" id="new-user-pw" class="ios-input" placeholder="Passwort">
+                <div class="account-item" onclick="toggleAdminCheck()" style="border:none; margin-bottom:15px; background:rgba(0,0,0,0.05); border-radius:12px; padding:15px;">
+                    <div class="account-item-text">Admin-Rechte</div>
+                    <div id="admin-check-toggle" class="ios-toggle"><div class="ios-toggle-knob"></div></div>
+                </div>
+                <button class="ios-btn" onclick="saveNewUser()">Erstellen</button>
+            `;
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
+
+        let newIsAdmin = false;
+        function toggleAdminCheck() {
+            newIsAdmin = !newIsAdmin;
+            const toggle = document.getElementById('admin-check-toggle');
+            if (newIsAdmin) toggle.classList.add('active'); else toggle.classList.remove('active');
+        }
+
+        async function saveNewUser() {
+            const username = document.getElementById('new-user-name').value;
+            const password = document.getElementById('new-user-pw').value;
+            if (!username || !password) return alert('Bitte alles ausfüllen');
+
+            try {
+                const res = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, is_admin: newIsAdmin })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeSheet();
+                    newIsAdmin = false;
+                    renderUserManagement();
+                } else alert(data.message || 'Fehler');
+            } catch (e) { alert('Verbindungsfehler'); }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Benutzer wirklich löschen?')) return;
+            try {
+                await fetch(\`/api/admin/users/\${id}\`, { method: 'DELETE' });
+                renderUserManagement();
+            } catch (e) { alert('Fehler'); }
         }
 
         async function saveNewPassword() {
