@@ -114,6 +114,10 @@ def create_task():
     data = request.get_json() if request.is_json else request.form
     
     try:
+        # Validate required fields
+        if not data or not data.get('title'):
+            return jsonify({'success': False, 'message': 'Title is required'}), 400
+        
         from datetime import datetime
         due_date = None
         date_str = data.get('due_date')
@@ -149,71 +153,80 @@ def create_task():
         db.session.commit()
         return jsonify({'success': True, 'id': new_task.id})
     except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in create_task: {str(e)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'message': str(e)}), 400
 
 @api_bp.route('/tasks/<int:id>', methods=['PUT'])
 @login_required
 def update_task(id):
-    task = Task.query.get_or_404(id)
-    # Handle JSON (toggle status) or FormData (edit content)
-    data = request.get_json() if request.is_json else request.form
-    
-    # Handle Completion Status (Per User) - usually JSON
-    if 'is_done' in data:
-        from .models import TaskCompletion
-        completion = TaskCompletion.query.filter_by(user_id=current_user.id, task_id=task.id).first()
-        if not completion:
-            completion = TaskCompletion(user_id=current_user.id, task_id=task.id)
-            db.session.add(completion)
-        # Handle string 'true'/'false' from FormData or boolean from JSON
-        is_done_val = data['is_done']
-        if isinstance(is_done_val, str):
-            is_done_val = is_done_val.lower() == 'true'
-        completion.is_done = bool(is_done_val)
-    
-    # Handle Content Updates (Only Author or Admin)
-    # Note: Logic here implies if you send 'title', you are editing content.
-    if task.user_id == current_user.id or current_user.is_admin:
-        if 'title' in data:
-            task.title = data['title']
-        if 'description' in data:
-            task.description = data['description']
+    try:
+        task = Task.query.get_or_404(id)
+        # Handle JSON (toggle status) or FormData (edit content)
+        data = request.get_json() if request.is_json else request.form
         
-        # Handle Deleted Images
-        if 'deleted_images' in data:
-            # Expecting comma-separated string if from FormData, or list if JSON (but we use FormData for edit)
-            del_ids = data['deleted_images']
-            if isinstance(del_ids, str) and del_ids:
-                del_ids = [int(x) for x in del_ids.split(',')]
+        # Handle Completion Status (Per User) - usually JSON
+        if 'is_done' in data:
+            from .models import TaskCompletion
+            completion = TaskCompletion.query.filter_by(user_id=current_user.id, task_id=task.id).first()
+            if not completion:
+                completion = TaskCompletion(user_id=current_user.id, task_id=task.id)
+                db.session.add(completion)
+            # Handle string 'true'/'false' from FormData or boolean from JSON
+            is_done_val = data['is_done']
+            if isinstance(is_done_val, str):
+                is_done_val = is_done_val.lower() == 'true'
+            completion.is_done = bool(is_done_val)
+        
+        # Handle Content Updates (Only Author or Admin)
+        # Note: Logic here implies if you send 'title', you are editing content.
+        if task.user_id == current_user.id or current_user.is_admin:
+            if 'title' in data:
+                task.title = data['title']
+            if 'description' in data:
+                task.description = data['description']
             
-            if del_ids:
-                imgs_to_del = TaskImage.query.filter(TaskImage.id.in_(del_ids), TaskImage.task_id == task.id).all()
-                for img in imgs_to_del:
-                    # Remove from FS
-                    path = os.path.join(current_app.config['UPLOAD_FOLDER'], img.filename)
-                    if os.path.exists(path):
-                        try:
-                            os.remove(path)
-                        except:
-                            pass
-                    db.session.delete(img)
+            # Handle Deleted Images
+            if 'deleted_images' in data:
+                # Expecting comma-separated string if from FormData, or list if JSON (but we use FormData for edit)
+                del_ids = data['deleted_images']
+                if isinstance(del_ids, str) and del_ids:
+                    del_ids = [int(x) for x in del_ids.split(',')]
+                
+                if del_ids:
+                    imgs_to_del = TaskImage.query.filter(TaskImage.id.in_(del_ids), TaskImage.task_id == task.id).all()
+                    for img in imgs_to_del:
+                        # Remove from FS
+                        path = os.path.join(current_app.config['UPLOAD_FOLDER'], img.filename)
+                        if os.path.exists(path):
+                            try:
+                                os.remove(path)
+                            except:
+                                pass
+                        db.session.delete(img)
 
-        # Handle New Images
-        if request.files:
-            files = request.files.getlist('images')
-            from datetime import datetime
-            for file in files:
-                if file and file.filename:
-                    filename = secure_filename(f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}")
-                    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-                    
-                    img = TaskImage(task_id=task.id, filename=filename)
-                    db.session.add(img)
-    
-    db.session.commit()
-    return jsonify({'success': True})
-    # All changes committed at block end already
-    pass
+            # Handle New Images
+            if request.files:
+                files = request.files.getlist('images')
+                from datetime import datetime
+                for file in files:
+                    if file and file.filename:
+                        filename = secure_filename(f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}")
+                        file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                        
+                        img = TaskImage(task_id=task.id, filename=filename)
+                        db.session.add(img)
+        
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in update_task: {str(e)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 @api_bp.route('/tasks/<int:id>', methods=['DELETE'])
 @login_required

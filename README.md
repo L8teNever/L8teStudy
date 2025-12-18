@@ -80,10 +80,18 @@ Perfekt für Homeserver oder einfache Updates.
 
 > **Automatische Datenbank-Initialisierung**: Die Datenbank und alle benötigten Tabellen werden beim ersten Start automatisch erstellt. Du musst nichts manuell einrichten!
 
+> **Automatische Migration**: Bei Updates werden neue Datenbank-Tabellen automatisch hinzugefügt. Deine Daten bleiben erhalten!
+
 > **Standard-Admin-Account**: Beim ersten Start wird automatisch ein Admin-Account erstellt:
 > - **Benutzername**: `admin`
 > - **Passwort**: `admin`
 > - ⚠️ **WICHTIG**: Ändere dieses Passwort sofort nach dem ersten Login in den Einstellungen!
+
+### 🔄 Nach einem Update
+
+Wenn du nach einem Update Probleme hast (z.B. 400 Fehler):
+1. Container neu starten - die Migration läuft automatisch
+2. Falls das nicht hilft: Siehe [MIGRATION.md](MIGRATION.md) für detaillierte Anweisungen
 
 
 ## ⚙️ Konfiguration

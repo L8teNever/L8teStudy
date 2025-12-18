@@ -16,6 +16,10 @@ if [ ! -f /data/l8testudy.db ]; then
     echo "Database not found. It will be created on first run..."
 fi
 
+# Initialize database tables explicitly before starting workers
+echo "Initializing database..."
+python -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all(); print('Database initialized successfully')" || echo "Database initialization warning (tables may already exist)"
+
 # Start the application
 # The database tables will be created automatically by app/__init__.py
 # Note: Removed --preload to avoid race conditions with multiple workers
