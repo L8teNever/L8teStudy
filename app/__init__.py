@@ -69,25 +69,27 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    @app.context_processor
-    def inject_version():
-        version_file = os.path.join(app.root_path, '..', 'version.txt')
+    def update_version_file():
+        version_file = os.path.abspath(os.path.join(app.root_path, '..', 'version.txt'))
+        print(f"DEBUG Versioning: Looking for {version_file}")
+        version = "1.1.15" # Default fallback
         
         # 1. Try to get it from git (for development)
         try:
-            commit_count = subprocess.check_output(['git', 'rev-list', '--count', 'HEAD'], 
-                                                   stderr=subprocess.STDOUT,
-                                                   cwd=app.root_path).decode('utf-8').strip()
             version = f"1.1.{commit_count}"
+            print(f"DEBUG Versioning: Git version is {version}")
             
-            # Auto-update version.txt so it can be pushed to GitHub
+            # Auto-update version.txt
             try:
                 with open(version_file, 'w') as f:
                     f.write(version)
-            except Exception:
+                print(f"DEBUG Versioning: Updated {version_file}")
+            except Exception as e:
+                print(f"DEBUG Versioning: Error writing file: {e}")
                 pass
-        except Exception:
-            # 2. Fallback to reading from version.txt (for production/Docker)
+        except Exception as e:
+            print(f"DEBUG Versioning: Git error: {e}")
+            # 2. Fallback to reading from version.txt
             if os.path.exists(version_file):
                 try:
                     with open(version_file, 'r') as f:
@@ -100,7 +102,7 @@ def create_app():
     current_version = update_version_file()
 
     @app.context_processor
-    def inject_version():
+    def inject_version_to_templates():
         return dict(version=current_version)
 
     with app.app_context():
