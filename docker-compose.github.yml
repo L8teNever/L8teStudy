@@ -9,8 +9,8 @@ services:
     volumes:
       # Daten werden im Ordner gespeichert, wo diese Datei ausgeführt wird
       - ./data:/data
-      - ./uploads:/app/static/uploads
     environment:
       - DATABASE_URL=sqlite:////data/l8testudy.db
       - SECRET_KEY=aender_mich_in_was_sicheres
+      - UPLOAD_FOLDER=/data/uploads
     restart: always

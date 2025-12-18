@@ -1,13 +1,18 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from dotenv import load_dotenv
-import os
+from flask_wtf.csrf import CSRFProtect
+from flask_talisman import Talisman
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 load_dotenv()
 
 db = SQLAlchemy()
 login_manager = LoginManager()
+csrf = CSRFProtect()
+talisman = Talisman()
+limiter = Limiter(key_func=get_remote_address)
 
 def create_app():
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
@@ -24,7 +29,12 @@ def create_app():
     #   app/
     #   static/
     #   templates/
-    app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(app.root_path), 'static', 'uploads')
+    #   instance/ (default for Flask instance_path)
+    
+    # Secure Uploads: Use 'instance/uploads' or env var 'UPLOAD_FOLDER'
+    # In Docker, we map volumes to this location.
+    default_upload_path = os.path.join(app.instance_path, 'uploads')
+    app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', default_upload_path)
     
     # Ensure upload directory exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -32,6 +42,15 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login_page'
+
+    # Security Init
+    csrf.init_app(app)
+    # CSP is set to None to allow inline scripts/styles for now. 
+    # Enable Force HTTPS in production, but careful in dev (Talisman defaults force_https=True).
+    # We disable force_https for local dev to avoid redirect loops if no SSL cert is present.
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    talisman.init_app(app, content_security_policy=None, force_https=is_production) 
+    limiter.init_app(app)
 
     from .routes import main_bp, auth_bp, api_bp
     app.register_blueprint(main_bp)

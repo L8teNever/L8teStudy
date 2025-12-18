@@ -12,9 +12,31 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="L8teStudy">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="apple-touch-icon" href="/static/icon-192.png">
     <link rel="icon" href="/static/icon-192.png">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // Global Fetch Wrapper for CSRF
+        (function() {
+            const originalFetch = window.fetch;
+            window.fetch = async function(input, init) {
+                init = init || {};
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                
+                if (csrfToken && init.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(init.method.toUpperCase())) {
+                    init.headers = init.headers || {};
+                    // Handle Headers object or plain object
+                    if (init.headers instanceof Headers) {
+                        init.headers.append('X-CSRFToken', csrfToken);
+                    } else {
+                        init.headers['X-CSRFToken'] = csrfToken;
+                    }
+                }
+                return originalFetch(input, init);
+            };
+        })();
+    </script>
     <style>
         :root {
             --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);

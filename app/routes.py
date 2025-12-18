@@ -3,7 +3,8 @@ from flask_login import login_user, logout_user, login_required, current_user
 from .models import User, Task, TaskImage, Event, Grade, db
 from werkzeug.utils import secure_filename
 import os
-from . import login_manager
+from flask import send_from_directory
+from . import login_manager, limiter
 
 main_bp = Blueprint('main', __name__)
 auth_bp = Blueprint('auth', __name__)
@@ -22,6 +23,11 @@ def sw():
 def manifest():
     return current_app.send_static_file('manifest.json')
 
+@main_bp.route('/uploads/<filename>')
+@login_required
+def uploaded_file(filename):
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+
 @main_bp.route('/')
 @login_required
 def index():
@@ -34,6 +40,7 @@ def catch_all(path):
 
 # --- Auth Routes ---
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     data = request.get_json()
     username = data.get('username')
@@ -106,7 +113,8 @@ def get_tasks():
             'due_date': t.due_date.strftime('%Y-%m-%d') if t.due_date else None,
             'description': t.description,
             'is_done': is_done,
-            'images': [{'id': img.id, 'url': f"/static/uploads/{img.filename}"} for img in t.images]
+            # Updated to use secure route /uploads/<filename>
+            'images': [{'id': img.id, 'url': f"/uploads/{img.filename}"} for img in t.images]
         })
     return jsonify(results)
 

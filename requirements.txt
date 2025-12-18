@@ -6,3 +6,6 @@ python-dotenv
 gunicorn
 pywebpush
 flask-apscheduler
+flask-wtf
+flask-talisman
+flask-limiter

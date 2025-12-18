@@ -5,8 +5,8 @@ services:
       - "5000:5000"
     volumes:
       - ./instance:/data
-      - ./static/uploads:/app/static/uploads
     environment:
       - DATABASE_URL=sqlite:////data/l8testudy.db
       - SECRET_KEY=${SECRET_KEY:-your-default-dev-secret}
+      - UPLOAD_FOLDER=/data/uploads
     restart: always
