@@ -1,6 +1,6 @@
 services:
   l8testudy:
-    build: .
+    image: l8tenever/l8testudy:latest
     container_name: l8testudy_local
     ports:
       - "5000:5000"
