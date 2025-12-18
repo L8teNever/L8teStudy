@@ -49,7 +49,10 @@ def create_app():
     # Only set secure cookies in production
     is_production = os.environ.get('FLASK_ENV') == 'production'
     app.config['SESSION_COOKIE_SECURE'] = is_production
-    app.config['REMEMBER_COOKIE_DURATION'] = 86400 * 30  # 30 days
+    app.config['REMEMBER_COOKIE_SECURE'] = is_production
+    
+    # Fix for CSRF behind reverse proxies (Dockge, Nginx)
+    app.config['WTF_CSRF_SSL_STRICT'] = is_production  # Disable strict SSL check unless in prod
 
     db.init_app(app)
     login_manager.init_app(app)
