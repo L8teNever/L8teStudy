@@ -41,6 +41,15 @@ def create_app():
     
     # Ensure upload directory exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
+    # Session Configuration
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 7  # 7 days
+    # Only set secure cookies in production
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    app.config['SESSION_COOKIE_SECURE'] = is_production
+    app.config['REMEMBER_COOKIE_DURATION'] = 86400 * 30  # 30 days
 
     db.init_app(app)
     login_manager.init_app(app)

@@ -43,6 +43,7 @@ def catch_all(path):
 @csrf.exempt
 @limiter.limit("5 per minute")
 def login():
+    from flask import session
     data = request.get_json()
     if not data:
         return jsonify({'success': False, 'message': 'No data received'}), 400
@@ -55,7 +56,8 @@ def login():
     
     user = User.query.filter_by(username=username).first()
     if user and user.check_password(password):
-        login_user(user)
+        session.permanent = True
+        login_user(user, remember=True)
         return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
 
