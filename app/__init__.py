@@ -71,29 +71,37 @@ def create_app():
 
     @app.context_processor
     def inject_version():
-        # Default fallback
-        version = "1.1.15"
-        
-        # 1. Try to read from version.txt (pre-generated for production/Docker)
         version_file = os.path.join(app.root_path, '..', 'version.txt')
-        if os.path.exists(version_file):
-            try:
-                with open(version_file, 'r') as f:
-                    return dict(version=f.read().strip())
-            except Exception:
-                pass
         
-        # 2. Try to get it from git (for development)
+        # 1. Try to get it from git (for development)
         try:
-            # Use app.root_path to ensure we are in the right directory for git
             commit_count = subprocess.check_output(['git', 'rev-list', '--count', 'HEAD'], 
                                                    stderr=subprocess.STDOUT,
                                                    cwd=app.root_path).decode('utf-8').strip()
             version = f"1.1.{commit_count}"
-        except Exception:
-            pass
             
-        return dict(version=version)
+            # Auto-update version.txt so it can be pushed to GitHub
+            try:
+                with open(version_file, 'w') as f:
+                    f.write(version)
+            except Exception:
+                pass
+        except Exception:
+            # 2. Fallback to reading from version.txt (for production/Docker)
+            if os.path.exists(version_file):
+                try:
+                    with open(version_file, 'r') as f:
+                        version = f.read().strip()
+                except Exception:
+                    pass
+        return version
+
+    # Generate version once on startup
+    current_version = update_version_file()
+
+    @app.context_processor
+    def inject_version():
+        return dict(version=current_version)
 
     with app.app_context():
         try:

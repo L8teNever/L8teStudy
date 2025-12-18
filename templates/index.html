@@ -383,6 +383,10 @@
             }
         }
 
+        .side-nav {
+            display: none;
+        }
+
         .bottom-nav {
             position: fixed;
             bottom: 30px;
@@ -722,36 +726,113 @@
         /* --- Desktop Responsive --- */
         @media (min-width: 1024px) {
             body {
-                padding-top: 100px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
+                padding-top: 40px;
+                padding-left: 100px;
+                padding-right: 40px;
+                display: block;
             }
 
             #app-container {
                 width: 100%;
-                max-width: 900px;
+                max-width: 1100px;
+                margin: 0 auto;
             }
 
             header {
-                max-width: 900px;
-                left: 50% !important;
-                transform: translateX(-50%);
+                position: relative;
+                top: 0;
+                left: 0 !important;
+                right: 0;
+                max-width: 1100px;
+                margin: 0 auto 30px auto;
+                background: transparent;
+                border: none;
+                box-shadow: none;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                transform: none !important;
+                height: auto;
+                padding: 0;
+            }
+
+            .header-title {
+                font-size: 28px;
+                font-weight: 800;
+            }
+
+            .profile-btn {
+                display: none;
+                /* In sidebar on desktop */
             }
 
             .bottom-nav {
-                max-width: 600px;
-                left: 50% !important;
-                transform: translateX(-50%);
-                bottom: 40px;
+                display: none !important;
+            }
+
+            .side-nav {
+                display: flex;
+                flex-direction: column;
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 80px;
+                background: var(--card-bg);
+                backdrop-filter: var(--glass-blur);
+                -webkit-backdrop-filter: var(--glass-blur);
+                border-right: 1px solid var(--border);
+                justify-content: space-between;
+                padding: 30px 0;
+                z-index: 1000;
+            }
+
+            .side-nav .nav-group {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                align-items: center;
+            }
+
+            .side-nav .nav-link {
+                width: 100%;
+                height: 80px;
+                border-radius: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+                background: transparent !important;
+            }
+
+            .side-nav .nav-link span {
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--text-sec);
+            }
+
+            .side-nav .nav-link i {
+                width: 24px;
+                height: 24px;
+                color: var(--text-sec);
+            }
+
+            .side-nav .nav-link.active i,
+            .side-nav .nav-link.active span {
+                color: var(--accent);
+            }
+
+            .side-nav .nav-link:hover {
+                opacity: 0.8;
             }
 
             .fab {
-                right: calc(50% - 450px + 25px);
-                bottom: 125px;
+                right: 40px;
+                bottom: 40px;
             }
 
-            /* Desktop Modals instead of Bottom Sheets */
+            /* Desktop Modals */
             .sheet-overlay {
                 align-items: center;
                 justify-content: center;
@@ -787,6 +868,22 @@
 </head>
 
 <body data-theme="{{ 'dark' if user.dark_mode else 'light' }}">
+
+    <nav class="side-nav">
+        <div class="nav-group">
+            <a class="nav-link active" onclick="navigate('home', this, 'Home')"><i
+                    data-lucide="house"></i><span>Home</span></a>
+            <a class="nav-link" onclick="navigate('tasks', this, 'Aufgaben')"><i
+                    data-lucide="check-circle-2"></i><span>Aufgaben</span></a>
+            <a class="nav-link" onclick="navigate('calendar', this, 'Plan')"><i
+                    data-lucide="calendar-days"></i><span>Plan</span></a>
+            <a class="nav-link" onclick="navigate('grades', this, 'Noten')"><i
+                    data-lucide="bar-chart-3"></i><span>Noten</span></a>
+        </div>
+        <div class="nav-group">
+            <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
+        </div>
+    </nav>
 
     <header>
         <div class="header-left">
@@ -862,8 +959,12 @@
             document.getElementById('header-back-btn').style.display = (view === 'settings' || view.startsWith('sub_')) ? 'block' : 'none';
             const headerTitle = document.getElementById('current-page-title');
             headerTitle.innerText = title;
-            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-            if (el) el.classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(n => {
+                n.classList.remove('active');
+                if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${view}'`)) {
+                    n.classList.add('active');
+                }
+            });
 
             // Update URL
             let path = '/';
