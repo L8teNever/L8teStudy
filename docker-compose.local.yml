@@ -1,0 +1,14 @@
+services:
+  l8testudy:
+    build: .
+    container_name: l8testudy_local
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./instance:/data
+      - ./static/uploads:/data/uploads
+    environment:
+      - DATABASE_URL=sqlite:////data/l8testudy.db
+      - SECRET_KEY=local-dev-secret-key
+      - UPLOAD_FOLDER=/data/uploads
+    restart: always

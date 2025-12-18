@@ -1,7 +1,7 @@
 import os
 import subprocess
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -63,6 +63,18 @@ def create_app():
     is_production = os.environ.get('FLASK_ENV') == 'production'
     talisman.init_app(app, content_security_policy=None, force_https=is_production) 
     limiter.init_app(app)
+
+    # Error Handlers for debugging
+    from flask_wtf.csrf import CSRFError
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        app.logger.error(f"CSRF Error: {e.description}")
+        return jsonify({'success': False, 'message': 'CSRF Token missing or invalid'}), 400
+
+    @app.errorhandler(400)
+    def handle_bad_request(e):
+        app.logger.error(f"Bad Request (400): {e}")
+        return jsonify({'success': False, 'message': 'Bad Request'}), 400
 
     from .routes import main_bp, auth_bp, api_bp
     app.register_blueprint(main_bp)
