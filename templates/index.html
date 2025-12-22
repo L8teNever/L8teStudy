@@ -554,7 +554,7 @@
 
         .ios-input {
             width: 100%;
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--tab-bg);
             border: none;
             padding: 15px;
             border-radius: 12px;
@@ -573,7 +573,7 @@
         /* --- Custom Pickers --- */
         .custom-picker-trigger {
             width: 100%;
-            background: rgba(0, 0, 0, 0.05);
+            background: var(--tab-bg);
             border: none;
             padding: 15px;
             border-radius: 12px;
@@ -597,7 +597,7 @@
 
         .picker-options {
             display: none;
-            background: rgba(0, 0, 0, 0.03);
+            background: var(--tab-bg);
             border-radius: 12px;
             margin-bottom: 15px;
             animation: fadeIn 0.2s ease;
@@ -1855,13 +1855,13 @@
                         
                         <div class="list-item" style="border-bottom: 1px solid var(--border);">
                              <div class="item-content"><div class="item-title">Hausaufgaben (Morgen)</div></div>
-                             <input type="time" value="${settings.reminder_homework || ''}" onchange="saveNotifyTime('reminder_homework', this.value)" style="background:transparent; border:1px solid var(--border); color:var(--text-main); padding:5px; border-radius:8px;">
+                             <input type="time" value="${settings.reminder_homework || ''}" onchange="saveNotifyTime('reminder_homework', this.value)" style="background:var(--tab-bg); border:none; color:var(--text-main); padding:8px; border-radius:8px;">
                         </div>
 
 
                         <div class="list-item">
                              <div class="item-content"><div class="item-title">Klausuren/Termine (Morgen)</div></div>
-                             <input type="time" value="${settings.reminder_exam || ''}" onchange="saveNotifyTime('reminder_exam', this.value)" style="background:transparent; border:1px solid var(--border); color:var(--text-main); padding:5px; border-radius:8px;">
+                             <input type="time" value="${settings.reminder_exam || ''}" onchange="saveNotifyTime('reminder_exam', this.value)" style="background:var(--tab-bg); border:none; color:var(--text-main); padding:8px; border-radius:8px;">
                         </div>
                         <p class="item-sub" style="margin-top:10px; font-size:13px;">Wähle eine Uhrzeit für die Erinnerung. Leer lassen zum Deaktivieren.</p>
                    </div>
@@ -2067,7 +2067,7 @@
                 </div>
                 <input type="text" id="new-user-name" class="ios-input" placeholder="Benutzername">
                 <input type="password" id="new-user-pw" class="ios-input" placeholder="Passwort">
-                <div class="account-item" onclick="toggleAdminCheck()" style="border:none; margin-bottom:15px; background:rgba(0,0,0,0.05); border-radius:12px; padding:15px;">
+                <div class="account-item" onclick="toggleAdminCheck()" style="border:none; margin-bottom:15px; background:var(--tab-bg); border-radius:12px; padding:15px;">
                     <div class="account-item-text">Admin-Rechte</div>
                     <div id="admin-check-toggle" class="ios-toggle"><div class="ios-toggle-knob"></div></div>
                 </div>
