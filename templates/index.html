@@ -1470,18 +1470,31 @@
             lucide.createIcons();
         }
 
+        let cachedEvents = [];
+        let currentCalendarTab = 'termine';
+
         function toggleSearch(e, force) {
             if (e) e.stopPropagation();
             isSearchActive = force !== undefined ? force : !isSearchActive;
-            renderTasks(currentTaskTab).then(() => {
-                const searchInput = document.querySelector('.search-input');
-                if (searchInput) {
-                    if (isSearchActive) {
+
+            // Re-render current view to show/hide search bar
+            if (currentView === 'tasks') {
+                renderTasks(currentTaskTab).then(() => {
+                    const searchInput = document.querySelector('.search-input');
+                    if (searchInput && isSearchActive) {
                         searchInput.focus();
                         searchInput.addEventListener('input', filterTasks);
                     }
-                }
-            });
+                });
+            } else if (currentView === 'calendar') {
+                renderCalendar(currentCalendarTab).then(() => {
+                    const searchInput = document.querySelector('.search-input');
+                    if (searchInput && isSearchActive) {
+                        searchInput.focus();
+                        searchInput.addEventListener('input', filterEvents);
+                    }
+                });
+            }
         }
 
         async function filterTasks() {
@@ -1530,30 +1543,47 @@
         }
 
         async function renderCalendar(tab = 'termine') {
+            currentCalendarTab = tab;
             const container = document.getElementById('app-container');
-            container.innerHTML = `<div class="controls-row"><div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">Termine</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">Monat</button></div></div>
-            <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">Lade Termine...</div>`;
+            container.innerHTML = `
+                <div class="controls-row ${isSearchActive ? 'search-active' : ''}">
+                    <!-- Tab Bar -->
+                    <div class="tab-bar">
+                        <button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">Termine</button>
+                        <button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">Monat</button>
+                    </div>
+                     <!-- Search Button/Bar -->
+                     <div class="search-container ${isSearchActive ? 'active' : ''}" onclick="if(!isSearchActive) toggleSearch(event)">
+                        <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
+                        <input type="text" class="search-input" placeholder="Termine suchen...">
+                        <div class="search-close-btn" onmousedown="toggleSearch(event, false)">Abbrechen</div>
+                    </div>
+                </div>
+                <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">Lade Termine...</div>`;
             lucide.createIcons();
+
+            // Re-attach search listener if active
+            if (isSearchActive) {
+                const searchInput = document.querySelector('.search-input');
+                if (searchInput) {
+                    searchInput.addEventListener('input', filterEvents);
+                    // If searching, keep focus in a real-world app, but here we just re-rendered.
+                    // The toggleSearch logic might need refinement for focus persistence, but this is functional.
+                }
+            }
 
             try {
                 const response = await fetch('/api/events');
                 const events = await response.json();
+                cachedEvents = events;
+
+                if (isSearchActive) {
+                    // Start with empty or full list? Let's show full list or wait for input.
+                    // If toggleSearch just happened, input is empty.
+                }
+
                 if (tab === 'termine') {
-                    const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
-                    const listHtml = sortedEvents.map(e => `
-                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
-                             <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
-                                <i data-lucide="calendar" style="width:20px; height:20px;"></i>
-                            </div>
-                            <div class="item-content">
-                                <div class="item-title">${e.title}</div>
-                                <div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
-                            </div>
-                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                        </div>`).join('');
-                    document.getElementById('calendar-content').innerHTML = listHtml ?
-                        `<div class="floating-card" style="padding:0 24px">${listHtml}</div>` :
-                        `<div class="floating-card" style="padding:40px; text-align:center"><p class="item-sub">Keine anstehenden Termine.</p></div>`;
+                    renderEventList(events);
                 } else {
                     document.getElementById('calendar-content').innerHTML = `
                         <div class="floating-card">
@@ -1568,6 +1598,40 @@
                 }
                 lucide.createIcons();
             } catch (err) { console.error(err); }
+        }
+
+        function renderEventList(events) {
+            const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const listHtml = sortedEvents.map(e => `
+                <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                        <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
+                        <i data-lucide="calendar" style="width:20px; height:20px;"></i>
+                    </div>
+                    <div class="item-content">
+                        <div class="item-title">${e.title}</div>
+                        <div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
+                    </div>
+                    <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                </div>`).join('');
+
+            document.getElementById('calendar-content').innerHTML = listHtml ?
+                `<div class="floating-card" style="padding:0 24px">${listHtml}</div>` :
+                `<div class="floating-card" style="padding:40px; text-align:center"><p class="item-sub">Keine Termine.</p></div>`;
+            lucide.createIcons();
+        }
+
+        function filterEvents() {
+            const searchInput = document.querySelector('.search-input');
+            if (!searchInput) return;
+            const searchTerm = searchInput.value.toLowerCase();
+
+            const filtered = cachedEvents.filter(e =>
+                e.title.toLowerCase().includes(searchTerm) ||
+                (e.description && e.description.toLowerCase().includes(searchTerm))
+            );
+
+            // Should always show list when searching
+            renderEventList(filtered);
         }
 
         function updateMainCalendarGrid(events = []) {
