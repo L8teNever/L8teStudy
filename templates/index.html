@@ -1717,10 +1717,10 @@
                             const toggle = document.getElementById('push-toggle');
                             const text = document.getElementById('push-status-text');
                             if (row && toggle && text) {
-                                row.onclick = null; // Already subscribed
+                                row.onclick = unsubscribePush;
                                 toggle.classList.add('active');
-                                toggle.style.opacity = '0.6';
-                                text.innerText = 'Benachrichtigungen sind aktiviert.';
+                                toggle.style.opacity = '1';
+                                text.innerText = 'Benachrichtigungen sind aktiviert. Tippe zum Deaktivieren.';
                             }
                         }
                     }).catch(e => console.log('SW check failed', e));
@@ -1794,6 +1794,28 @@
             } catch (e) {
                 console.error(e);
                 alert('Aktivierung fehlgeschlagen: ' + e);
+            }
+        }
+
+        async function unsubscribePush() {
+            if (!confirm('Benachrichtigungen auf diesem Gerät deaktivieren?')) return;
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) {
+                    const endpoint = sub.endpoint;
+                    await sub.unsubscribe();
+                    await fetch('/api/notifications/unsubscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ endpoint: endpoint })
+                    });
+                }
+                alert('Benachrichtigungen deaktiviert.');
+                renderNotificationSettings();
+            } catch (e) {
+                console.error(e);
+                alert('Fehler beim Deaktivieren: ' + e);
             }
         }
 

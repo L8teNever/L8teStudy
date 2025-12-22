@@ -569,6 +569,21 @@ def subscribe_push():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@api_bp.route('/notifications/unsubscribe', methods=['POST'])
+@login_required
+def unsubscribe_push():
+    data = request.json
+    try:
+        endpoint = data.get('endpoint')
+        if endpoint:
+            sub = PushSubscription.query.filter_by(endpoint=endpoint).first()
+            if sub and sub.user_id == current_user.id:
+                db.session.delete(sub)
+                db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 @api_bp.route('/settings/notifications', methods=['GET'])
 @login_required
 def get_notification_settings():
