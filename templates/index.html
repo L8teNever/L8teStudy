@@ -195,15 +195,10 @@
             padding: 4px;
             border-radius: 16px;
             flex: 1;
+            /* Takes remaining space */
             height: 100%;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             border: 1px solid var(--border);
-        }
-
-        .search-active .tab-bar {
-            opacity: 0;
-            transform: scale(0.95);
-            pointer-events: none;
         }
 
         .tab-btn {
@@ -231,12 +226,17 @@
             background: var(--card-bg);
         }
 
+        .search-active .tab-bar {
+            display: none;
+            /* Hide when searching to give full width */
+        }
+
         .search-container {
-            position: absolute;
-            right: 0;
-            top: 0;
+            /* Now flex item, not absolute */
             height: 48px;
             width: 48px;
+            /* Collapsed state: just icon */
+            min-width: 48px;
             background: var(--tab-bg);
             border: 1px solid var(--border);
             border-radius: 16px;
@@ -246,6 +246,14 @@
             overflow: hidden;
             z-index: 20;
             cursor: pointer;
+            margin-left: 10px;
+            /* Space between tabs and search */
+        }
+
+        .search-container.active {
+            width: 100%;
+            /* Expands to fill container when tabs are hidden */
+            margin-left: 0;
         }
 
         .search-container.active {
@@ -1088,16 +1096,20 @@
             currentTaskTab = tab;
             document.getElementById('app-container').innerHTML = `
                 <div class="controls-row ${isSearchActive ? 'search-active' : ''}">
+                    <!-- Tab Bar -->
                     <div class="tab-bar">
                         <button class="tab-btn ${tab === 'open' ? 'active' : ''}" onclick="renderTasks('open')">Offen</button>
                         <button class="tab-btn ${tab === 'done' ? 'active' : ''}" onclick="renderTasks('done')">Erledigt</button>
                     </div>
+                    
+                    <!-- Search Button/Bar -->
                     <div class="search-container ${isSearchActive ? 'active' : ''}" onclick="if(!isSearchActive) toggleSearch(event)">
                         <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
                         <input type="text" class="search-input" placeholder="Suchen...">
                         <div class="search-close-btn" onmousedown="toggleSearch(event, false)">Abbrechen</div>
                     </div>
                 </div>
+
                 <div id="tasks-list-container" style="padding-top: 20px; padding-bottom: 40px;"><div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Aufgaben...</div></div>`;
             lucide.createIcons();
 
