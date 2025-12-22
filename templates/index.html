@@ -1352,15 +1352,9 @@
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     ${isAdmin ? `
-
-                    <div class="account-item" onclick="renderUserManagement()">
-                        <div class="account-item-icon"><i data-lucide="users"></i></div>
-                        <div class="account-item-text">Benutzerverwaltung</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                    <div class="account-item" onclick="renderSubjectManagement()">
-                        <div class="account-item-icon"><i data-lucide="book-open"></i></div>
-                        <div class="account-item-text">Fächer verwalten</div>
+                    <div class="account-item" onclick="renderAdminMenu()">
+                        <div class="account-item-icon"><i data-lucide="shield"></i></div>
+                        <div class="account-item-text">Admin Einstellungen</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>` : ''}
                     <div class="account-item" onclick="window.location.href='mailto:support@l8testudy.app?subject=Bug Report'">
@@ -2492,6 +2486,26 @@
                     alert('Fehler beim Löschen');
                 }
             } catch (e) { console.error(e); alert('Fehler'); }
+        }
+
+
+        function renderAdminMenu() {
+            navigate('sub_admin', null, 'Admin Einstellungen');
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card">
+                    <div class="account-item" onclick="renderUserManagement()">
+                        <div class="account-item-icon"><i data-lucide="users"></i></div>
+                        <div class="account-item-text">Benutzerverwaltung</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    <div class="account-item" onclick="renderSubjectManagement()">
+                        <div class="account-item-icon"><i data-lucide="book-open"></i></div>
+                        <div class="account-item-text">Fächer verwalten</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
         }
 
         window.onload = () => {
