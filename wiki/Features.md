@@ -35,9 +35,18 @@ Behalte deinen Schnitt im Auge.
 
 ---
 
+## 🔔 Benachrichtigungen
+Verpasse keine Fristen mehr.
+- **Push-Benachrichtigungen**: Erhalte Erinnerungen für Hausaufgaben (Standard: 17:00 am Vortag) und Klausuren.
+- **Konfiguration**: Lege in den Einstellungen fest, wann du erinnert werden möchtest.
+- **Test-Modus**: Sende dir eine Test-Nachricht, um die Verbindung zu prüfen.
+
+---
+
 ## ⚙️ Account Hub
 Klicke oben rechts auf das Benutzer-Icon, um in dein Profil zu gelangen.
 - **Dunkelmodus**: Schalte zwischen hellem und dunklem Design um.
-- **Bug melden**: Öffnet direkt dein E-Mail-Programm mit einer Vorlage.
+- **Admin-Tools**: (Nur für Admins) Verwalte Benutzer und Fächer zentral.
+- **Bug melden**: Melde Fehler direkt auf unserer GitHub Issues Seite.
 - **Version**: Hier siehst du die aktuelle Build-Nummer deines Systems.
 - **Sicherheit**: Ändere dein Passwort jederzeit über das Einstellungsmenü.

@@ -2,11 +2,19 @@
 
 Als Administrator hast du zusätzliche Rechte, um das System zu verwalten. Diese Funktionen sind im **Account Hub** (Profil-Icon oben rechts) sichtbar, wenn dein Account als Admin markiert ist.
 
-## 👥 Benutzerverwaltung
-Im Bereich "Benutzerverwaltung" kannst du:
-- **Neue Benutzer anlegen**: Erstelle Accounts für Freunde oder Mitschüler. Du kannst entscheiden, ob sie ebenfalls Admin-Rechte erhalten sollen.
-- **Passwörter zurücksetzen**: Fall jemand sein Passwort vergessen hat, kannst du ihm ein neues zuweisen.
+## 👥 Benutzerverwaltung & Fächer
+Diese Funktionen findest du jetzt unter **"Admin Einstellungen"** im Account Hub.
+
+### 1. Benutzerverwaltung
+- **Neue Benutzer anlegen**: Erstelle Accounts für Freunde oder Mitschüler.
+- **Passwörter zurücksetzen**: Fall jemand sein Passwort vergessen hat.
 - **Benutzer löschen**: Entferne Accounts aus dem System.
+
+### 2. Fächerverwaltung (Neu)
+Da jede Schule andere Fächer hat, kannst du diese hier zentral verwalten:
+- **Hinzufügen**: Trage den Namen des Fachs ein (z.B. "Informatik" oder "Wirtschaft").
+- **Löschen**: Entferne Fächer, die nicht benötigt werden. 
+  *(Achtung: Dies kann Auswirkungen auf bestehende Aufgaben haben, die dieses Fach nutzen)*.
 
 ---
 

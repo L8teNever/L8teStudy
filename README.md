@@ -1,4 +1,4 @@
-# 📋 L8teStudy v1.1.25
+# 📋 L8teStudy v1.1.51
 
 Eine minimalistische, offline-fähige Schul-Organisations-App im iOS-Design.
 
@@ -8,16 +8,20 @@ Eine minimalistische, offline-fähige Schul-Organisations-App im iOS-Design.
 *   **Minimalistisches Design**: Angelehnt an modernste Apple iOS UI (Glassmorphism, Snappy Animations).
 *   **Organisation**:
     *   **Dashboard**: Überblick über den Tag, nächste Termine und fällige Aufgaben.
-    *   **Aufgaben**: Verwalten von Hausaufgaben (Offen/Erledigt).
+    *   **Aufgaben**: Verwalten von Hausaufgaben (Offen/Erledigt) mit Bild-Upload.
     *   **Plan**: Kalender für Termine und Klausuren (Monats- und Listenansicht).
     *   **Noten**: Notenverwaltung mit Gewichtung und Durchschnittsberechnung.
+*   **Benachrichtigungen**: Push-Benachrichtigungen für Aufgaben und Termine (Web Push).
+*   **Admin-Tools**:
+    *   **Benutzerverwaltung**: Benutzer anlegen und löschen.
+    *   **Fächerverwaltung**: Fächer global verwalten (dynamisch anpassbar).
 *   **Technologie**: PWA (Progressive Web App) - installierbar auf Mobilgeräten.
 
 ## 🛠 Tech Stack
 
 *   **Backend**: Python (Flask), SQLAlchemy, SQLite.
 *   **Frontend**: Vanilla HTML5, CSS3, JavaScript (keine Frameworks).
-*   **PWA**: Service Worker für Caching.
+*   **PWA**: Service Worker für Caching und Push Notifications.
 
 ## 🚀 Installation & Start
 
@@ -53,6 +57,7 @@ Voraussetzung: Docker Desktop ist installiert und läuft.
 3.  Öffne [http://localhost:5000](http://localhost:5000) im Browser.
 
 > **Daten-Sicherheit**: Deine Datenbank und hochgeladenen Bilder werden in den Ordnern `./instance` und `./static/uploads` auf deinem PC gespeichert. Sie gehen bei einem Update nicht verloren.
+> **Secure Keys**: VAPID-Keys für Benachrichtigungen werden automatisch sicher in `./instance/vapid.json` generiert.
 
 ### Option 3: Deployment Tools (Dockge / Portainer) 🚀
 
@@ -70,6 +75,7 @@ Perfekt für Homeserver oder einfache Updates.
         volumes:
           - ./data:/data
           - ./uploads:/app/static/uploads
+          - ./instance_keys:/app/instance
         environment:
           - DATABASE_URL=sqlite:////data/l8testudy.db
           - SECRET_KEY=ein-sicheres-passwort-hier-einfuegen
@@ -78,9 +84,9 @@ Perfekt für Homeserver oder einfache Updates.
 3.  Starte den Stack. Der Container wird **direkt von GitHub** gebaut.
 4.  Für Updates einfach im Tool auf "Update" / "Rebuild" klicken.
 
-> **Automatische Datenbank-Initialisierung**: Die Datenbank und alle benötigten Tabellen werden beim ersten Start automatisch erstellt. Du musst nichts manuell einrichten!
+> **Automatische Datenbank-Initialisierung**: Die Datenbank und alle benötigten Tabellen (inkl. Fächer und Benutzer) werden beim ersten Start automatisch erstellt.
 
-> **Automatische Migration**: Bei Updates werden neue Datenbank-Tabellen automatisch hinzugefügt. Deine Daten bleiben erhalten!
+> **Automatische Migration**: Bei Updates werden neue Datenbank-Tabellen automatisch hinzugefügt (z.B. neue Fächer-Tabelle).
 
 > **Standard-Admin-Account**: Beim ersten Start wird automatisch ein Admin-Account erstellt:
 > - **Benutzername**: `admin`
@@ -93,13 +99,13 @@ Wenn du nach einem Update Probleme hast (z.B. 400 Fehler):
 1. Container neu starten - die Migration läuft automatisch
 2. Falls das nicht hilft: Siehe [MIGRATION.md](MIGRATION.md) für detaillierte Anweisungen
 
-
 ## ⚙️ Konfiguration
 
 Erstelle optional eine `.env` Datei (bei lokaler Nutzung) oder setze Umgebungsvariablen in Docker:
 
 *   `SECRET_KEY`: Ein zufälliger Schlüssel zur Absicherung von Sessions (WICHTIG für Produktion!).
 *   `DATABASE_URL`: Pfad zur Datenbank (Standard: SQLite).
+*   `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY`: Optional, falls manuelle Keys gewünscht (sonst automatisch generiert).
 
 ## 🔐 Login
 
@@ -130,3 +136,4 @@ python create_admin.py DeinName DeinPasswort
 
 1.  Öffne die Seite auf deinem Smartphone oder Tablet (Chromium-Browser empfohlen für Android, Safari für iOS).
 2.  Wähle im Menü "Zum Startbildschirm hinzufügen" oder "Installieren".
+
