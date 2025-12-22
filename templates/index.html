@@ -462,11 +462,14 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             color: var(--text-sec);
             text-decoration: none;
             font-size: 11px;
             font-weight: 500;
             cursor: pointer;
+            flex: 1;
+            height: 100%;
         }
 
         .nav-link.active {
@@ -667,6 +670,17 @@
             background: rgba(0, 113, 227, 0.1);
         }
 
+        .calendar-day.has-event {
+            background: rgba(0, 113, 227, 0.08);
+            /* Light accent background */
+            font-weight: 600;
+        }
+
+        /* If today AND has event, make it slightly stronger or merge */
+        .calendar-day.today.has-event {
+            background: rgba(0, 113, 227, 0.15);
+        }
+
         .event-dot {
             width: 4px;
             height: 4px;
@@ -857,6 +871,7 @@
                 gap: 6px;
                 transition: all 0.2s ease;
                 background: transparent !important;
+                flex: none;
             }
 
             .side-nav .nav-link span {
@@ -976,12 +991,12 @@
         let selectedDate = new Date();
         let viewDate = new Date();
         let isSearchActive = false;
-        let isAdmin = {{ 'true' if user.is_admin else 'false' }};
+        let isAdmin = "{{ 'true' if user.is_admin else 'false' }}" === 'true';
         window.currentUserId = Number("{{ user.id }}");
         window.currentUser = {
             name: "{{ user.username }}",
             email: "{{ user.username }}@l8testudy.app",
-            darkMode: {{ 'true' if user.dark_mode else 'false' }} 
+            darkMode: "{{ 'true' if user.dark_mode else 'false' }}" === 'true'
         };
         let currentTaskTab = 'open';
         let cachedTasks = [];
@@ -1651,8 +1666,9 @@
                 const dateStr = dayDate.toISOString().split('T')[0];
                 const dayEvents = events.filter(e => e.date === dateStr);
                 const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
-                const dotHtml = dayEvents.length > 0 ? `<div class="event-dot"></div>` : '';
-                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotHtml}</div>`;
+                const hasEvent = dayEvents.length > 0;
+                const dotHtml = hasEvent ? `<div class="event-dot"></div>` : '';
+                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasEvent ? 'has-event' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotHtml}</div>`;
             }
         }
 
