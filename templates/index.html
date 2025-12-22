@@ -2480,6 +2480,67 @@
             lucide.createIcons();
         }
 
+        /* --- SWIPE NAVIGATION --- */
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe(e.target);
+        }, { passive: true });
+
+        function handleSwipe(target) {
+            // Prevent if sheet is open
+            if (document.getElementById('sheet-overlay').classList.contains('active')) return;
+
+            // Prevent if interacting with horizontally scrollable elements
+            let el = target;
+            while (el && el !== document.body) {
+                if (el.scrollWidth > el.clientWidth) {
+                    const style = window.getComputedStyle(el);
+                    if (style.overflowX === 'auto' || style.overflowX === 'scroll') return;
+                }
+                el = el.parentElement;
+            }
+
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+            const threshold = 60; // minimum distance
+
+            // Check if horizontal swipe and more horizontal than vertical
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
+                const views = ['home', 'tasks', 'calendar', 'grades'];
+                const titles = ['Home', 'Aufgaben', 'Plan', 'Noten'];
+                const idx = views.indexOf(currentView);
+
+                if (idx === -1) return; // Not in main flow
+
+                if (diffX < 0) {
+                    // Swipe Left -> Next (Move content to left)
+                    if (idx < views.length - 1) {
+                        const nextView = views[idx + 1];
+                        const navLink = document.querySelector(`.nav-link[onclick*="'${nextView}'"]`);
+                        navigate(nextView, navLink, titles[idx + 1]);
+                    }
+                } else {
+                    // Swipe Right -> Previous (Move content to right)
+                    if (idx > 0) {
+                        const prevView = views[idx - 1];
+                        const navLink = document.querySelector(`.nav-link[onclick*="'${prevView}'"]`);
+                        navigate(prevView, navLink, titles[idx - 1]);
+                    }
+                }
+            }
+        }
+
         window.onload = () => {
             const path = window.location.pathname;
             if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], 'Aufgaben');
