@@ -2483,25 +2483,39 @@
         /* --- SWIPE NAVIGATION --- */
         let touchStartX = 0;
         let touchStartY = 0;
-        let touchEndX = 0;
-        let touchEndY = 0;
 
+        // Touch
         document.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
         }, { passive: true });
 
         document.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            touchEndY = e.changedTouches[0].screenY;
-            handleSwipe(e.target);
+            handleSwipe(touchStartX, touchStartY, e.changedTouches[0].screenX, e.changedTouches[0].screenY, e.target);
         }, { passive: true });
 
-        function handleSwipe(target) {
+        // Mouse (for desktop testing)
+        let mouseStartX = 0;
+        let mouseStartY = 0;
+        let isMouseDown = false;
+
+        document.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            mouseStartX = e.clientX; // Mouse uses clientX, Touch uses screenX usually but consistency matters. Let's use clientX for mouse.
+            mouseStartY = e.clientY;
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (!isMouseDown) return;
+            isMouseDown = false;
+            handleSwipe(mouseStartX, mouseStartY, e.clientX, e.clientY, e.target);
+        });
+
+        function handleSwipe(startX, startY, endX, endY, target) {
             // Prevent if sheet is open
             if (document.getElementById('sheet-overlay').classList.contains('active')) return;
 
-            // Prevent if interacting with horizontally scrollable elements
+            // Check scrollable
             let el = target;
             while (el && el !== document.body) {
                 if (el.scrollWidth > el.clientWidth) {
@@ -2511,32 +2525,30 @@
                 el = el.parentElement;
             }
 
-            const diffX = touchEndX - touchStartX;
-            const diffY = touchEndY - touchStartY;
-            const threshold = 60; // minimum distance
+            const diffX = endX - startX;
+            const diffY = endY - startY;
+            const threshold = 50; // Lower threshold
 
-            // Check if horizontal swipe and more horizontal than vertical
+            // Check horizontal dominance and threshold
             if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
                 const views = ['home', 'tasks', 'calendar', 'grades'];
                 const titles = ['Home', 'Aufgaben', 'Plan', 'Noten'];
                 const idx = views.indexOf(currentView);
 
-                if (idx === -1) return; // Not in main flow
+                if (idx === -1) return;
 
+                let nextIdx = -1;
                 if (diffX < 0) {
-                    // Swipe Left -> Next (Move content to left)
-                    if (idx < views.length - 1) {
-                        const nextView = views[idx + 1];
-                        const navLink = document.querySelector(`.nav-link[onclick*="'${nextView}'"]`);
-                        navigate(nextView, navLink, titles[idx + 1]);
-                    }
+                    // Swipe Left -> Next
+                    if (idx < views.length - 1) nextIdx = idx + 1;
                 } else {
-                    // Swipe Right -> Previous (Move content to right)
-                    if (idx > 0) {
-                        const prevView = views[idx - 1];
-                        const navLink = document.querySelector(`.nav-link[onclick*="'${prevView}'"]`);
-                        navigate(prevView, navLink, titles[idx - 1]);
-                    }
+                    // Swipe Right -> Previous
+                    if (idx > 0) nextIdx = idx - 1;
+                }
+
+                if (nextIdx !== -1) {
+                    // Navigate
+                    navigate(views[nextIdx], null, titles[nextIdx]);
                 }
             }
         }
