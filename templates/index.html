@@ -991,9 +991,10 @@
             else if (view === 'home') renderHome();
             else if (view === 'grades') renderGrades();
             else if (view === 'settings') renderSettings();
+            else if (view === 'account') renderAccountHub();
 
             const fab = document.getElementById('main-fab');
-            if (view !== 'home' && view !== 'settings') fab.classList.add('visible');
+            if (view !== 'home' && view !== 'settings' && view !== 'account' && !view.startsWith('sub_')) fab.classList.add('visible');
             else fab.classList.remove('visible');
             lucide.createIcons();
             closeSheet();
@@ -2337,16 +2338,10 @@
             } catch (e) { alert('Fehler'); }
         }
 
+
         /* --- NAVIGATION HELPERS --- */
         function openAccountMenu() {
-            // Manually handle navigation since Profile isn't a bottom tab
-            previousView = currentView;
-            currentView = 'account';
-
-            // Uncheck all bottom tabs
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
-            renderAccountHub();
+            navigate('account', null, 'Account');
         }
 
 
