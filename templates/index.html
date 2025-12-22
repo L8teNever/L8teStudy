@@ -1611,57 +1611,7 @@
             if (currentView !== 'account') navigate('account', document.querySelector('.profile-btn'), 'Account');
         }
 
-        function renderAccountHub() {
-            const user = window.currentUser || { name: 'User', email: 'user@example.com' };
-            document.getElementById('app-container').innerHTML = `
-                <div class="floating-card" style="text-align:center; padding:30px 20px;">
-                    <div style="width:80px; height:80px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; margin:0 auto 15px auto;">
-                        <i data-lucide="user" style="width:40px; height:40px;"></i>
-                    </div>
-                    <h2 style="margin:0; font-size:22px;">${user.name}</h2>
-                    <p class="item-sub">${user.email}</p>
-                </div>
-                
-                <div class="floating-card">
-                    <div class="account-item" onclick="renderSettingsPage()">
-                        <div class="account-item-icon"><i data-lucide="settings"></i></div>
-                        <div class="account-item-text">Einstellungen</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                    ${isAdmin ? `
-                    <div class="account-item" onclick="renderUserManagement()">
-                        <div class="account-item-icon"><i data-lucide="users"></i></div>
-                        <div class="account-item-text">Benutzerverwaltung</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>` : ''}
-                    <div class="account-item" onclick="window.location.href='mailto:support@l8testudy.app?subject=Bug Report'">
-                        <div class="account-item-icon"><i data-lucide="bug"></i></div>
-                        <div class="account-item-text">Bug melden</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                </div>
 
-                ${deferredPrompt ? `
-                <div class="floating-card" style="background: var(--accent); color: white; border: none;" onclick="installApp()">
-                    <div class="account-item" style="border:none;">
-                        <div class="account-item-icon" style="background:rgba(255,255,255,0.2); color:white;"><i data-lucide="download"></i></div>
-                        <div class="account-item-text" style="color:white; font-weight:700;">App installieren</div>
-                    </div>
-                </div>` : ''}
-
-                <div class="floating-card">
-                    <div class="account-item" onclick="location.href='/logout'">
-                        <div class="account-item-icon" style="color:var(--danger); background:rgba(255,59,48,0.1)"><i data-lucide="log-out"></i></div>
-                        <div class="account-item-text" style="color:var(--danger)">Abmelden</div>
-                    </div>
-                </div>
-                <p class="item-sub" style="text-align:center;">L8teStudy v{{ version }}</p>
-            `;
-            // Update header title
-            document.getElementById('current-page-title').innerText = 'Account';
-            document.getElementById('header-back-btn').style.display = 'none'; // Top level
-            lucide.createIcons();
-        }
 
         // Sub-page: Settings
         async function renderSettingsPage() {
