@@ -2026,7 +2026,12 @@
             currentView = 'sub_users';
             document.getElementById('current-page-title').innerText = 'Benutzer';
             document.getElementById('header-back-btn').style.display = 'block';
-            document.getElementById('header-back-btn').onclick = () => { renderAccountHub(); currentView = 'account'; document.getElementById('header-back-btn').style.display = 'none'; };
+            document.getElementById('header-back-btn').onclick = () => {
+                renderAccountHub();
+                currentView = 'account';
+                document.getElementById('header-back-btn').style.display = 'none';
+                document.getElementById('main-fab').classList.remove('visible');
+            };
 
             document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Benutzer...</div>`;
 
@@ -2050,8 +2055,9 @@
 
                 document.getElementById('app-container').innerHTML = `
                     <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${listHtml}</div>
-                    <button class="fab visible" onclick="openCreateUserMenu()" style="position:fixed; bottom:115px; z-index:1100;"><i data-lucide="plus"></i></button>
                 `;
+                document.getElementById('main-fab').classList.add('visible');
+                lucide.createIcons();
                 lucide.createIcons();
             } catch (e) {
                 console.error(e);
@@ -2254,6 +2260,10 @@
         }
 
         function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
+            if (currentView === 'sub_users') {
+                openCreateUserMenu();
+                return;
+            }
             let type = editType || (currentView === 'tasks' ? "Aufgabe" : (currentView === 'calendar' ? "Termin" : "Note"));
 
             // Fix date parsing
