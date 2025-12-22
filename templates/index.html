@@ -168,15 +168,61 @@
             }
         }
 
-        @keyframes fadeIn {
+        @keyframes slideOutLeft {
+            to {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+        }
+
+        @keyframes slideOutRight {
+            to {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+        }
+
+        @keyframes slideInRight {
             from {
                 opacity: 0;
-                transform: translateX(-5px);
+                transform: translateX(20px);
             }
 
             to {
                 opacity: 1;
                 transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
             }
         }
 
@@ -966,38 +1012,76 @@
         }
 
         function navigate(view, el, title) {
-            previousView = (currentView === 'settings' || currentView.startsWith('sub_')) ? previousView : currentView;
-            currentView = view;
-            isSearchActive = false;
-            document.getElementById('header-back-btn').style.display = (view === 'settings' || view.startsWith('sub_')) ? 'block' : 'none';
-            const headerTitle = document.getElementById('current-page-title');
-            headerTitle.innerText = title;
-            document.querySelectorAll('.nav-link').forEach(n => {
-                n.classList.remove('active');
-                if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${view}'`)) {
-                    n.classList.add('active');
+            if (view === currentView) return;
+
+            // Determine Animation Direction
+            const views = ['home', 'tasks', 'calendar', 'grades'];
+            const oldIdx = views.indexOf(currentView);
+            const newIdx = views.indexOf(view);
+
+            let exitAnim = 'fadeOut';
+            let enterAnim = 'fadeIn';
+
+            if (oldIdx !== -1 && newIdx !== -1) {
+                if (newIdx > oldIdx) { // Moving Right
+                    exitAnim = 'slideOutLeft'; enterAnim = 'slideInRight';
+                } else { // Moving Left
+                    exitAnim = 'slideOutRight'; enterAnim = 'slideInLeft';
                 }
-            });
+            } else if (view === 'settings' || view === 'account' || view.startsWith('sub_')) {
+                exitAnim = 'slideOutLeft'; enterAnim = 'slideInRight';
+            } else if (currentView === 'settings' || currentView === 'account' || currentView.startsWith('sub_')) {
+                exitAnim = 'slideOutRight'; enterAnim = 'slideInLeft';
+            }
 
-            // Update URL
-            let path = '/';
-            if (view === 'tasks') path = '/tasks';
-            else if (view === 'calendar') path = '/calendar';
-            else if (view === 'grades') path = '/grades';
-            window.history.replaceState({}, '', path);
+            const container = document.getElementById('app-container');
+            container.style.animation = `${exitAnim} 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
-            if (view === 'tasks') renderTasks();
-            else if (view === 'calendar') renderCalendar();
-            else if (view === 'home') renderHome();
-            else if (view === 'grades') renderGrades();
-            else if (view === 'settings') renderSettings();
-            else if (view === 'account') renderAccountHub();
+            setTimeout(() => {
+                previousView = (currentView === 'settings' || currentView.startsWith('sub_')) ? previousView : currentView;
+                currentView = view;
+                isSearchActive = false;
 
-            const fab = document.getElementById('main-fab');
-            if (view !== 'home' && view !== 'settings' && view !== 'account' && !view.startsWith('sub_')) fab.classList.add('visible');
-            else fab.classList.remove('visible');
-            lucide.createIcons();
-            closeSheet();
+                document.getElementById('header-back-btn').style.display = (view === 'settings' || view.startsWith('sub_')) ? 'block' : 'none';
+                const headerTitle = document.getElementById('current-page-title');
+                headerTitle.innerText = title;
+
+                document.querySelectorAll('.nav-link').forEach(n => {
+                    n.classList.remove('active');
+                    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${view}'`)) {
+                        n.classList.add('active');
+                    }
+                });
+
+                // Update URL
+                let path = '/';
+                if (view === 'tasks') path = '/tasks';
+                else if (view === 'calendar') path = '/calendar';
+                else if (view === 'grades') path = '/grades';
+                window.history.replaceState({}, '', path);
+
+                // Render
+                if (view === 'tasks') renderTasks();
+                else if (view === 'calendar') renderCalendar();
+                else if (view === 'home') renderHome();
+                else if (view === 'grades') renderGrades();
+                else if (view === 'settings') renderSettingsPage();
+                else if (view === 'account') renderAccountHub();
+                else if (view === 'sub_admin') renderAdminContent();
+
+                const fab = document.getElementById('main-fab');
+                if (view !== 'home' && view !== 'settings' && view !== 'account' && !view.startsWith('sub_')) fab.classList.add('visible');
+                else fab.classList.remove('visible');
+                lucide.createIcons();
+                closeSheet();
+
+                // Enter Animation
+                window.scrollTo(0, 0);
+                container.style.animation = 'none';
+                void container.offsetWidth; // Reflow
+                container.style.animation = `${enterAnim} 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+
+            }, 200);
         }
 
         /* --- API LOGIC INTEGRATED --- */
@@ -1346,7 +1430,7 @@
                 </div>
                 
                 <div class="floating-card">
-                    <div class="account-item" onclick="renderSettingsPage()">
+                    <div class="account-item" onclick="navigate('settings', null, 'Einstellungen')">
                         <div class="account-item-icon"><i data-lucide="settings"></i></div>
                         <div class="account-item-text">Einstellungen</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
@@ -2463,6 +2547,9 @@
 
         function renderAdminMenu() {
             navigate('sub_admin', null, 'Admin Einstellungen');
+        }
+
+        function renderAdminContent() {
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
                     <div class="account-item" onclick="renderUserManagement()">
