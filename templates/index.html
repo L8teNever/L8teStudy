@@ -1351,9 +1351,15 @@
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     ${isAdmin ? `
+
                     <div class="account-item" onclick="renderUserManagement()">
                         <div class="account-item-icon"><i data-lucide="users"></i></div>
                         <div class="account-item-text">Benutzerverwaltung</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    <div class="account-item" onclick="renderSubjectManagement()">
+                        <div class="account-item-icon"><i data-lucide="book-open"></i></div>
+                        <div class="account-item-text">Fächer verwalten</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>` : ''}
                     <div class="account-item" onclick="window.location.href='mailto:support@l8testudy.app?subject=Bug Report'">
@@ -2160,16 +2166,8 @@
                 ${(type === 'Aufgabe' || type === 'Note') ? `
                     <div class="custom-picker-trigger" onclick="toggleOptionList('subject-list')"><span id="selected-subject-display">${selectedSubject || 'Fach wählen...'}</span><i data-lucide="chevron-down" style="width:18px"></i></div>
                     <div class="picker-options" id="subject-list">
-                        <div class="picker-option" onclick="selectSubject('Mathematik')">Mathematik</div>
-                        <div class="picker-option" onclick="selectSubject('Deutsch')">Deutsch</div>
-                        <div class="picker-option" onclick="selectSubject('Englisch')">Englisch</div>
-                        <div class="picker-option" onclick="selectSubject('Physik')">Physik</div>
-                        <div class="picker-option" onclick="selectSubject('Biologie')">Biologie</div>
-                        <div class="picker-option" onclick="selectSubject('Geschichte')">Geschichte</div>
-                        <div class="picker-option" onclick="selectSubject('Kunst')">Kunst</div>
-                        <div class="picker-option" onclick="selectSubject('Sport')">Sport</div>
-                        <div class="picker-option" onclick="selectSubject('Chemie')">Chemie</div>
-                        <div class="picker-option" onclick="selectSubject('Religion')">Religion</div>
+                        <!-- Loaded dynamically -->
+                    </div>
                     </div>
                 ` : ''}
                 <input type="text" id="input-title" class="ios-input" placeholder="Titel" value="${titleVal}">
@@ -2224,6 +2222,23 @@
                 <button class="ios-btn btn-sec" onclick="closeSheet()">Abbrechen</button>`;
             document.getElementById('sheet-overlay').classList.add('active');
             lucide.createIcons();
+
+            // Load subjects if subject list exists
+            const subjectList = document.getElementById('subject-list');
+            if (subjectList) {
+                fetch('/api/subjects')
+                    .then(res => res.json())
+                    .then(data => {
+                        subjectList.innerHTML = data.map(s =>
+                            `<div class="picker-option" onclick="selectSubject('${s.name}')">${s.name}</div>`
+                        ).join('');
+                    })
+                    .catch(e => {
+                        console.error("Subject load error", e);
+                        // Fallback
+                        subjectList.innerHTML = '<div style="padding:10px; color:var(--text-sec); text-align:center;">Laden fehlgeschlagen</div>';
+                    });
+            }
         }
 
         let imagesToDelete = new Set();
@@ -2409,6 +2424,79 @@
 
                 grid.innerHTML += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" onclick="event.stopPropagation(); selectPickerDate(${i})">${i}</div>`;
             }
+        }
+
+
+        async function renderSubjectManagement() {
+            navigate('sub_subjects', null, 'Fächer verwalten');
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Fächer...</div>`;
+
+            try {
+                const res = await fetch('/api/subjects');
+                const subjects = await res.json();
+
+                const listHtml = subjects.map(s => `
+                    <div class="list-item">
+                        <div class="item-content">
+                            <div class="item-title">${s.name}</div>
+                        </div>
+                        <div style="color:var(--danger); cursor:pointer; padding:5px;" onclick="deleteSubject(${s.id}, '${s.name}')">
+                            <i data-lucide="trash-2" style="width:18px;"></i>
+                        </div>
+                    </div>`).join('');
+
+                document.getElementById('app-container').innerHTML = `
+                    <div class="floating-card" style="padding: 20px;">
+                        <h3 style="margin-top:0">Neues Fach</h3>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="new-subject-name" class="ios-input" placeholder="Fachname (z.B. Informatik)" style="margin:0;">
+                            <button class="ios-btn" style="width:auto; padding:0 20px;" onclick="addSubject()">Hinzufügen</button>
+                        </div>
+                    </div>
+
+                    <h3 style="margin:20px 0 10px 5px; font-size:18px;">Vorhandene Fächer</h3>
+                    <div class="floating-card" style="padding:0 20px;">
+                        ${listHtml || '<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Fächer gefunden.</div>'}
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                alert('Fehler beim Laden der Fächer');
+            }
+        }
+
+        async function addSubject() {
+            const name = document.getElementById('new-subject-name').value.trim();
+            if (!name) return;
+
+            try {
+                const res = await fetch('/api/subjects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    renderSubjectManagement();
+                } else {
+                    alert(data.message || 'Fehler beim Hinzufügen');
+                }
+            } catch (e) { console.error(e); alert('Fehler'); }
+        }
+
+        async function deleteSubject(id, name) {
+            if (!confirm(`Fach "${name}" wirklich löschen? Dies könnte Auswirkungen auf bestehende Aufgaben haben.`)) return;
+
+            try {
+                const res = await fetch(`/api/subjects/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    renderSubjectManagement();
+                } else {
+                    alert('Fehler beim Löschen');
+                }
+            } catch (e) { console.error(e); alert('Fehler'); }
         }
 
         window.onload = () => {

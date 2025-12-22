@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, PushSubscription, db
+from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, PushSubscription, Subject, db
 from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
 import os
@@ -624,6 +624,48 @@ def send_test_notification():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 400
+
+# --- Subject Routes ---
+
+@api_bp.route('/subjects', methods=['GET'])
+@login_required
+def get_subjects():
+    subjects = Subject.query.order_by(Subject.name).all()
+    # If empty (shouldn't happen due to migration), return defaults
+    if not subjects:
+       defaults = ['Mathematik', 'Deutsch', 'Englisch', 'Physik', 'Biologie', 'Geschichte', 'Kunst', 'Sport', 'Chemie', 'Religion']
+       return jsonify([{'id': i, 'name': n} for i, n in enumerate(defaults)])
+       
+    return jsonify([{'id': s.id, 'name': s.name} for s in subjects])
+
+@api_bp.route('/subjects', methods=['POST'])
+@login_required
+def add_subject():
+    if not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    data = request.json
+    name = data.get('name')
+    if not name:
+        return jsonify({'success': False, 'message': 'Name required'}), 400
+    
+    if Subject.query.filter_by(name=name).first():
+         return jsonify({'success': False, 'message': 'Subject exists'}), 400
+
+    db.session.add(Subject(name=name))
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/subjects/<int:id>', methods=['DELETE'])
+@login_required
+def delete_subject(id):
+    if not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    subject = Subject.query.get(id)
+    if subject:
+        db.session.delete(subject)
+        db.session.commit()
+    return jsonify({'success': True})
 
 
 
