@@ -2200,7 +2200,11 @@
                         return '';
                     })() : ''}
                     <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">Bilder hinzufügen</label>
-                    <input type="file" id="input-images" class="ios-input" multiple accept="image/*" style="padding:10px;">
+                    <input type="file" id="input-images" class="ios-input" multiple accept="image/*" style="display:none;" onchange="updateFileCount(this)">
+                    <div class="ios-btn btn-sec" onclick="document.getElementById('input-images').click()" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:15px; cursor:pointer;">
+                        <i data-lucide="image-plus" style="width:20px;"></i>
+                        <span id="file-count-text">Bilder auswählen...</span>
+                    </div>
                 ` : ''}
                 ${type === 'Note' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="Note" value="${valVal}">` : ''}
                 <div class="custom-picker-trigger" onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span id="selected-date-display">${selectedDate.toLocaleDateString('de-DE')}</span><i data-lucide="calendar" style="width:18px"></i></div>
@@ -2331,6 +2335,18 @@
         function closeSheet() { document.getElementById('sheet-overlay').classList.remove('active'); }
 
         /* --- PICKER HELPERS --- */
+        function updateFileCount(input) {
+            const count = input.files ? input.files.length : 0;
+            const textEl = document.getElementById('file-count-text');
+            if (count > 0) {
+                textEl.innerText = `${count} Bild${count > 1 ? 'er' : ''} ausgewählt`;
+                textEl.style.fontWeight = '700';
+            } else {
+                textEl.innerText = 'Bilder auswählen...';
+                textEl.style.fontWeight = 'normal';
+            }
+        }
+
         function toggleOptionList(id) {
             const el = document.getElementById(id);
             const isVisible = el.style.display === 'block';
