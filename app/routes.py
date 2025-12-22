@@ -615,5 +615,15 @@ def get_vapid_key():
     from app.notifications import VAPID_PUBLIC_KEY
     return jsonify({'publicKey': VAPID_PUBLIC_KEY})
 
+@api_bp.route('/notifications/test', methods=['POST'])
+@login_required
+def send_test_notification():
+    from app.notifications import notify_user
+    try:
+        notify_user(current_user, "Test-Benachrichtigung", "Dies ist ein Test! Wenn du das liest, funktioniert es.", url='/settings/notifications')
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
 
 
