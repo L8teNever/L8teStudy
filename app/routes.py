@@ -594,10 +594,15 @@ def update_notification_settings():
         settings = NotificationSetting(user_id=current_user.id)
         db.session.add(settings)
     
-    settings.notify_new_task = bool(data.get('notify_new_task', True))
-    settings.notify_new_event = bool(data.get('notify_new_event', True))
-    settings.reminder_homework = data.get('reminder_homework') # "HH:MM" or ""
-    settings.reminder_exam = data.get('reminder_exam')
+    if 'notify_new_task' in data:
+        settings.notify_new_task = bool(data['notify_new_task'])
+    if 'notify_new_event' in data:
+        settings.notify_new_event = bool(data['notify_new_event'])
+    
+    if 'reminder_homework' in data:
+        settings.reminder_homework = data['reminder_homework']
+    if 'reminder_exam' in data:
+        settings.reminder_exam = data['reminder_exam']
     
     if settings.reminder_homework == "": settings.reminder_homework = None
     if settings.reminder_exam == "": settings.reminder_exam = None

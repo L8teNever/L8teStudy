@@ -1705,22 +1705,15 @@
                 const res = await fetch('/api/settings/notifications');
                 const settings = await res.json();
 
-                // Get Push Status
-                let isSubscribed = false;
-                if ('serviceWorker' in navigator && 'PushManager' in window) {
-                    const reg = await navigator.serviceWorker.ready;
-                    const sub = await reg.pushManager.getSubscription();
-                    isSubscribed = !!sub;
-                }
-
+                // Render UI immediately
                 document.getElementById('app-container').innerHTML = `
                    <div class="floating-card">
                         <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Browser Push</h4>
-                        <div class="account-item" onclick="${isSubscribed ? '' : 'subscribePush()'}">
+                        <div class="account-item" id="push-row" onclick="subscribePush()">
                             <div class="account-item-text">Push erlauben</div>
-                            <div class="ios-toggle ${isSubscribed ? 'active' : ''}" style="${isSubscribed ? 'opacity:0.6' : ''}"><div class="ios-toggle-knob"></div></div>
+                            <div class="ios-toggle" id="push-toggle"><div class="ios-toggle-knob"></div></div>
                         </div>
-                        <p class="item-sub" style="margin-top:10px; font-size:13px;">${isSubscribed ? 'Benachrichtigungen sind aktiviert.' : 'Tippe, um Benachrichtigungen zu aktivieren.'}</p>
+                        <p class="item-sub" id="push-status-text" style="margin-top:10px; font-size:13px;">Tippe, um Benachrichtigungen zu aktivieren.</p>
                    </div>
                    
                    <div class="floating-card">
@@ -1751,6 +1744,25 @@
                    </div>
                 `;
                 lucide.createIcons();
+
+                // Check Push Status Async
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    navigator.serviceWorker.ready.then(async reg => {
+                        const sub = await reg.pushManager.getSubscription();
+                        if (sub) {
+                            const row = document.getElementById('push-row');
+                            const toggle = document.getElementById('push-toggle');
+                            const text = document.getElementById('push-status-text');
+                            if (row && toggle && text) {
+                                row.onclick = null; // Already subscribed
+                                toggle.classList.add('active');
+                                toggle.style.opacity = '0.6';
+                                text.innerText = 'Benachrichtigungen sind aktiviert.';
+                            }
+                        }
+                    }).catch(e => console.log('SW check failed', e));
+                }
+
             } catch (e) {
                 console.error(e);
                 alert('Fehler beim Laden');
