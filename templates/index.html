@@ -361,30 +361,25 @@
             background: var(--accent);
             color: white;
             border-radius: 20px;
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: 0 10px 25px rgba(0, 113, 227, 0.3);
             border: none;
             z-index: 1100;
-            transition: transform 0.2s;
+
+            /* Hidden State */
+            transform: scale(0) rotate(-45deg);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .fab.visible {
-            display: flex;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            from {
-                transform: scale(0) rotate(-45deg);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1) rotate(0);
-                opacity: 1;
-            }
+            /* Visible State */
+            transform: scale(1) rotate(0);
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .side-nav {
