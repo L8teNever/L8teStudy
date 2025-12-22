@@ -1035,7 +1035,7 @@
             }
 
             const container = document.getElementById('app-container');
-            container.style.animation = `${exitAnim} 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+            container.style.animation = `${exitAnim} 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
             setTimeout(() => {
                 previousView = (currentView === 'settings' || currentView.startsWith('sub_')) ? previousView : currentView;
@@ -1079,9 +1079,9 @@
                 window.scrollTo(0, 0);
                 container.style.animation = 'none';
                 void container.offsetWidth; // Reflow
-                container.style.animation = `${enterAnim} 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+                container.style.animation = `${enterAnim} 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
-            }, 200);
+            }, 150);
         }
 
         /* --- API LOGIC INTEGRATED --- */
