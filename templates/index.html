@@ -2649,7 +2649,7 @@
                 ${actionBtns}
                 
                 <div style="margin-top: 15px;">
-                    <button class="ios-btn" style="background:var(--text-main); color:var(--card-bg); font-weight:700;" onclick="closeSheet()">Fertig</button>
+                    <button class="ios-btn" style="background:var(--text-main); color:var(--card-bg); font-weight:700;" onclick="closeSheet()">${t('done')}</button>
                 </div>
             `;
                 document.getElementById('sheet-overlay').classList.add('active');
@@ -3160,10 +3160,13 @@
 
             window.onload = () => {
                 const path = window.location.pathname;
+                if (window.currentUser && window.currentUser.language) {
+                    localStorage.setItem('l8te_lang', window.currentUser.language);
+                }
                 updateAppLanguage(); // Initialize translations
-                if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], 'Aufgaben');
-                else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], 'Plan');
-                else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], 'Noten');
+                if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));
+                else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'));
+                else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
                 else renderHome();
             };
     </script>
