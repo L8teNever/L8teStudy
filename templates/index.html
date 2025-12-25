@@ -1142,6 +1142,10 @@
                     renderUserManagement();
                     return;
                 }
+                if (event.state.view === 'sub_subjects') {
+                    renderSubjectManagement();
+                    return;
+                }
 
                 // Find existing nav link for the view to pass element
                 const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
@@ -2153,6 +2157,11 @@
                         <div class="account-item-text">Benutzerverwaltung</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    <div class="account-item" onclick="renderSubjectManagement()">
+                        <div class="account-item-icon"><i data-lucide="book"></i></div>
+                        <div class="account-item-text">Fächer verwalten</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
                     <div class="account-item" onclick="renderActivityLog()">
                         <div class="account-item-icon"><i data-lucide="activity"></i></div>
                         <div class="account-item-text">Aktivitätsprotokoll</div>
@@ -2768,7 +2777,18 @@
 
 
         async function renderSubjectManagement() {
-            navigate('sub_subjects', null, 'Fächer verwalten');
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_subjects';
+            document.getElementById('current-page-title').innerText = 'Fächer';
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_subjects' }, '', null);
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+
             document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Fächer...</div>`;
 
             try {
@@ -2840,27 +2860,7 @@
         }
 
 
-        function renderAdminMenu() {
-            navigate('sub_admin', null, 'Admin Einstellungen');
-        }
 
-        function renderAdminContent() {
-            document.getElementById('app-container').innerHTML = `
-                <div class="floating-card">
-                    <div class="account-item" onclick="renderUserManagement()">
-                        <div class="account-item-icon"><i data-lucide="users"></i></div>
-                        <div class="account-item-text">Benutzerverwaltung</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                    <div class="account-item" onclick="renderSubjectManagement()">
-                        <div class="account-item-icon"><i data-lucide="book-open"></i></div>
-                        <div class="account-item-text">Fächer verwalten</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                </div>
-            `;
-            lucide.createIcons();
-        }
 
         /* --- SWIPE NAVIGATION --- */
         let touchStartX = 0;
