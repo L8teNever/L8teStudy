@@ -1374,10 +1374,10 @@
                 const container = document.getElementById('home-due-tasks');
                 if (!container) return; // Exit if user navigated away
                 if (dueTasks.length > 0) {
-                    const listHtml = dueTasks.map(t => `
-                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${t.title}', '${t.subject || ''}', '${t.due_date || ''}', null, '${t.description || ''}', ${t.id}, '${JSON.stringify(t.images || []).replace(/"/g, '&quot;')}')">
-                            <div class="check-circle" onclick="event.stopPropagation(); toggleTaskStatus(${t.id}, false, true)"><i data-lucide="circle" style="width:14px; opacity:0"></i></div>
-                            <div class="item-content"><div class="item-title">${t.title}</div><div class="item-sub">${t('due')}: ${t.due_date ? new Date(t.due_date).toLocaleDateString(locale) : t('no_date')}</div></div>
+                    const listHtml = dueTasks.map(task => `
+                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
+                            <div class="check-circle" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, false, true)"><i data-lucide="circle" style="width:14px; opacity:0"></i></div>
+                            <div class="item-content"><div class="item-title">${task.title}</div><div class="item-sub">${t('due')}: ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}</div></div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div>`).join('');
                     container.parentElement.style.background = "";
@@ -1433,18 +1433,19 @@
                     }
                     return;
                 }
-                const listHtml = filteredTasks.map(t => `
-                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${t.title}', '${t.subject || ''}', '${t.due_date || ''}', null, '${t.description || ''}', ${t.id}, '${JSON.stringify(t.images || []).replace(/"/g, '&quot;')}')">
-                        <div class="check-circle ${t.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${t.id}, ${t.is_done})">
-                            <i data-lucide="check" style="width:14px; opacity:${t.is_done ? 1 : 0}"></i>
+                const listHtml = filteredTasks.map(task => `
+                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
+                        <div class="check-circle ${task.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})">
+                            <i data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}"></i>
                         </div>
                         <div class="item-content">
-                            <div class="item-title">${t.title}</div>
-                            <div class="item-sub">${t.subject || 'Allgemein'} • ${t.due_date ? new Date(t.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
+                            <div class="item-title">${task.title}</div>
+                            <div class="item-sub">${task.subject || 'Allgemein'} • ${task.due_date ? new Date(task.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
                         </div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>`).join('');
-                listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}</div>`;
+                    </div > `).join('');
+                listContainer.innerHTML = `< div class="floating-card" style = "padding:0 24px" > ${ listHtml }</div > `;
                 lucide.createIcons();
 
                 // Re-attach search listener if active
@@ -1457,13 +1458,13 @@
                 }
             } catch (err) {
                 console.error(err);
-                document.getElementById('tasks-list-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">Fehler beim Laden.</div>`;
+                document.getElementById('tasks-list-container').innerHTML = `< div class="floating-card" style = "color:var(--danger)" > Fehler beim Laden.</div > `;
             }
         }
 
         async function toggleTaskStatus(id, currentStatus, refreshHome = false) {
             try {
-                const res = await fetch(`/api/tasks/${id}`, {
+                const res = await fetch(`/ api / tasks / ${ id } `, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ is_done: !currentStatus })
@@ -1477,8 +1478,8 @@
 
         async function renderCalendar(tab = 'termine') {
             const container = document.getElementById('app-container');
-            container.innerHTML = `<div class="controls-row"><div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">Termine</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">Monat</button></div></div>
-            <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">Lade Termine...</div>`;
+            container.innerHTML = `< div class="controls-row" > <div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">Termine</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">Monat</button></div></div >
+                    <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">Lade Termine...</div>`;
             lucide.createIcons();
 
             try {
@@ -1487,7 +1488,7 @@
                 if (tab === 'termine') {
                     const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
                     const listHtml = sortedEvents.map(e => `
-                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                        < div class="list-item" style = "padding: 18px 0;" onclick = "openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})" >
                              <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
                                 <i data-lucide="calendar" style="width:20px; height:20px;"></i>
                             </div>
@@ -1496,20 +1497,20 @@
                                 <div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
                             </div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                        </div>`).join('');
+                        </div > `).join('');
                     document.getElementById('calendar-content').innerHTML = listHtml ?
-                        `<div class="floating-card" style="padding:0 24px">${listHtml}</div>` :
-                        `<div class="floating-card" style="padding:40px; text-align:center"><p class="item-sub">Keine anstehenden Termine.</p></div>`;
+                        `< div class="floating-card" style = "padding:0 24px" > ${ listHtml }</div > ` :
+                        `< div class="floating-card" style = "padding:40px; text-align:center" > <p class="item-sub">Keine anstehenden Termine.</p></div > `;
                 } else {
                     document.getElementById('calendar-content').innerHTML = `
-                        <div class="floating-card">
+                    < div class="floating-card" >
                             <div class="calendar-header">
                                 <div style="padding:10px" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
                                 <span id="main-calendar-month-year" style="font-weight:700"></span>
                                 <div style="padding:10px" onclick="changeViewMonth(1)"><i data-lucide="chevron-right"></i></div>
                             </div>
                             <div class="calendar-days-grid" id="main-calendar-grid"></div>
-                        </div>`;
+                        </div > `;
                     updateMainCalendarGrid(events);
                 }
                 lucide.createIcons();
@@ -1522,7 +1523,7 @@
             if (!grid || !title) return;
             title.innerText = viewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
             grid.innerHTML = '';
-            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
+            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `< div class="day-label" > ${ d }</div > `);
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
             const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
             const offset = firstDay === 0 ? 6 : firstDay - 1;
@@ -1532,12 +1533,13 @@
                 const year = dayDate.getFullYear();
                 const month = String(dayDate.getMonth() + 1).padStart(2, '0');
                 const d = String(dayDate.getDate()).padStart(2, '0');
-                const dateStr = `${year}-${month}-${d}`;
+                const dateStr = `${ year } -${ month } -${ d } `;
                 const dayEvents = events.filter(e => e.date === dateStr);
                 const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
-                const dotHtml = dayEvents.length > 0 ? `<div class="event-dot"></div>` : '';
-                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotHtml}</div>`;
-            }
+                const dotHtml = dayEvents.length > 0 ? `< div class="event-dot" ></div > ` : '';
+                grid.innerHTML += `< div class="calendar-day ${isToday ? 'today' : ''}" onclick = "openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/" / g, '&quot;')
+            }')">${i}${dotHtml}</div>`;
+        }
         }
 
         function changeViewMonth(delta) { viewDate.setMonth(viewDate.getMonth() + delta); renderCalendar('monat'); }
@@ -1748,14 +1750,14 @@
                     return;
                 }
 
-                const listHtml = filteredTasks.map(t => `
-                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${t.title}', '${t.subject || ''}', '${t.due_date || ''}', null, '${t.description || ''}', ${t.id}, '${JSON.stringify(t.images || []).replace(/"/g, '&quot;')}')">
-                        <div class="check-circle ${t.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${t.id}, ${t.is_done})">
-                            <i data-lucide="check" style="width:14px; opacity:${t.is_done ? 1 : 0}"></i>
+                const listHtml = filteredTasks.map(task => `
+                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
+                        <div class="check-circle ${task.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})">
+                            <i data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}"></i>
                         </div>
                         <div class="item-content">
-                            <div class="item-title">${t.title}</div>
-                            <div class="item-sub">${t.subject || 'Allgemein'} • ${t.due_date ? new Date(t.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
+                            <div class="item-title">${task.title}</div>
+                            <div class="item-sub">${task.subject || 'Allgemein'} • ${task.due_date ? new Date(task.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
                         </div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>`).join('');
