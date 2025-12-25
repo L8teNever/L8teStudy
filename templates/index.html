@@ -1588,6 +1588,7 @@
         }
 
         let cachedEvents = [];
+        let cachedActivityLogs = [];
         let currentCalendarTab = 'termine';
 
         function toggleSearch(e, force) {
@@ -2185,30 +2186,54 @@
 
             document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
-            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Aktivitäten...</div>`;
+            document.getElementById('app-container').innerHTML = `
+                <div class="controls-row search-active" style="margin-bottom:10px;">
+                    <div class="search-bar">
+                        <i data-lucide="search"></i>
+                        <input type="text" class="search-input" placeholder="Suchen..." oninput="filterActivityLog()">
+                    </div>
+                </div>
+                <div id="activity-list-container">
+                    <div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Aktivitäten...</div>
+                </div>
+             `;
+            lucide.createIcons();
 
             try {
                 const res = await fetch('/api/admin/activity');
-                const logs = await res.json();
-
-                const listHtml = logs.map(l => `
-                    <div class="list-item" style="align-items:flex-start;">
-                        <div class="item-content">
-                            <div class="item-title" style="font-size:14px; font-weight:600;">${l.user}</div>
-                            <div class="item-sub" style="margin-top:2px;">${l.action}</div>
-                        </div>
-                        <div style="font-size:11px; color:var(--text-sec); white-space:nowrap;">${l.timestamp}</div>
-                    </div>
-                 `).join('');
-
-                document.getElementById('app-container').innerHTML = `
-                    <div class="floating-card" style="padding:0 24px; margin-bottom:40px;">
-                        ${listHtml || '<div style="padding:20px; text-align:center">Keine Aktivitäten.</div>'}
-                    </div>
-                 `;
+                cachedActivityLogs = await res.json();
+                renderActivityLogList(cachedActivityLogs);
             } catch (e) {
-                document.getElementById('app-container').innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">Fehler beim Laden.</div>`;
+                document.getElementById('activity-list-container').innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">Fehler beim Laden.</div>`;
             }
+        }
+
+        function renderActivityLogList(logs) {
+            const listHtml = logs.map(l => `
+                <div class="list-item" style="align-items:flex-start;">
+                    <div class="item-content">
+                        <div class="item-title" style="font-size:14px; font-weight:600;">${l.user}</div>
+                        <div class="item-sub" style="margin-top:2px;">${l.action}</div>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-sec); white-space:nowrap;">${l.timestamp}</div>
+                </div>
+             `).join('');
+
+            document.getElementById('activity-list-container').innerHTML = `
+                <div class="floating-card" style="padding:0 15px; margin-bottom:40px;">
+                    ${listHtml || '<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Aktivitäten gefunden.</div>'}
+                </div>
+             `;
+        }
+
+        function filterActivityLog() {
+            const term = document.querySelector('.search-input').value.toLowerCase();
+            const filtered = cachedActivityLogs.filter(l =>
+                l.user.toLowerCase().includes(term) ||
+                l.action.toLowerCase().includes(term) ||
+                l.timestamp.includes(term)
+            );
+            renderActivityLogList(filtered);
         }
 
         // Sub-page: User Management
