@@ -984,7 +984,7 @@
     </div>
 
     <script>
-        lucide.createIcons();
+        try { lucide.createIcons(); } catch (e) { console.warn('Lucide icons failed to load:', e); }
         let currentView = 'home';
         let previousView = 'home';
         let selectedSubject = null;
@@ -1028,7 +1028,11 @@
                 jan: "Jan", feb: "Feb", mar: "Mär", apr: "Apr", may: "Mai", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", oct: "Okt", nov: "Nov", dec: "Dez",
                 filter: "Filtern", by_user: "Nach Benutzer", by_action: "Nach Aktion", all: "Alle",
                 users: "Benutzer", new_user: "Neuer Benutzer", admin_rights: "Admin-Rechte", images: "Bilder",
-                msg_username: "Benutzername", msg_password: "Passwort", create: "Erstellen"
+                msg_username: "Benutzername", msg_password: "Passwort", create: "Erstellen",
+                morning: "Guten Morgen.", today_is: "Heute ist der", next_event: "Nächster Termin",
+                due_tasks: "Fällige Aufgaben", loading_tasks: "Lade Aufgaben...",
+                no_upcoming_events: "Keine anstehenden Termine.", today: "Heute", tomorrow: "Morgen",
+                no_date: "Kein Datum", due: "Fällig"
             },
             en: {
                 home: "Home", tasks: "Tasks", calendar: "Plan", grades: "Grades",
@@ -1053,7 +1057,11 @@
                 jan: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", may: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", oct: "Oct", nov: "Nov", dec: "Dec",
                 filter: "Filter", by_user: "By User", by_action: "By Action", all: "All",
                 users: "Users", new_user: "New User", admin_rights: "Admin Rights", images: "Images",
-                msg_username: "Username", msg_password: "Password", create: "Create"
+                msg_username: "Username", msg_password: "Password", create: "Create",
+                morning: "Good Morning.", today_is: "Today is", next_event: "Next Event",
+                due_tasks: "Due Tasks", loading_tasks: "Loading tasks...",
+                no_upcoming_events: "No upcoming events.", today: "Today", tomorrow: "Tomorrow",
+                no_date: "No Date", due: "Due"
             }
         };
 
@@ -1299,16 +1307,18 @@
         }
 
         async function renderHome() {
+            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
+            const locale = lang === 'en' ? 'en-US' : 'de-DE';
             const today = new Date();
-            const dateStr = today.toLocaleDateString('de-DE', { day: '2-digit', month: 'long' });
+            const dateStr = today.toLocaleDateString(locale, { day: '2-digit', month: 'long' });
 
             document.getElementById('app-container').innerHTML = `
-                <div class="floating-card"><h3 style="margin:0">Guten Morgen.</h3><p class="item-sub">Heute ist der ${dateStr}.</p></div>
+                <div class="floating-card"><h3 style="margin:0">${t('morning')}</h3><p class="item-sub">${t('today_is')} ${dateStr}.</p></div>
                 <div id="home-next-event"></div>
-                <div class="floating-card"><h4 style="margin:0 0 15px 0; font-size:17px;">Fällige Aufgaben</h4>
-                   <div id="home-due-tasks" style="padding:10px; color:var(--text-sec); text-align:center;">Lade Aufgaben...</div>
+                <div class="floating-card"><h4 style="margin:0 0 15px 0; font-size:17px;">${t('due_tasks')}</h4>
+                   <div id="home-due-tasks" style="padding:10px; color:var(--text-sec); text-align:center;">${t('loading_tasks')}</div>
                 </div>`;
-            lucide.createIcons();
+            try { lucide.createIcons(); } catch (e) { }
 
             // 1. Fetch Next Event
             try {
@@ -1323,13 +1333,13 @@
                     const dateObj = new Date(e.date);
                     const isTomorrow = new Date().getDate() + 1 === dateObj.getDate();
                     const isToday = new Date().getDate() === dateObj.getDate();
-                    let timeText = dateObj.toLocaleDateString('de-DE');
-                    if (isToday) timeText = 'Heute';
-                    if (isTomorrow) timeText = 'Morgen';
+                    let timeText = dateObj.toLocaleDateString(locale);
+                    if (isToday) timeText = t('today');
+                    if (isTomorrow) timeText = t('tomorrow');
 
                     document.getElementById('home-next-event').innerHTML = `
                         <div class="floating-card" style="padding: 20px 24px 10px 24px;">
-                            <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Nächster Termin</h4>
+                            <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('next_event')}</h4>
                             <div class="list-item" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
                                 <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
                                     <i data-lucide="calendar" style="width:18px; height:18px;"></i>
@@ -1337,12 +1347,12 @@
                                 <div class="item-content"><div class="item-title">${e.title}</div><div class="item-sub">${timeText}</div></div><i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                             </div>
                         </div>`;
-                    lucide.createIcons();
+                    try { lucide.createIcons(); } catch (e) { }
                 } else {
                     document.getElementById('home-next-event').innerHTML = `
-                        <div class="floating-card" onclick="navigate('calendar', document.querySelectorAll('.nav-link')[2], 'Plan')">
-                            <h4 style="margin:0 0 5px 0; font-size:17px; color:var(--accent);">Nächster Termin</h4>
-                            <p class="item-sub">Keine anstehenden Termine.</p>
+                        <div class="floating-card" onclick="navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'))">
+                            <h4 style="margin:0 0 5px 0; font-size:17px; color:var(--accent);">${t('next_event')}</h4>
+                            <p class="item-sub">${t('no_upcoming_events')}</p>
                         </div>`;
                 }
             } catch (e) { console.error(e); }
@@ -1358,17 +1368,17 @@
                     const listHtml = dueTasks.map(t => `
                         <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${t.title}', '${t.subject || ''}', '${t.due_date || ''}', null, '${t.description || ''}', ${t.id}, '${JSON.stringify(t.images || []).replace(/"/g, '&quot;')}')">
                             <div class="check-circle" onclick="event.stopPropagation(); toggleTaskStatus(${t.id}, false, true)"><i data-lucide="circle" style="width:14px; opacity:0"></i></div>
-                            <div class="item-content"><div class="item-title">${t.title}</div><div class="item-sub">Fällig: ${t.due_date ? new Date(t.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div></div>
+                            <div class="item-content"><div class="item-title">${t.title}</div><div class="item-sub">${t('due')}: ${t.due_date ? new Date(t.due_date).toLocaleDateString(locale) : t('no_date')}</div></div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div>`).join('');
                     container.parentElement.style.background = "";
                     container.parentElement.style.border = "";
                     container.parentElement.style.boxShadow = "";
                     container.parentElement.style.padding = "24px";
-                    container.parentElement.innerHTML = `<h4 style="margin:0 0 15px 0; font-size:17px;">Fällige Aufgaben</h4>${listHtml}`;
-                    lucide.createIcons();
+                    container.parentElement.innerHTML = `<h4 style="margin:0 0 15px 0; font-size:17px;">${t('due_tasks')}</h4>${listHtml}`;
+                    try { lucide.createIcons(); } catch (e) { }
                 } else {
-                    container.innerHTML = `<p class="item-sub">Alles erledigt!</p>`;
+                    container.innerHTML = `<p class="item-sub">${t('tasks_empty')}</p>`;
                 }
             } catch (e) { console.error(e); }
         }
