@@ -2330,20 +2330,17 @@
         async function renderActivityLog() {
             previousView = 'sub_admin_menu';
             currentView = 'sub_activity';
-            async function renderActivityLog() {
-                previousView = 'sub_admin_menu';
-                currentView = 'sub_activity';
-                document.getElementById('current-page-title').innerText = t('activity');
-                document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('current-page-title').innerText = t('activity');
+            document.getElementById('header-back-btn').style.display = 'block';
 
-                if (!window.isPoppingState) {
-                    window.history.pushState({ view: 'sub_activity' }, '', null);
-                }
-                window.isPoppingState = false;
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_activity' }, '', null);
+            }
+            window.isPoppingState = false;
 
-                document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
-                document.getElementById('app-container').innerHTML = `
+            document.getElementById('app-container').innerHTML = `
                 <div class="controls-row search-active">
                     <div class="search-container active" style="position:relative; flex:1; width:auto; margin-left:0; cursor:text;" onclick="document.querySelector('.sub-search-input').focus()">
                         <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
@@ -2358,25 +2355,25 @@
                     <div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>
                 </div>
              `;
-                lucide.createIcons();
+            lucide.createIcons();
 
-                try {
-                    const res = await fetch('/api/admin/activity');
-                    cachedActivityLogs = await res.json();
-                    // Reset filter on load? Or keep? Let's reset for fresh view
-                    currentActivityFilter = { user: null, action: null };
-                    renderActivityLogList(cachedActivityLogs);
-                } catch (e) {
-                    document.getElementById('activity-list-container').innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">Fehler beim Laden.</div>`;
-                }
+            try {
+                const res = await fetch('/api/admin/activity');
+                cachedActivityLogs = await res.json();
+                // Reset filter on load? Or keep? Let's reset for fresh view
+                currentActivityFilter = { user: null, action: null };
+                renderActivityLogList(cachedActivityLogs);
+            } catch (e) {
+                document.getElementById('activity-list-container').innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">Fehler beim Laden.</div>`;
             }
+        }
 
-            function openActivityFilterMenu() {
-                // Extract unique users and basic actions
-                const users = [...new Set(cachedActivityLogs.map(l => l.user))];
-                const actions = ['Created', 'Updated', 'Deleted'];
+        function openActivityFilterMenu() {
+            // Extract unique users and basic actions
+            const users = [...new Set(cachedActivityLogs.map(l => l.user))];
+            const actions = ['Created', 'Updated', 'Deleted'];
 
-                document.getElementById('sheet-content').innerHTML = `
+            document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
                     <h3 style="margin:0">${t('filter')}</h3>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
@@ -2394,18 +2391,18 @@
                     ${actions.map(a => `<button class="ios-btn ${currentActivityFilter.action === a ? 'btn-primary' : 'btn-sec'}" style="width:auto; padding:8px 16px; height:auto; font-size:14px;" onclick="setActivityFilter('action', '${a}')">${a}</button>`).join('')}
                 </div>
             `;
-                openSheetOverlay();
-                lucide.createIcons();
-            }
+            openSheetOverlay();
+            lucide.createIcons();
+        }
 
-            function setActivityFilter(type, value) {
-                currentActivityFilter[type] = value;
-                filterActivityLog();
-                closeSheet();
-            }
+        function setActivityFilter(type, value) {
+            currentActivityFilter[type] = value;
+            filterActivityLog();
+            closeSheet();
+        }
 
-            function renderActivityLogList(logs) {
-                const listHtml = logs.map(l => `
+        function renderActivityLogList(logs) {
+            const listHtml = logs.map(l => `
                 <div class="list-item" style="align-items:flex-start;">
                     <div class="item-content">
                         <div class="item-title" style="font-size:14px; font-weight:600;">${l.user}</div>
@@ -2415,69 +2412,69 @@
                 </div>
              `).join('');
 
-                document.getElementById('activity-list-container').innerHTML = `
+            document.getElementById('activity-list-container').innerHTML = `
                 <div class="floating-card" style="padding:0 15px; margin-bottom:40px;">
                     ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_results')}</div>`}
                 </div>
              `;
+        }
+
+        function filterActivityLog() {
+            const term = document.querySelector('.sub-search-input').value.toLowerCase();
+
+            // Check filters
+            const filtered = cachedActivityLogs.filter(l => {
+                // Text Search
+                const matchesSearch = l.user.toLowerCase().includes(term) ||
+                    l.action.toLowerCase().includes(term) ||
+                    l.timestamp.includes(term);
+
+                // Structured Filters
+                const matchesUser = currentActivityFilter.user ? l.user === currentActivityFilter.user : true;
+                const matchesAction = currentActivityFilter.action ? l.action.startsWith(currentActivityFilter.action) : true;
+
+                return matchesSearch && matchesUser && matchesAction;
+            });
+
+            // Update Filter Status UI (Chips)
+            const statusContainer = document.getElementById('filter-status');
+            if (currentActivityFilter.user || currentActivityFilter.action) {
+                statusContainer.style.display = 'flex';
+                let html = '';
+                if (currentActivityFilter.user) html += `<div style="background:var(--accent); color:white; padding:4px 12px; border-radius:15px; font-size:12px; display:flex; align-items:center;">user: ${currentActivityFilter.user} <i data-lucide="x" style="width:12px; margin-left:5px; cursor:pointer;" onclick="setActivityFilter('user', null)"></i></div>`;
+                if (currentActivityFilter.action) html += `<div style="background:var(--accent); color:white; padding:4px 12px; border-radius:15px; font-size:12px; display:flex; align-items:center;">action: ${currentActivityFilter.action} <i data-lucide="x" style="width:12px; margin-left:5px; cursor:pointer;" onclick="setActivityFilter('action', null)"></i></div>`;
+                statusContainer.innerHTML = html;
+                lucide.createIcons();
+            } else {
+                statusContainer.style.display = 'none';
             }
 
-            function filterActivityLog() {
-                const term = document.querySelector('.sub-search-input').value.toLowerCase();
+            renderActivityLogList(filtered);
+        }
 
-                // Check filters
-                const filtered = cachedActivityLogs.filter(l => {
-                    // Text Search
-                    const matchesSearch = l.user.toLowerCase().includes(term) ||
-                        l.action.toLowerCase().includes(term) ||
-                        l.timestamp.includes(term);
+        // Sub-page: User Management
+        async function renderUserManagement() {
+            previousView = 'sub_admin_menu'; // Logically parent is admin menu now
+            currentView = 'sub_users';
+            document.getElementById('current-page-title').innerText = t('users');
+            document.getElementById('header-back-btn').style.display = 'block';
 
-                    // Structured Filters
-                    const matchesUser = currentActivityFilter.user ? l.user === currentActivityFilter.user : true;
-                    const matchesAction = currentActivityFilter.action ? l.action.startsWith(currentActivityFilter.action) : true;
-
-                    return matchesSearch && matchesUser && matchesAction;
-                });
-
-                // Update Filter Status UI (Chips)
-                const statusContainer = document.getElementById('filter-status');
-                if (currentActivityFilter.user || currentActivityFilter.action) {
-                    statusContainer.style.display = 'flex';
-                    let html = '';
-                    if (currentActivityFilter.user) html += `<div style="background:var(--accent); color:white; padding:4px 12px; border-radius:15px; font-size:12px; display:flex; align-items:center;">user: ${currentActivityFilter.user} <i data-lucide="x" style="width:12px; margin-left:5px; cursor:pointer;" onclick="setActivityFilter('user', null)"></i></div>`;
-                    if (currentActivityFilter.action) html += `<div style="background:var(--accent); color:white; padding:4px 12px; border-radius:15px; font-size:12px; display:flex; align-items:center;">action: ${currentActivityFilter.action} <i data-lucide="x" style="width:12px; margin-left:5px; cursor:pointer;" onclick="setActivityFilter('action', null)"></i></div>`;
-                    statusContainer.innerHTML = html;
-                    lucide.createIcons();
-                } else {
-                    statusContainer.style.display = 'none';
-                }
-
-                renderActivityLogList(filtered);
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_users' }, '', null);
             }
+            window.isPoppingState = false;
 
-            // Sub-page: User Management
-            async function renderUserManagement() {
-                previousView = 'sub_admin_menu'; // Logically parent is admin menu now
-                currentView = 'sub_users';
-                document.getElementById('current-page-title').innerText = t('users');
-                document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => {
+                window.history.back();
+            };
 
-                if (!window.isPoppingState) {
-                    window.history.pushState({ view: 'sub_users' }, '', null);
-                }
-                window.isPoppingState = false;
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
 
-                document.getElementById('header-back-btn').onclick = () => {
-                    window.history.back();
-                };
+            try {
+                const res = await fetch('/api/admin/users');
+                const users = await res.json();
 
-                document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
-
-                try {
-                    const res = await fetch('/api/admin/users');
-                    const users = await res.json();
-
-                    const listHtml = users.map(u => `
+                const listHtml = users.map(u => `
                     <div class="list-item">
                         <div class="account-item-icon"><i data-lucide="user"></i></div>
                         <div class="item-content">
@@ -2491,20 +2488,20 @@
                     </div>
                 `).join('');
 
-                    document.getElementById('app-container').innerHTML = `
+                document.getElementById('app-container').innerHTML = `
                     <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${listHtml}</div>
                 `;
-                    document.getElementById('main-fab').classList.add('visible');
-                    lucide.createIcons();
-                    lucide.createIcons();
-                } catch (e) {
-                    console.error(e);
-                    document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
-                }
+                document.getElementById('main-fab').classList.add('visible');
+                lucide.createIcons();
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
             }
+        }
 
-            function openCreateUserMenu() {
-                document.getElementById('sheet-content').innerHTML = `
+        function openCreateUserMenu() {
+            document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
                     <h2 style="margin:0; font-size:20px; font-weight:700;">${t('new_user')}</h2>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
@@ -2517,133 +2514,133 @@
                 </div>
                 <button class="ios-btn" onclick="saveNewUser()">${t('create')}</button>
             `;
-                document.getElementById('sheet-overlay').classList.add('active');
-                lucide.createIcons();
-            }
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
 
-            let newIsAdmin = false;
-            function toggleAdminCheck() {
-                newIsAdmin = !newIsAdmin;
-                const toggle = document.getElementById('admin-check-toggle');
-                if (newIsAdmin) toggle.classList.add('active'); else toggle.classList.remove('active');
-            }
+        let newIsAdmin = false;
+        function toggleAdminCheck() {
+            newIsAdmin = !newIsAdmin;
+            const toggle = document.getElementById('admin-check-toggle');
+            if (newIsAdmin) toggle.classList.add('active'); else toggle.classList.remove('active');
+        }
 
-            async function saveNewUser() {
-                const username = document.getElementById('new-user-name').value;
-                const password = document.getElementById('new-user-pw').value;
-                if (!username || !password) return alert(t('error'));
+        async function saveNewUser() {
+            const username = document.getElementById('new-user-name').value;
+            const password = document.getElementById('new-user-pw').value;
+            if (!username || !password) return alert(t('error'));
 
-                try {
-                    const res = await fetch('/api/admin/users', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password, is_admin: newIsAdmin })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        closeSheet();
-                        newIsAdmin = false;
-                        renderUserManagement();
-                    } else alert(data.message || 'Fehler');
-                } catch (e) { alert('Verbindungsfehler'); }
-            }
-
-            async function deleteUser(id) {
-                if (!confirm(t('confirm_delete'))) return;
-                try {
-                    await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+            try {
+                const res = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, is_admin: newIsAdmin })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeSheet();
+                    newIsAdmin = false;
                     renderUserManagement();
-                } catch (e) { alert('Fehler'); }
+                } else alert(data.message || 'Fehler');
+            } catch (e) { alert('Verbindungsfehler'); }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm(t('confirm_delete'))) return;
+            try {
+                await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+                renderUserManagement();
+            } catch (e) { alert('Fehler'); }
+        }
+
+        async function resetUserPassword(id) {
+            const newPw = prompt('Neues Passwort für diesen Benutzer eingeben:');
+            if (!newPw) return;
+
+            try {
+                const res = await fetch(`/api/admin/users/${id}/reset_password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: newPw })
+                });
+                const data = await res.json();
+                if (data.success) alert(t('success_pw_change'));
+                else alert(data.message || t('error'));
+            } catch (e) { alert('Verbindungsfehler'); }
+        }
+
+        async function saveNewPassword() {
+            const oldPw = document.getElementById('old-pw').value;
+            const newPw = document.getElementById('new-pw').value;
+            const confirmPw = document.getElementById('confirm-pw').value;
+            const errEl = document.getElementById('pw-error');
+
+            if (newPw !== confirmPw) {
+                errEl.innerText = "Die neuen Passwörter stimmen nicht überein.";
+                errEl.style.display = 'block';
+                return;
+            }
+            if (!newPw) {
+                errEl.innerText = "Bitte ein neues Passwort eingeben.";
+                errEl.style.display = 'block';
+                return;
             }
 
-            async function resetUserPassword(id) {
-                const newPw = prompt('Neues Passwort für diesen Benutzer eingeben:');
-                if (!newPw) return;
-
-                try {
-                    const res = await fetch(`/api/admin/users/${id}/reset_password`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ password: newPw })
-                    });
-                    const data = await res.json();
-                    if (data.success) alert(t('success_pw_change'));
-                    else alert(data.message || t('error'));
-                } catch (e) { alert('Verbindungsfehler'); }
+            try {
+                const res = await fetch('/api/change_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: oldPw, new_password: newPw })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Passwort erfolgreich geändert.');
+                    renderSettingsPage();
+                } else {
+                    errEl.innerText = data.message || "Fehler beim Ändern.";
+                    errEl.style.display = 'block';
+                }
+            } catch (e) {
+                errEl.innerText = "Verbindungsfehler.";
+                errEl.style.display = 'block';
             }
+        }
 
-            async function saveNewPassword() {
-                const oldPw = document.getElementById('old-pw').value;
-                const newPw = document.getElementById('new-pw').value;
-                const confirmPw = document.getElementById('confirm-pw').value;
-                const errEl = document.getElementById('pw-error');
-
-                if (newPw !== confirmPw) {
-                    errEl.innerText = "Die neuen Passwörter stimmen nicht überein.";
-                    errEl.style.display = 'block';
-                    return;
-                }
-                if (!newPw) {
-                    errEl.innerText = "Bitte ein neues Passwort eingeben.";
-                    errEl.style.display = 'block';
-                    return;
-                }
-
-                try {
-                    const res = await fetch('/api/change_password', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ current_password: oldPw, new_password: newPw })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        alert('Passwort erfolgreich geändert.');
-                        renderSettingsPage();
-                    } else {
-                        errEl.innerText = data.message || "Fehler beim Ändern.";
-                        errEl.style.display = 'block';
-                    }
-                } catch (e) {
-                    errEl.innerText = "Verbindungsfehler.";
-                    errEl.style.display = 'block';
-                }
-            }
-
-            // Placeholder for the old renderSettings to avoid errors if referenced elsewhere (though we replaced calls)
-            function renderSettings() { renderSettingsPage(); }
+        // Placeholder for the old renderSettings to avoid errors if referenced elsewhere (though we replaced calls)
+        function renderSettings() { renderSettingsPage(); }
 
 
 
 
 
 
-            function openDetails(type, title, subject, date, value = null, desc = '', id = null, imagesJson = '[]') {
-                const hasDesc = desc && desc.trim() !== '' && desc !== 'null' && desc !== 'undefined';
-                let images = [];
-                try { images = JSON.parse(imagesJson); } catch (e) { console.error(e); }
+        function openDetails(type, title, subject, date, value = null, desc = '', id = null, imagesJson = '[]') {
+            const hasDesc = desc && desc.trim() !== '' && desc !== 'null' && desc !== 'undefined';
+            let images = [];
+            try { images = JSON.parse(imagesJson); } catch (e) { console.error(e); }
 
-                let actionBtns = '';
-                if (id) {
-                    actionBtns = `
+            let actionBtns = '';
+            if (id) {
+                actionBtns = `
                     <div style="display: flex; gap: 10px; margin-top: 30px;">
                         <button class="ios-btn btn-sec" style="flex: 1; margin-bottom: 0;" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date}', '${value || ''}', '${desc.replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">${t('edit')}</button>
                         ${type === 'Aufgabe' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteTask(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
                         ${type === 'Termin' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteEvent(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
                         ${type === 'Note' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteGrade(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
                     </div>`;
-                }
+            }
 
-                let imagesHtml = '';
-                if (images && images.length > 0) {
-                    imagesHtml = `<div style="padding:0 5px; margin-top:20px;">
+            let imagesHtml = '';
+            if (images && images.length > 0) {
+                imagesHtml = `<div style="padding:0 5px; margin-top:20px;">
                    <div style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); margin-bottom:8px;">${t('images')}</div>
                     <div style="display:flex; overflow-x:auto; gap:10px; padding-bottom:10px;">
                         ${images.map(img => `<img src="${img.url}" onclick="window.open('${img.url}', '_blank')" style="height:120px; border-radius:12px; border:1px solid var(--border); object-fit:cover; cursor:pointer;">`).join('')}
                     </div>
                </div>`;
-                }
+            }
 
-                document.getElementById('sheet-content').innerHTML = `
+            document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
                     <h2 style="margin:0; font-size:20px; font-weight:700;">${type} ${t('details')}</h2>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
@@ -2673,76 +2670,76 @@
                     <button class="ios-btn" style="background:var(--text-main); color:var(--card-bg); font-weight:700;" onclick="closeSheet()">${t('done')}</button>
                 </div>
             `;
-                document.getElementById('sheet-overlay').classList.add('active');
-                lucide.createIcons();
-            }
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
 
-            async function deleteTask(id) {
-                if (!confirm('Wirklich löschen?')) return;
-                await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-                closeSheet();
-                if (currentView === 'tasks') renderTasks();
-                else renderHome();
-            }
-            async function deleteEvent(id) {
-                if (!confirm('Wirklich löschen?')) return;
-                await fetch(`/api/events/${id}`, { method: 'DELETE' });
-                closeSheet();
-                renderCalendar();
-            }
-            async function deleteGrade(id) {
-                if (!confirm('Wirklich löschen?')) return;
-                await fetch(`/api/grades/${id}`, { method: 'DELETE' });
-                closeSheet();
-                renderGrades();
-            }
+        async function deleteTask(id) {
+            if (!confirm('Wirklich löschen?')) return;
+            await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+            closeSheet();
+            if (currentView === 'tasks') renderTasks();
+            else renderHome();
+        }
+        async function deleteEvent(id) {
+            if (!confirm('Wirklich löschen?')) return;
+            await fetch(`/api/events/${id}`, { method: 'DELETE' });
+            closeSheet();
+            renderCalendar();
+        }
+        async function deleteGrade(id) {
+            if (!confirm('Wirklich löschen?')) return;
+            await fetch(`/api/grades/${id}`, { method: 'DELETE' });
+            closeSheet();
+            renderGrades();
+        }
 
-            function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
-                if (currentView === 'sub_users') {
-                    openCreateUserMenu();
-                    return;
-                }
-                let type = editType || (currentView === 'tasks' ? "Aufgabe" : (currentView === 'calendar' ? "Termin" : "Note"));
+        function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
+            if (currentView === 'sub_users') {
+                openCreateUserMenu();
+                return;
+            }
+            let type = editType || (currentView === 'tasks' ? "Aufgabe" : (currentView === 'calendar' ? "Termin" : "Note"));
 
-                if (editDate && editDate !== 'null' && editDate !== 'undefined') {
-                    if (editDate.includes('-')) {
-                        const [y, m, d] = editDate.split('-').map(Number);
-                        selectedDate = new Date(y, m - 1, d);
-                    } else {
-                        selectedDate = new Date(editDate);
-                    }
-                    if (isNaN(selectedDate.getTime())) selectedDate = new Date();
+            if (editDate && editDate !== 'null' && editDate !== 'undefined') {
+                if (editDate.includes('-')) {
+                    const [y, m, d] = editDate.split('-').map(Number);
+                    selectedDate = new Date(y, m - 1, d);
                 } else {
-                    selectedDate = new Date(); // Default today
+                    selectedDate = new Date(editDate);
                 }
-                pickerViewDate = new Date(selectedDate);
+                if (isNaN(selectedDate.getTime())) selectedDate = new Date();
+            } else {
+                selectedDate = new Date(); // Default today
+            }
+            pickerViewDate = new Date(selectedDate);
 
-                // If string "null" or empty passed
-                if (editSubject && editSubject !== 'null' && editSubject !== 'undefined') selectedSubject = editSubject;
-                else selectedSubject = null;
+            // If string "null" or empty passed
+            if (editSubject && editSubject !== 'null' && editSubject !== 'undefined') selectedSubject = editSubject;
+            else selectedSubject = null;
 
-                const safeId = id ? id : 'null';
-                const saveFunction = (type === 'Aufgabe') ? `saveTask(${safeId})` : (type === 'Termin' ? `saveEvent(${safeId})` : `saveGrade(${safeId})`);
+            const safeId = id ? id : 'null';
+            const saveFunction = (type === 'Aufgabe') ? `saveTask(${safeId})` : (type === 'Termin' ? `saveEvent(${safeId})` : `saveGrade(${safeId})`);
 
-                const titleVal = editTitle === 'undefined' ? '' : editTitle;
-                const descVal = editDesc === 'undefined' ? '' : editDesc;
-                const valVal = editValue === 'null' || editValue === 'undefined' ? '' : editValue;
+            const titleVal = editTitle === 'undefined' ? '' : editTitle;
+            const descVal = editDesc === 'undefined' ? '' : editDesc;
+            const valVal = editValue === 'null' || editValue === 'undefined' ? '' : editValue;
 
-                let existingImagesHtml = '';
-                // Render existing images if editing
-                if (id && currentView === 'tasks' && editSubject) { // check if task by param or context. Usually 'editSubject' is passed for tasks.
-                    // We need existing images. Since we don't pass them to openCreateMenu, we need to pass them or fetch them.
-                    // Correction: openCreateMenu is called from openDetails. I should update openDetails to pass images to openCreateMenu.
-                    // But openCreateMenu doesn't have an argument for images. I should add it.
-                }
-                // Wait, I need to update the signature first.
+            let existingImagesHtml = '';
+            // Render existing images if editing
+            if (id && currentView === 'tasks' && editSubject) { // check if task by param or context. Usually 'editSubject' is passed for tasks.
+                // We need existing images. Since we don't pass them to openCreateMenu, we need to pass them or fetch them.
+                // Correction: openCreateMenu is called from openDetails. I should update openDetails to pass images to openCreateMenu.
+                // But openCreateMenu doesn't have an argument for images. I should add it.
+            }
+            // Wait, I need to update the signature first.
 
-                // Let's assume I update the signature in the next step.
-                // But I am in multi_replace.
+            // Let's assume I update the signature in the next step.
+            // But I am in multi_replace.
 
-                // Let's actually update openCreateMenu signature and usage right here.
+            // Let's actually update openCreateMenu signature and usage right here.
 
-                document.getElementById('sheet-content').innerHTML = `
+            document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
                     <h2 style="margin:0; font-size:20px; font-weight:700;">${id ? 'Bearbeiten' : type}</h2>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
@@ -2757,37 +2754,37 @@
                 <input type="text" id="input-title" class="ios-input" placeholder="Titel" value="${titleVal}">
                 ${type === 'Aufgabe' ? `
                     ${(id && existingImagesJson !== '[]') ? (() => {
-                            let imgs = [];
-                            try { imgs = JSON.parse(existingImagesJson.replace(/&quot;/g, '"')); } catch (e) { }
-                            if (imgs.length > 0) {
-                                return `<div style="margin-bottom:10px;">
+                        let imgs = [];
+                        try { imgs = JSON.parse(existingImagesJson.replace(/&quot;/g, '"')); } catch (e) { }
+                        if (imgs.length > 0) {
+                            return `<div style="margin-bottom:10px;">
                                 <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">Vorhandene Bilder - zum Löschen antippen</label>
                                 <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;">
                                     ${imgs.map(img => {
-                                    // extracting filename/id might be needed if url is full path. 
-                                    // But wait, the API returns full path.
-                                    // We need the ID to delete it.
-                                    // The current API structure for images in tasks list is just URL strings. 
-                                    // I need to change the API to return object {id, url} to support deletion by ID.
-                                    // OR, I can delete by filename, but ID is safer.
-                                    // Let's assume for now I only have URL. I can't delete easily without ID.
-                                    // I will assume for this step that I can't delete individual existing images yet unless I update the API GET.
-                                    // BUT, the user explicitly asked for "delete some".
+                                // extracting filename/id might be needed if url is full path. 
+                                // But wait, the API returns full path.
+                                // We need the ID to delete it.
+                                // The current API structure for images in tasks list is just URL strings. 
+                                // I need to change the API to return object {id, url} to support deletion by ID.
+                                // OR, I can delete by filename, but ID is safer.
+                                // Let's assume for now I only have URL. I can't delete easily without ID.
+                                // I will assume for this step that I can't delete individual existing images yet unless I update the API GET.
+                                // BUT, the user explicitly asked for "delete some".
 
-                                    // Quick fix: Update API GET to return objects.
-                                    // But for now, let's render them. 
-                                    return `<div id="img-container-${img.id}" onclick="toggleDeleteImage(${img.id})" style="position:relative; flex-shrink:0; cursor:pointer;">
+                                // Quick fix: Update API GET to return objects.
+                                // But for now, let's render them. 
+                                return `<div id="img-container-${img.id}" onclick="toggleDeleteImage(${img.id})" style="position:relative; flex-shrink:0; cursor:pointer;">
                                             <img src="${img.url}" style="height:80px; border-radius:10px; border:1px solid var(--border); transition: opacity 0.2s;">
                                             <div id="del-overlay-${img.id}" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,59,48,0.6); border-radius:10px; display:none; align-items:center; justify-content:center;">
                                                 <i data-lucide="trash-2" style="color:white; width:24px;"></i>
                                             </div>
                                         </div>`
-                                }).join('')}
+                            }).join('')}
                                 </div>
                             </div>`
-                            }
-                            return '';
-                        })() : ''}
+                        }
+                        return '';
+                    })() : ''}
                     <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">Bilder hinzufügen</label>
                     <input type="file" id="input-images" class="ios-input" multiple accept="image/*" style="display:none;" onchange="updateFileCount(this)">
                     <div class="ios-btn btn-sec" onclick="document.getElementById('input-images').click()" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:15px; cursor:pointer;">
@@ -2804,242 +2801,242 @@
                 <textarea id="input-desc" class="ios-input" placeholder="Beschreibung">${descVal}</textarea>
                 <button class="ios-btn" onclick="${saveFunction}">Speichern</button>
                 <button class="ios-btn btn-sec" onclick="closeSheet()">Abbrechen</button>`;
-                openSheetOverlay();
-                lucide.createIcons();
+            openSheetOverlay();
+            lucide.createIcons();
 
-                // Load subjects if subject list exists
-                const subjectList = document.getElementById('subject-list');
-                if (subjectList) {
-                    fetch('/api/subjects')
-                        .then(res => res.json())
-                        .then(data => {
-                            subjectList.innerHTML = data.map(s =>
-                                `<div class="picker-option" onclick="selectSubject('${s.name}')">${s.name}</div>`
-                            ).join('');
-                        })
-                        .catch(e => {
-                            console.error("Subject load error", e);
-                            // Fallback
-                            subjectList.innerHTML = '<div style="padding:10px; color:var(--text-sec); text-align:center;">Laden fehlgeschlagen</div>';
-                        });
-                }
+            // Load subjects if subject list exists
+            const subjectList = document.getElementById('subject-list');
+            if (subjectList) {
+                fetch('/api/subjects')
+                    .then(res => res.json())
+                    .then(data => {
+                        subjectList.innerHTML = data.map(s =>
+                            `<div class="picker-option" onclick="selectSubject('${s.name}')">${s.name}</div>`
+                        ).join('');
+                    })
+                    .catch(e => {
+                        console.error("Subject load error", e);
+                        // Fallback
+                        subjectList.innerHTML = '<div style="padding:10px; color:var(--text-sec); text-align:center;">Laden fehlgeschlagen</div>';
+                    });
             }
+        }
 
-            let imagesToDelete = new Set();
-            function toggleDeleteImage(id) {
-                if (imagesToDelete.has(id)) {
-                    imagesToDelete.delete(id);
-                    document.getElementById(`del-overlay-${id}`).style.display = 'none';
-                } else {
-                    imagesToDelete.add(id);
-                    document.getElementById(`del-overlay-${id}`).style.display = 'flex';
-                }
+        let imagesToDelete = new Set();
+        function toggleDeleteImage(id) {
+            if (imagesToDelete.has(id)) {
+                imagesToDelete.delete(id);
+                document.getElementById(`del-overlay-${id}`).style.display = 'none';
+            } else {
+                imagesToDelete.add(id);
+                document.getElementById(`del-overlay-${id}`).style.display = 'flex';
             }
+        }
 
-            async function saveTask(updateId = null) {
-                const title = document.getElementById('input-title').value;
-                const desc = document.getElementById('input-desc').value;
-                const subject = selectedSubject;
-                const year = selectedDate.getFullYear();
-                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                const d = String(selectedDate.getDate()).padStart(2, '0');
-                const date = `${year}-${month}-${d}`;
-                if (!title) return;
+        async function saveTask(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const desc = document.getElementById('input-desc').value;
+            const subject = selectedSubject;
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            const date = `${year}-${month}-${d}`;
+            if (!title) return;
 
-                const url = updateId ? `/api/tasks/${updateId}` : '/api/tasks';
+            const url = updateId ? `/api/tasks/${updateId}` : '/api/tasks';
 
-                try {
-                    let body, headers;
-                    // Always use FormData if there are images to upload or delete (if updateId is present but we want to use form data for consistent image handling? 
-                    // Wait, update_task supports FormData.
-                    // It is simpler to always use FormData for tasks now.
+            try {
+                let body, headers;
+                // Always use FormData if there are images to upload or delete (if updateId is present but we want to use form data for consistent image handling? 
+                // Wait, update_task supports FormData.
+                // It is simpler to always use FormData for tasks now.
 
-                    const formData = new FormData();
-                    formData.append('title', title);
-                    formData.append('description', desc);
-                    formData.append('subject', subject || '');
-                    formData.append('due_date', date);
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('description', desc);
+                formData.append('subject', subject || '');
+                formData.append('due_date', date);
 
-                    const fileInput = document.getElementById('input-images');
-                    if (fileInput && fileInput.files.length > 0) {
-                        for (let i = 0; i < fileInput.files.length; i++) {
-                            formData.append('images', fileInput.files[i]);
-                        }
+                const fileInput = document.getElementById('input-images');
+                if (fileInput && fileInput.files.length > 0) {
+                    for (let i = 0; i < fileInput.files.length; i++) {
+                        formData.append('images', fileInput.files[i]);
                     }
-
-                    if (updateId && imagesToDelete.size > 0) {
-                        formData.append('deleted_images', Array.from(imagesToDelete).join(','));
-                    }
-
-                    body = formData;
-                    // Headers auto
-
-                    const res = await fetch(url, {
-                        method: updateId ? 'PUT' : 'POST',
-                        body: body
-                    });
-                    if (res.ok) {
-                        imagesToDelete.clear();
-                        closeSheet();
-                        if (currentView === 'tasks') renderTasks(); else renderHome();
-                    } else { alert('Fehler'); }
-                } catch (err) { alert('Verbindungsfehler'); }
-            }
-
-            async function saveEvent(updateId = null) {
-                const title = document.getElementById('input-title').value;
-                const desc = document.getElementById('input-desc').value;
-                const year = selectedDate.getFullYear();
-                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                const d = String(selectedDate.getDate()).padStart(2, '0');
-                const date = `${year}-${month}-${d}`;
-                if (!title) return;
-
-                const method = updateId ? 'PUT' : 'POST';
-                const url = updateId ? `/api/events/${updateId}` : '/api/events';
-
-                try {
-                    await fetch(url, {
-                        method: method,
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title, description: desc, date })
-                    });
-                    closeSheet(); renderCalendar(currentView === 'calendar' ? 'termine' : 'monat');
-                } catch (e) { alert('Fehler'); }
-            }
-
-            async function saveGrade(updateId = null) {
-                const title = document.getElementById('input-title').value;
-                const value = document.getElementById('input-value').value;
-                const year = selectedDate.getFullYear();
-                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                const d = String(selectedDate.getDate()).padStart(2, '0');
-                const date = `${year}-${month}-${d}`;
-                if (!selectedSubject || !value) { alert('Bitte Fach und Note ausfüllen.'); return; }
-
-                const method = updateId ? 'PUT' : 'POST';
-                const url = updateId ? `/api/grades/${updateId}` : '/api/grades';
-
-                try {
-                    await fetch(url, {
-                        method: method,
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'), date })
-                    });
-                    closeSheet(); renderGrades();
-                } catch (e) { alert('Fehler'); }
-            }
-
-
-            /* --- NAVIGATION HELPERS --- */
-            function openAccountMenu() {
-                navigate('account', null, 'Account');
-            }
-
-
-
-
-
-
-            function closeSheet() {
-                // If user clicks "X" or "Fertig" (explicit close), we want to go back in history to remove the modal state.
-                // But we first check if it's active.
-                if (document.getElementById('sheet-overlay').classList.contains('active')) {
-                    window.history.back();
                 }
-            }
 
-            /* --- PICKER HELPERS --- */
-            function updateFileCount(input) {
-                const count = input.files ? input.files.length : 0;
-                const textEl = document.getElementById('file-count-text');
-                if (count > 0) {
-                    textEl.innerText = `${count} Bild${count > 1 ? 'er' : ''} ausgewählt`;
-                    textEl.style.fontWeight = '700';
-                } else {
-                    textEl.innerText = 'Bilder auswählen...';
-                    textEl.style.fontWeight = 'normal';
+                if (updateId && imagesToDelete.size > 0) {
+                    formData.append('deleted_images', Array.from(imagesToDelete).join(','));
                 }
+
+                body = formData;
+                // Headers auto
+
+                const res = await fetch(url, {
+                    method: updateId ? 'PUT' : 'POST',
+                    body: body
+                });
+                if (res.ok) {
+                    imagesToDelete.clear();
+                    closeSheet();
+                    if (currentView === 'tasks') renderTasks(); else renderHome();
+                } else { alert('Fehler'); }
+            } catch (err) { alert('Verbindungsfehler'); }
+        }
+
+        async function saveEvent(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const desc = document.getElementById('input-desc').value;
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            const date = `${year}-${month}-${d}`;
+            if (!title) return;
+
+            const method = updateId ? 'PUT' : 'POST';
+            const url = updateId ? `/api/events/${updateId}` : '/api/events';
+
+            try {
+                await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description: desc, date })
+                });
+                closeSheet(); renderCalendar(currentView === 'calendar' ? 'termine' : 'monat');
+            } catch (e) { alert('Fehler'); }
+        }
+
+        async function saveGrade(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const value = document.getElementById('input-value').value;
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            const date = `${year}-${month}-${d}`;
+            if (!selectedSubject || !value) { alert('Bitte Fach und Note ausfüllen.'); return; }
+
+            const method = updateId ? 'PUT' : 'POST';
+            const url = updateId ? `/api/grades/${updateId}` : '/api/grades';
+
+            try {
+                await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'), date })
+                });
+                closeSheet(); renderGrades();
+            } catch (e) { alert('Fehler'); }
+        }
+
+
+        /* --- NAVIGATION HELPERS --- */
+        function openAccountMenu() {
+            navigate('account', null, 'Account');
+        }
+
+
+
+
+
+
+        function closeSheet() {
+            // If user clicks "X" or "Fertig" (explicit close), we want to go back in history to remove the modal state.
+            // But we first check if it's active.
+            if (document.getElementById('sheet-overlay').classList.contains('active')) {
+                window.history.back();
             }
+        }
 
-            function toggleOptionList(id) {
-                const el = document.getElementById(id);
-                const isVisible = el.style.display === 'block';
-                document.querySelectorAll('.picker-options').forEach(p => p.style.display = 'none');
-                el.style.display = isVisible ? 'none' : 'block';
+        /* --- PICKER HELPERS --- */
+        function updateFileCount(input) {
+            const count = input.files ? input.files.length : 0;
+            const textEl = document.getElementById('file-count-text');
+            if (count > 0) {
+                textEl.innerText = `${count} Bild${count > 1 ? 'er' : ''} ausgewählt`;
+                textEl.style.fontWeight = '700';
+            } else {
+                textEl.innerText = 'Bilder auswählen...';
+                textEl.style.fontWeight = 'normal';
             }
+        }
 
-            function selectSubject(name) {
-                selectedSubject = name;
-                const display = document.getElementById('selected-subject-display');
-                if (display) display.innerText = name;
-                toggleOptionList('subject-list');
+        function toggleOptionList(id) {
+            const el = document.getElementById(id);
+            const isVisible = el.style.display === 'block';
+            document.querySelectorAll('.picker-options').forEach(p => p.style.display = 'none');
+            el.style.display = isVisible ? 'none' : 'block';
+        }
+
+        function selectSubject(name) {
+            selectedSubject = name;
+            const display = document.getElementById('selected-subject-display');
+            if (display) display.innerText = name;
+            toggleOptionList('subject-list');
+        }
+
+        function selectPickerDate(day) {
+            selectedDate = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth(), day);
+            const display = document.getElementById('selected-date-display');
+            if (display) display.innerText = selectedDate.toLocaleDateString('de-DE');
+            toggleOptionList('calendar-picker-view');
+        }
+
+        function changeMonth(delta) {
+            pickerViewDate.setMonth(pickerViewDate.getMonth() + delta);
+            updateCalendarGrid();
+        }
+
+        function updateCalendarGrid() {
+            const grid = document.getElementById('calendar-grid');
+            const title = document.getElementById('calendar-month-year');
+            if (!grid || !title) return;
+
+            title.innerText = pickerViewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            grid.innerHTML = '';
+
+            const weekdays = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
+            weekdays.forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
+
+            const firstDay = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth(), 1).getDay();
+            const daysInMonth = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth() + 1, 0).getDate();
+
+            // Adjust for Monday start (JS 0=Sun, 1=Mon...6=Sat)
+            const offset = firstDay === 0 ? 6 : firstDay - 1;
+
+            for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>';
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const isSelected = selectedDate.getDate() === i &&
+                    selectedDate.getMonth() === pickerViewDate.getMonth() &&
+                    selectedDate.getFullYear() === pickerViewDate.getFullYear();
+                const isToday = i === new Date().getDate() &&
+                    pickerViewDate.getMonth() === new Date().getMonth() &&
+                    pickerViewDate.getFullYear() === new Date().getFullYear();
+
+                grid.innerHTML += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" onclick="event.stopPropagation(); selectPickerDate(${i})">${i}</div>`;
             }
+        }
 
-            function selectPickerDate(day) {
-                selectedDate = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth(), day);
-                const display = document.getElementById('selected-date-display');
-                if (display) display.innerText = selectedDate.toLocaleDateString('de-DE');
-                toggleOptionList('calendar-picker-view');
+
+        async function renderSubjectManagement() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_subjects';
+            document.getElementById('current-page-title').innerText = 'Fächer';
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_subjects' }, '', null);
             }
+            window.isPoppingState = false;
 
-            function changeMonth(delta) {
-                pickerViewDate.setMonth(pickerViewDate.getMonth() + delta);
-                updateCalendarGrid();
-            }
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
-            function updateCalendarGrid() {
-                const grid = document.getElementById('calendar-grid');
-                const title = document.getElementById('calendar-month-year');
-                if (!grid || !title) return;
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Fächer...</div>`;
 
-                title.innerText = pickerViewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
-                grid.innerHTML = '';
+            try {
+                const res = await fetch('/api/subjects');
+                const subjects = await res.json();
 
-                const weekdays = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
-                weekdays.forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
-
-                const firstDay = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth(), 1).getDay();
-                const daysInMonth = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth() + 1, 0).getDate();
-
-                // Adjust for Monday start (JS 0=Sun, 1=Mon...6=Sat)
-                const offset = firstDay === 0 ? 6 : firstDay - 1;
-
-                for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>';
-
-                for (let i = 1; i <= daysInMonth; i++) {
-                    const isSelected = selectedDate.getDate() === i &&
-                        selectedDate.getMonth() === pickerViewDate.getMonth() &&
-                        selectedDate.getFullYear() === pickerViewDate.getFullYear();
-                    const isToday = i === new Date().getDate() &&
-                        pickerViewDate.getMonth() === new Date().getMonth() &&
-                        pickerViewDate.getFullYear() === new Date().getFullYear();
-
-                    grid.innerHTML += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" onclick="event.stopPropagation(); selectPickerDate(${i})">${i}</div>`;
-                }
-            }
-
-
-            async function renderSubjectManagement() {
-                previousView = 'sub_admin_menu';
-                currentView = 'sub_subjects';
-                document.getElementById('current-page-title').innerText = 'Fächer';
-                document.getElementById('header-back-btn').style.display = 'block';
-
-                if (!window.isPoppingState) {
-                    window.history.pushState({ view: 'sub_subjects' }, '', null);
-                }
-                window.isPoppingState = false;
-
-                document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
-
-                document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Fächer...</div>`;
-
-                try {
-                    const res = await fetch('/api/subjects');
-                    const subjects = await res.json();
-
-                    const listHtml = subjects.map(s => `
+                const listHtml = subjects.map(s => `
                     <div class="list-item">
                         <div class="item-content">
                             <div class="item-title">${s.name}</div>
@@ -3049,7 +3046,7 @@
                         </div>
                     </div>`).join('');
 
-                    document.getElementById('app-container').innerHTML = `
+                document.getElementById('app-container').innerHTML = `
                     <div class="floating-card" style="padding: 20px;">
                         <h3 style="margin-top:0">Neues Fach</h3>
                         <div style="display:flex; gap:10px;">
@@ -3063,143 +3060,143 @@
                         ${listHtml || '<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Fächer gefunden.</div>'}
                     </div>
                 `;
-                    lucide.createIcons();
-                } catch (e) {
-                    console.error(e);
-                    alert('Fehler beim Laden der Fächer');
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                alert('Fehler beim Laden der Fächer');
+            }
+        }
+
+        async function addSubject() {
+            const name = document.getElementById('new-subject-name').value.trim();
+            if (!name) return;
+
+            try {
+                const res = await fetch('/api/subjects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    renderSubjectManagement();
+                } else {
+                    alert(data.message || 'Fehler beim Hinzufügen');
                 }
+            } catch (e) { console.error(e); alert('Fehler'); }
+        }
+
+        async function deleteSubject(id, name) {
+            if (!confirm(`Fach "${name}" wirklich löschen? Dies könnte Auswirkungen auf bestehende Aufgaben haben.`)) return;
+
+            try {
+                const res = await fetch(`/api/subjects/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    renderSubjectManagement();
+                } else {
+                    alert('Fehler beim Löschen');
+                }
+            } catch (e) { console.error(e); alert('Fehler'); }
+        }
+
+
+
+
+        /* --- SWIPE NAVIGATION --- */
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        // Touch
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            handleSwipe(touchStartX, touchStartY, e.changedTouches[0].screenX, e.changedTouches[0].screenY, e.target);
+        }, { passive: true });
+
+        // Mouse (for desktop testing)
+        let mouseStartX = 0;
+        let mouseStartY = 0;
+        let isMouseDown = false;
+
+        document.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            mouseStartX = e.clientX; // Mouse uses clientX, Touch uses screenX usually but consistency matters. Let's use clientX for mouse.
+            mouseStartY = e.clientY;
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (!isMouseDown) return;
+            isMouseDown = false;
+            handleSwipe(mouseStartX, mouseStartY, e.clientX, e.clientY, e.target);
+        });
+
+        function handleSwipe(startX, startY, endX, endY, target) {
+            // Prevent if sheet is open
+            if (document.getElementById('sheet-overlay').classList.contains('active')) return;
+
+            // Check scrollable
+            let el = target;
+            while (el && el !== document.body) {
+                if (el.scrollWidth > el.clientWidth) {
+                    const style = window.getComputedStyle(el);
+                    if (style.overflowX === 'auto' || style.overflowX === 'scroll') return;
+                }
+                el = el.parentElement;
             }
 
-            async function addSubject() {
-                const name = document.getElementById('new-subject-name').value.trim();
-                if (!name) return;
+            const diffX = endX - startX;
+            const diffY = endY - startY;
+            const threshold = 50; // Lower threshold
 
-                try {
-                    const res = await fetch('/api/subjects', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        renderSubjectManagement();
-                    } else {
-                        alert(data.message || 'Fehler beim Hinzufügen');
-                    }
-                } catch (e) { console.error(e); alert('Fehler'); }
-            }
+            // Check horizontal dominance and threshold
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
+                const views = ['home', 'tasks', 'calendar', 'grades'];
+                const titles = ['Home', 'Aufgaben', 'Plan', 'Noten'];
+                const idx = views.indexOf(currentView);
 
-            async function deleteSubject(id, name) {
-                if (!confirm(`Fach "${name}" wirklich löschen? Dies könnte Auswirkungen auf bestehende Aufgaben haben.`)) return;
+                if (idx === -1) return;
 
-                try {
-                    const res = await fetch(`/api/subjects/${id}`, { method: 'DELETE' });
-                    const data = await res.json();
-                    if (data.success) {
-                        renderSubjectManagement();
-                    } else {
-                        alert('Fehler beim Löschen');
-                    }
-                } catch (e) { console.error(e); alert('Fehler'); }
-            }
-
-
-
-
-            /* --- SWIPE NAVIGATION --- */
-            let touchStartX = 0;
-            let touchStartY = 0;
-
-            // Touch
-            document.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
-                touchStartY = e.changedTouches[0].screenY;
-            }, { passive: true });
-
-            document.addEventListener('touchend', (e) => {
-                handleSwipe(touchStartX, touchStartY, e.changedTouches[0].screenX, e.changedTouches[0].screenY, e.target);
-            }, { passive: true });
-
-            // Mouse (for desktop testing)
-            let mouseStartX = 0;
-            let mouseStartY = 0;
-            let isMouseDown = false;
-
-            document.addEventListener('mousedown', (e) => {
-                isMouseDown = true;
-                mouseStartX = e.clientX; // Mouse uses clientX, Touch uses screenX usually but consistency matters. Let's use clientX for mouse.
-                mouseStartY = e.clientY;
-            });
-
-            document.addEventListener('mouseup', (e) => {
-                if (!isMouseDown) return;
-                isMouseDown = false;
-                handleSwipe(mouseStartX, mouseStartY, e.clientX, e.clientY, e.target);
-            });
-
-            function handleSwipe(startX, startY, endX, endY, target) {
-                // Prevent if sheet is open
-                if (document.getElementById('sheet-overlay').classList.contains('active')) return;
-
-                // Check scrollable
-                let el = target;
-                while (el && el !== document.body) {
-                    if (el.scrollWidth > el.clientWidth) {
-                        const style = window.getComputedStyle(el);
-                        if (style.overflowX === 'auto' || style.overflowX === 'scroll') return;
-                    }
-                    el = el.parentElement;
+                let nextIdx = -1;
+                if (diffX < 0) {
+                    // Swipe Left -> Next
+                    if (idx < views.length - 1) nextIdx = idx + 1;
+                } else {
+                    // Swipe Right -> Previous
+                    if (idx > 0) nextIdx = idx - 1;
                 }
 
-                const diffX = endX - startX;
-                const diffY = endY - startY;
-                const threshold = 50; // Lower threshold
-
-                // Check horizontal dominance and threshold
-                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
-                    const views = ['home', 'tasks', 'calendar', 'grades'];
-                    const titles = ['Home', 'Aufgaben', 'Plan', 'Noten'];
-                    const idx = views.indexOf(currentView);
-
-                    if (idx === -1) return;
-
-                    let nextIdx = -1;
-                    if (diffX < 0) {
-                        // Swipe Left -> Next
-                        if (idx < views.length - 1) nextIdx = idx + 1;
-                    } else {
-                        // Swipe Right -> Previous
-                        if (idx > 0) nextIdx = idx - 1;
-                    }
-
-                    if (nextIdx !== -1) {
-                        // Navigate
-                        navigate(views[nextIdx], null, titles[nextIdx]);
-                    }
+                if (nextIdx !== -1) {
+                    // Navigate
+                    navigate(views[nextIdx], null, titles[nextIdx]);
                 }
             }
+        }
 
-            window.onload = () => {
-                const path = window.location.pathname;
-                if (window.currentUser && window.currentUser.language) {
-                    localStorage.setItem('l8te_lang', window.currentUser.language);
-                }
-                updateAppLanguage(); // Initialize translations
-                if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));
-                else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'));
-                else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
-                else renderHome();
-            };
-            console.log('Main Script Parsed Successfully');
+        window.onload = () => {
+            const path = window.location.pathname;
+            if (window.currentUser && window.currentUser.language) {
+                localStorage.setItem('l8te_lang', window.currentUser.language);
+            }
+            updateAppLanguage(); // Initialize translations
+            if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));
+            else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'));
+            else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
+            else renderHome();
+        };
+        console.log('Main Script Parsed Successfully');
     </script>
     <script>
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/service-worker.js')
-                        .then(registration => console.log('SW registered'))
-                        .catch(err => console.log('SW registration failed: ', err));
-                });
-            }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed: ', err));
+            });
+        }
     </script>
 </body>
 
