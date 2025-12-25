@@ -1951,8 +1951,7 @@
 
         // Main Account Menu (Hub)
         function openAccountMenu() {
-            renderAccountHub();
-            if (currentView !== 'account') navigate('account', document.querySelector('.profile-btn'), t('account'));
+            navigate('account', document.querySelector('.profile-btn'), t('account'));
         }
 
         function renderAccountHub() {
@@ -1975,7 +1974,7 @@
                  </div>
 
                  <div class="floating-card">
-                     <div class="account-item" onclick="renderSettingsPage()">
+                     <div class="account-item" onclick="navigate('settings', null, t('settings'))">
                          <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="settings"></i></div>
                          <div class="account-item-text">${t('settings')}</div>
                          <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
@@ -2026,6 +2025,7 @@
             document.getElementById('header-back-btn').onclick = () => { renderAccountHub(); currentView = 'account'; document.getElementById('header-back-btn').style.display = 'none'; };
 
             const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const savedLang = localStorage.getItem('l8te_lang') || 'de';
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
@@ -2059,7 +2059,6 @@
                     </div>
                 </div>
             `;
-            const savedLang = localStorage.getItem('l8te_lang') || 'de';
             const langLabel = savedLang === 'en' ? t('en') : t('de');
             document.getElementById('current-lang-display').innerText = langLabel;
 
