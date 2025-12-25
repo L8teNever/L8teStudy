@@ -9,6 +9,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     dark_mode = db.Column(db.Boolean, default=False)
+    language = db.Column(db.String(5), default='de')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     tasks = db.relationship('Task', backref='author', lazy='dynamic')

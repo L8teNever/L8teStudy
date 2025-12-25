@@ -600,6 +600,28 @@ def get_notification_settings():
         'reminder_exam': settings.reminder_exam or ""
     })
 
+@api_bp.route('/settings/theme', methods=['POST'])
+@login_required
+def update_theme():
+    data = request.get_json()
+    if data and 'dark_mode' in data:
+        current_user.dark_mode = data['dark_mode']
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 400
+
+@api_bp.route('/settings/language', methods=['POST'])
+@login_required
+def update_language():
+    data = request.get_json()
+    if data and 'language' in data:
+        lang = data['language']
+        if lang in ['de', 'en']:
+            current_user.language = lang
+            db.session.commit()
+            return jsonify({'success': True})
+    return jsonify({'success': False}), 400
+
 @api_bp.route('/settings/notifications', methods=['POST'])
 @login_required
 def update_notification_settings():

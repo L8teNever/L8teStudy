@@ -997,7 +997,8 @@
         window.currentUser = {
             name: "{{ user.username }}",
             email: "{{ user.username }}@l8testudy.app",
-            darkMode: "{{ 'true' if user.dark_mode else 'false' }}" === 'true'
+            darkMode: "{{ 'true' if user.dark_mode else 'false' }}" === 'true',
+            language: "{{ user.language }}" || 'de'
         };
         let currentTaskTab = 'open';
         let cachedTasks = [];
@@ -1049,7 +1050,7 @@
         };
 
         function t(key) {
-            const lang = localStorage.getItem('l8te_lang') || 'de';
+            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
             return translations[lang][key] || key;
         }
 
@@ -2017,7 +2018,7 @@
         }
 
         function renderLanguageSelection() {
-            const savedLang = localStorage.getItem('l8te_lang') || 'de';
+            const savedLang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
             document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
                     <h3 style="margin:0">Sprache wählen</h3>
@@ -2036,8 +2037,18 @@
             lucide.createIcons();
         }
 
-        function setLanguage(lang) {
+        async function setLanguage(lang) {
             localStorage.setItem('l8te_lang', lang);
+            if (window.currentUser) window.currentUser.language = lang;
+
+            try {
+                await fetch('/api/settings/language', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ language: lang })
+                });
+            } catch (e) { console.error('Failed to save language', e); }
+
             closeSheet();
             updateAppLanguage();
         }

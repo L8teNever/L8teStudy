@@ -11,7 +11,10 @@ from flask_limiter.util import get_remote_address
 
 load_dotenv()
 
+from flask_migrate import Migrate
+
 db = SQLAlchemy()
+migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 talisman = Talisman()
@@ -59,6 +62,7 @@ def create_app():
     app.config['WTF_CSRF_SSL_STRICT'] = is_production  # Disable strict SSL check unless in prod
 
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login_page'
 
