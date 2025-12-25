@@ -1066,8 +1066,13 @@
         };
 
         function t(key) {
-            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
-            return translations[lang][key] || key;
+            try {
+                const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
+                return (translations[lang] && translations[lang][key]) || (translations['de'] && translations['de'][key]) || key;
+            } catch (e) {
+                console.warn('Translation missing for:', key);
+                return key;
+            }
         }
 
         function updateAppLanguage() {
