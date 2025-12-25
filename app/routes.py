@@ -478,16 +478,7 @@ def change_password():
     
     return jsonify({'success': True})
 
-@api_bp.route('/settings/theme', methods=['POST'])
-@login_required
-def update_theme():
-    data = request.json
-    dark_mode = data.get('dark_mode')
-    if dark_mode is not None:
-        current_user.dark_mode = bool(dark_mode)
-        db.session.commit()
-        return jsonify({'success': True})
-    return jsonify({'success': False, 'message': 'Missing dark_mode value'}), 400
+
 
 # --- Admin Routes ---
 @api_bp.route('/admin/users', methods=['GET'])
