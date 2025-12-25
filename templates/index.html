@@ -1444,8 +1444,7 @@
                         </div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>`).join('');
-                    </div > `).join('');
-                listContainer.innerHTML = `< div class="floating-card" style = "padding:0 24px" > ${ listHtml }</div > `;
+                listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}</div>`;
                 lucide.createIcons();
 
                 // Re-attach search listener if active
@@ -1464,7 +1463,7 @@
 
         async function toggleTaskStatus(id, currentStatus, refreshHome = false) {
             try {
-                const res = await fetch(`/ api / tasks / ${ id } `, {
+                const res = await fetch(`/ api / tasks / ${id} `, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ is_done: !currentStatus })
@@ -1499,7 +1498,7 @@
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div > `).join('');
                     document.getElementById('calendar-content').innerHTML = listHtml ?
-                        `< div class="floating-card" style = "padding:0 24px" > ${ listHtml }</div > ` :
+                        `< div class="floating-card" style = "padding:0 24px" > ${listHtml}</div > ` :
                         `< div class="floating-card" style = "padding:40px; text-align:center" > <p class="item-sub">Keine anstehenden Termine.</p></div > `;
                 } else {
                     document.getElementById('calendar-content').innerHTML = `
@@ -1523,7 +1522,7 @@
             if (!grid || !title) return;
             title.innerText = viewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
             grid.innerHTML = '';
-            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `< div class="day-label" > ${ d }</div > `);
+            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `< div class="day-label" > ${d}</div > `);
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
             const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
             const offset = firstDay === 0 ? 6 : firstDay - 1;
@@ -1533,13 +1532,12 @@
                 const year = dayDate.getFullYear();
                 const month = String(dayDate.getMonth() + 1).padStart(2, '0');
                 const d = String(dayDate.getDate()).padStart(2, '0');
-                const dateStr = `${ year } -${ month } -${ d } `;
+                const dateStr = `${year}-${month}-${d}`;
                 const dayEvents = events.filter(e => e.date === dateStr);
                 const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
-                const dotHtml = dayEvents.length > 0 ? `< div class="event-dot" ></div > ` : '';
-                grid.innerHTML += `< div class="calendar-day ${isToday ? 'today' : ''}" onclick = "openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/" / g, '&quot;')
-            }')">${i}${dotHtml}</div>`;
-        }
+                const dotHtml = dayEvents.length > 0 ? `<div class="event-dot"></div>` : '';
+                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotHtml}</div>`;
+            }
         }
 
         function changeViewMonth(delta) { viewDate.setMonth(viewDate.getMonth() + delta); renderCalendar('monat'); }
