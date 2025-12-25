@@ -1036,7 +1036,8 @@
                 morning: "Guten Morgen.", today_is: "Heute ist der", next_event: "Nächster Termin",
                 due_tasks: "Fällige Aufgaben", loading_tasks: "Lade Aufgaben...",
                 no_upcoming_events: "Keine anstehenden Termine.", today: "Heute", tomorrow: "Morgen",
-                no_date: "Kein Datum", due: "Fällig"
+                no_date: "Kein Datum", due: "Fällig",
+                no_open_tasks: "Keine offenen Aufgaben.", no_completed_tasks: "Keine erledigten Aufgaben."
             },
             en: {
                 home: "Home", tasks: "Tasks", calendar: "Plan", grades: "Grades",
@@ -1065,7 +1066,8 @@
                 morning: "Good Morning.", today_is: "Today is", next_event: "Next Event",
                 due_tasks: "Due Tasks", loading_tasks: "Loading tasks...",
                 no_upcoming_events: "No upcoming events.", today: "Today", tomorrow: "Tomorrow",
-                no_date: "No Date", due: "Due"
+                no_date: "No Date", due: "Due",
+                no_open_tasks: "No open tasks.", no_completed_tasks: "No completed tasks."
             }
         };
 
@@ -1080,16 +1082,29 @@
         }
 
         function updateAppLanguage() {
-            // Update Static Navigation
-            const navLinks = document.querySelectorAll('.bottom-nav .nav-link span');
-            if (navLinks.length >= 4) {
-                navLinks[0].innerText = t('home');
-                navLinks[1].innerText = t('tasks');
-                navLinks[2].innerText = t('calendar');
-                navLinks[3].innerText = t('grades');
+            // Update Bottom Navigation
+            const bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-link span');
+            if (bottomNavLinks.length >= 4) {
+                bottomNavLinks[0].innerText = t('home');
+                bottomNavLinks[1].innerText = t('tasks');
+                bottomNavLinks[2].innerText = t('calendar');
+                bottomNavLinks[3].innerText = t('grades');
             }
+            // Update Side Navigation
+            const sideNavLinks = document.querySelectorAll('.side-nav .nav-link span');
+            if (sideNavLinks.length >= 4) {
+                sideNavLinks[0].innerText = t('home');
+                sideNavLinks[1].innerText = t('tasks');
+                sideNavLinks[2].innerText = t('calendar');
+                sideNavLinks[3].innerText = t('grades');
+                if (sideNavLinks.length > 4) sideNavLinks[4].innerText = t('account');
+            }
+
             // Update Header if on main view
-            const titles = { home: 'home', tasks: 'tasks', calendar: 'calendar', grades: 'grades', account: 'account', settings: 'settings' };
+            const titles = {
+                home: 'home', tasks: 'tasks', calendar: 'calendar', grades: 'grades',
+                account: 'account', settings: 'settings', sub_admin: 'admin'
+            };
             if (titles[currentView]) {
                 document.getElementById('current-page-title').innerText = t(titles[currentView]);
             }
@@ -1162,8 +1177,14 @@
                 isSearchActive = false;
 
                 document.getElementById('header-back-btn').style.display = (view === 'settings' || view.startsWith('sub_')) ? 'block' : 'none';
-                const headerTitle = document.getElementById('current-page-title');
-                headerTitle.innerText = title;
+
+                // Set Header Title using translation
+                const titleKeys = {
+                    home: 'home', tasks: 'tasks', calendar: 'calendar', grades: 'grades',
+                    settings: 'settings', account: 'account'
+                };
+                const translatedTitle = titleKeys[view] ? t(titleKeys[view]) : (view.charAt(0).toUpperCase() + view.slice(1));
+                document.getElementById('current-page-title').innerText = translatedTitle;
 
                 document.querySelectorAll('.nav-link').forEach(n => {
                     n.classList.remove('active');
@@ -1393,24 +1414,26 @@
         }
 
         async function renderTasks(tab = 'open') {
+            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
+            const locale = lang === 'en' ? 'en-US' : 'de-DE';
             currentTaskTab = tab;
             document.getElementById('app-container').innerHTML = `
                 <div class="controls-row ${isSearchActive ? 'search-active' : ''}">
                     <!-- Tab Bar -->
                     <div class="tab-bar">
-                        <button class="tab-btn ${tab === 'open' ? 'active' : ''}" onclick="renderTasks('open')">Offen</button>
-                        <button class="tab-btn ${tab === 'done' ? 'active' : ''}" onclick="renderTasks('done')">Erledigt</button>
+                        <button class="tab-btn ${tab === 'open' ? 'active' : ''}" onclick="renderTasks('open')">${t('open')}</button>
+                        <button class="tab-btn ${tab === 'done' ? 'active' : ''}" onclick="renderTasks('done')">${t('completed')}</button>
                     </div>
                     
                     <!-- Search Button/Bar -->
                     <div class="search-container ${isSearchActive ? 'active' : ''}" onclick="if(!isSearchActive) toggleSearch(event)">
                         <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
-                        <input type="text" class="search-input" placeholder="Suchen...">
-                        <div class="search-close-btn" onmousedown="toggleSearch(event, false)">Abbrechen</div>
+                        <input type="text" class="search-input" placeholder="${t('search')}">
+                        <div class="search-close-btn" onmousedown="toggleSearch(event, false)">${t('cancel')}</div>
                     </div>
                 </div>
 
-                <div id="tasks-list-container" style="padding-top: 20px; padding-bottom: 40px;"><div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Aufgaben...</div></div>`;
+                <div id="tasks-list-container" style="padding-top: 20px; padding-bottom: 40px;"><div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading_tasks')}</div></div>`;
             lucide.createIcons();
 
             try {
@@ -1421,7 +1444,8 @@
                 const filteredTasks = tasks.filter(t => tab === 'open' ? !t.is_done : t.is_done);
                 const listContainer = document.getElementById('tasks-list-container');
                 if (filteredTasks.length === 0) {
-                    listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Keine ${tab === 'open' ? 'offenen' : 'erledigten'} Aufgaben.</p></div>`;
+                    const emptyText = tab === 'open' ? t('no_open_tasks') : t('no_completed_tasks');
+                    listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${emptyText}</p></div>`;
 
                     // Re-attach search listener if active
                     if (isSearchActive) {
@@ -1440,7 +1464,7 @@
                         </div>
                         <div class="item-content">
                             <div class="item-title">${task.title}</div>
-                            <div class="item-sub">${task.subject || 'Allgemein'} • ${task.due_date ? new Date(task.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}</div>
+                            <div class="item-sub">${task.subject || t('general')} • ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}</div>
                         </div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>`).join('');
@@ -1457,7 +1481,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                document.getElementById('tasks-list-container').innerHTML = `< div class="floating-card" style = "color:var(--danger)" > Fehler beim Laden.</div > `;
+                document.getElementById('tasks-list-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
             }
         }
 
