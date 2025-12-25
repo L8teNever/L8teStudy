@@ -990,6 +990,7 @@
         let selectedSubject = null;
         let selectedDate = new Date();
         let viewDate = new Date();
+        let pickerViewDate = new Date();
         let isSearchActive = false;
         let isAdmin = "{{ 'true' if user.is_admin else 'false' }}" === 'true';
         window.currentUserId = Number("{{ user.id }}");
@@ -2287,6 +2288,7 @@
             } else {
                 selectedDate = new Date(); // Default today
             }
+            pickerViewDate = new Date(selectedDate);
 
             // If string "null" or empty passed
             if (editSubject && editSubject !== 'null' && editSubject !== 'undefined') selectedSubject = editSubject;
@@ -2542,14 +2544,14 @@
         }
 
         function selectPickerDate(day) {
-            selectedDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+            selectedDate = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth(), day);
             const display = document.getElementById('selected-date-display');
             if (display) display.innerText = selectedDate.toLocaleDateString('de-DE');
             toggleOptionList('calendar-picker-view');
         }
 
         function changeMonth(delta) {
-            viewDate.setMonth(viewDate.getMonth() + delta);
+            pickerViewDate.setMonth(pickerViewDate.getMonth() + delta);
             updateCalendarGrid();
         }
 
@@ -2558,14 +2560,14 @@
             const title = document.getElementById('calendar-month-year');
             if (!grid || !title) return;
 
-            title.innerText = viewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            title.innerText = pickerViewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
             grid.innerHTML = '';
 
             const weekdays = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
             weekdays.forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
 
-            const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-            const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+            const firstDay = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth(), 1).getDay();
+            const daysInMonth = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth() + 1, 0).getDate();
 
             // Adjust for Monday start (JS 0=Sun, 1=Mon...6=Sat)
             const offset = firstDay === 0 ? 6 : firstDay - 1;
@@ -2574,11 +2576,11 @@
 
             for (let i = 1; i <= daysInMonth; i++) {
                 const isSelected = selectedDate.getDate() === i &&
-                    selectedDate.getMonth() === viewDate.getMonth() &&
-                    selectedDate.getFullYear() === viewDate.getFullYear();
+                    selectedDate.getMonth() === pickerViewDate.getMonth() &&
+                    selectedDate.getFullYear() === pickerViewDate.getFullYear();
                 const isToday = i === new Date().getDate() &&
-                    viewDate.getMonth() === new Date().getMonth() &&
-                    viewDate.getFullYear() === new Date().getFullYear();
+                    pickerViewDate.getMonth() === new Date().getMonth() &&
+                    pickerViewDate.getFullYear() === new Date().getFullYear();
 
                 grid.innerHTML += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" onclick="event.stopPropagation(); selectPickerDate(${i})">${i}</div>`;
             }
