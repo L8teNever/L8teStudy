@@ -1130,6 +1130,18 @@
                     renderSubjectDetails(event.state.subject, event.state.avg, event.state.gradesJson, false);
                     return;
                 }
+                if (event.state.view === 'sub_admin_menu') {
+                    renderAdminMenu();
+                    return;
+                }
+                if (event.state.view === 'sub_activity') {
+                    renderActivityLog();
+                    return;
+                }
+                if (event.state.view === 'sub_users') {
+                    renderUserManagement();
+                    return;
+                }
 
                 // Find existing nav link for the view to pass element
                 const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
@@ -2115,17 +2127,95 @@
             `;
         }
 
+        // Admin Menu
+        function renderAdminMenu() {
+            previousView = 'settings';
+            currentView = 'sub_admin_menu';
+            document.getElementById('current-page-title').innerText = 'Admin';
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            // Check if we pushed state already (to avoid loop if popping)
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_admin_menu' }, '', null);
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => {
+                // If we came from history, go back. But hard to know source.
+                // Assuming standard flow: Settings -> Admin Menu.
+                window.history.back();
+            };
+
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card">
+                    <div class="account-item" onclick="renderUserManagement()">
+                        <div class="account-item-icon"><i data-lucide="users"></i></div>
+                        <div class="account-item-text">Benutzerverwaltung</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    <div class="account-item" onclick="renderActivityLog()">
+                        <div class="account-item-icon"><i data-lucide="activity"></i></div>
+                        <div class="account-item-text">Aktivitätsprotokoll</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function renderActivityLog() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_activity';
+            document.getElementById('current-page-title').innerText = 'Aktivität';
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_activity' }, '', null);
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Aktivitäten...</div>`;
+
+            try {
+                const res = await fetch('/api/admin/activity');
+                const logs = await res.json();
+
+                const listHtml = logs.map(l => `
+                    <div class="list-item" style="align-items:flex-start;">
+                        <div class="item-content">
+                            <div class="item-title" style="font-size:14px; font-weight:600;">${l.user}</div>
+                            <div class="item-sub" style="margin-top:2px;">${l.action}</div>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-sec); white-space:nowrap;">${l.timestamp}</div>
+                    </div>
+                 `).join('');
+
+                document.getElementById('app-container').innerHTML = `
+                    <div class="floating-card" style="padding:0 24px; margin-bottom:40px;">
+                        ${listHtml || '<div style="padding:20px; text-align:center">Keine Aktivitäten.</div>'}
+                    </div>
+                 `;
+            } catch (e) {
+                document.getElementById('app-container').innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">Fehler beim Laden.</div>`;
+            }
+        }
+
         // Sub-page: User Management
         async function renderUserManagement() {
-            previousView = 'account';
+            previousView = 'sub_admin_menu'; // Logically parent is admin menu now
             currentView = 'sub_users';
             document.getElementById('current-page-title').innerText = 'Benutzer';
             document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_users' }, '', null);
+            }
+            window.isPoppingState = false;
+
             document.getElementById('header-back-btn').onclick = () => {
-                renderAccountHub();
-                currentView = 'account';
-                document.getElementById('header-back-btn').style.display = 'none';
-                document.getElementById('main-fab').classList.remove('visible');
+                window.history.back();
             };
 
             document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Benutzer...</div>`;

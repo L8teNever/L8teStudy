@@ -684,3 +684,19 @@ def delete_subject(id):
 
 
 
+@api_bp.route('/admin/activity', methods=['GET'])
+@login_required
+def get_activity_log():
+    if not current_user.is_admin:
+        return jsonify({'success': False}), 403
+    
+    from .models import AuditLog
+    # Join with User to get username
+    logs = AuditLog.query.join(User).order_by(AuditLog.timestamp.desc()).limit(100).all()
+    
+    return jsonify([{
+        'id': l.id,
+        'user': l.author.username,
+        'action': l.action,
+        'timestamp': l.timestamp.strftime('%d.%m.%Y %H:%M')
+    } for l in logs])
