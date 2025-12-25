@@ -1037,7 +1037,19 @@
                 due_tasks: "Fällige Aufgaben", loading_tasks: "Lade Aufgaben...",
                 no_upcoming_events: "Keine anstehenden Termine.", today: "Heute", tomorrow: "Morgen",
                 no_date: "Kein Datum", due: "Fällig",
-                no_open_tasks: "Keine offenen Aufgaben.", no_completed_tasks: "Keine erledigten Aufgaben."
+                no_open_tasks: "Keine offenen Aufgaben.", no_completed_tasks: "Keine erledigten Aufgaben.",
+                edit_task: "Aufgabe bearbeiten", new_task: "Neue Aufgabe", new_event: "Neuer Termin",
+                new_grade: "Neue Note", edit_grade: "Note bearbeiten", edit_event: "Termin bearbeiten",
+                choose_subject: "Fach wählen...", title_placeholder: "Titel",
+                existing_images: "Vorhandene Bilder - zum Löschen antippen", add_images: "Bilder hinzufügen",
+                select_images: "Bilder auswählen...", desc_placeholder: "Beschreibung",
+                average: "Durchschnitt", single_grades: "Einzelnoten", total_average: "Gesamtdurchschnitt",
+                no_grades_yet: "Noch keine Noten eingetragen.", save: "Speichern",
+                browser_push: "Browser Push", allow_push: "Push erlauben", push_active_msg: "Benachrichtigungen sind aktiviert. Tippe zum Deaktivieren.",
+                push_inactive_msg: "Tippe, um Benachrichtigungen zu aktivieren.", news: "Neuigkeiten", new_tasks_others: "Neue Aufgaben (von anderen)",
+                new_events_others: "Neue Termine (von anderen)", daily_reminder: "Tägliche Erinnerung", homework_tmrw: "Hausaufgaben (Morgen)",
+                exams_tmrw: "Klausuren/Termine (Morgen)", reminder_hint: "Wähle eine Uhrzeit für die Erinnerung. Leer lassen zum Deaktivieren.",
+                send_test: "Test-Benachrichtigung senden", view_details: "Details ansehen"
             },
             en: {
                 home: "Home", tasks: "Tasks", calendar: "Plan", grades: "Grades",
@@ -1067,7 +1079,19 @@
                 due_tasks: "Due Tasks", loading_tasks: "Loading tasks...",
                 no_upcoming_events: "No upcoming events.", today: "Today", tomorrow: "Tomorrow",
                 no_date: "No Date", due: "Due",
-                no_open_tasks: "No open tasks.", no_completed_tasks: "No completed tasks."
+                no_open_tasks: "No open tasks.", no_completed_tasks: "No completed tasks.",
+                edit_task: "Edit Task", new_task: "New Task", new_event: "New Event",
+                new_grade: "New Grade", edit_grade: "Edit Grade", edit_event: "Edit Event",
+                choose_subject: "Select Subject...", title_placeholder: "Title",
+                existing_images: "Existing Images - Tap to delete", add_images: "Add Images",
+                select_images: "Select Images...", desc_placeholder: "Description",
+                average: "Average", single_grades: "Single Grades", total_average: "Total Average",
+                no_grades_yet: "No grades entered yet.", save: "Save",
+                browser_push: "Browser Push", allow_push: "Allow Push", push_active_msg: "Notifications enabled. Tap to disable.",
+                push_inactive_msg: "Tap to enable notifications.", news: "News", new_tasks_others: "New Tasks (from others)",
+                new_events_others: "New Events (from others)", daily_reminder: "Daily Reminder", homework_tmrw: "Homework (Tomorrow)",
+                exams_tmrw: "Exams/Events (Tomorrow)", reminder_hint: "Choose a time. Leave empty to disable.",
+                send_test: "Send Test Notification", view_details: "View Details"
             }
         };
 
@@ -1927,12 +1951,12 @@
 
                 document.getElementById('sheet-content').innerHTML = `
                     <div class="sheet-header">
-                        <h2 style="margin:0; font-size:20px;">${day}. ${viewDate.toLocaleDateString('de-DE', { month: 'long' })}</h2>
+                        <h2 style="margin:0; font-size:20px;">${day}. ${viewDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { month: 'long' })}</h2>
                         <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
                     </div>
                     <div class="floating-card" style="padding:0 24px; margin-bottom:20px;">${listHtml}</div>
-                    <button class="ios-btn" onclick="openCreateMenu('Termin', '', null, '${events[0].date}')">Neuer Termin</button>
-                    <button class="ios-btn btn-sec" onclick="closeSheet()">Fertig</button>
+                    <button class="ios-btn" onclick="openCreateMenu('Termin', '', null, '${events[0].date}')">${t('new_event')}</button>
+                    <button class="ios-btn btn-sec" onclick="closeSheet()">${t('done')}</button>
                 `;
                 document.getElementById('sheet-overlay').classList.add('active');
                 lucide.createIcons();
@@ -1940,7 +1964,7 @@
         }
 
         async function renderGrades() {
-            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Noten...</div>`;
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
             try {
                 const res = await fetch('/api/grades');
                 const grades = await res.json();
@@ -1969,10 +1993,10 @@
                 document.getElementById('app-container').innerHTML = `
                     ${totalAvg !== null ? `
                     <div class="floating-card" style="text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;">
-                        <p style="opacity:0.8; font-size:14px;">Gesamtdurchschnitt</p>
+                        <p style="opacity:0.8; font-size:14px;">${t('total_average')}</p>
                         <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">${totalAvg}</div>
                     </div>` : ''}
-                    ${listHtml || '<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Noch keine Noten eingetragen.</p></div>'}
+                    ${listHtml || `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_grades_yet')}</p></div>`}
                 `;
                 lucide.createIcons();
             } catch (e) { console.error(e); }
@@ -1999,7 +2023,7 @@
                     <h2 style="margin:0">${subject}</h2>
                     <div style="color:var(--accent); font-size:32px; font-weight:700; margin:10px 0;">${avg}</div>
                 </div>
-                <h3 style="margin:30px 0 10px 5px; font-size:18px;">Einzelnoten</h3>
+                <h3 style="margin:30px 0 10px 5px; font-size:18px;">${t('single_grades')}</h3>
                 <div class="floating-card" style="padding:10px; margin-bottom: 40px;">${listHtml}</div>`;
             document.getElementById('header-back-btn').style.display = 'block';
             document.getElementById('header-back-btn').onclick = () => window.history.back();
@@ -2123,44 +2147,44 @@
                 // Render UI immediately
                 document.getElementById('app-container').innerHTML = `
                    <div class="floating-card">
-                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Browser Push</h4>
+                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('browser_push')}</h4>
                         <div class="account-item" id="push-row" onclick="subscribePush()">
-                            <div class="account-item-text">Push erlauben</div>
+                            <div class="account-item-text">${t('allow_push')}</div>
                             <div class="ios-toggle" id="push-toggle"><div class="ios-toggle-knob"></div></div>
                         </div>
-                        <p class="item-sub" id="push-status-text" style="margin-top:10px; font-size:13px;">Tippe, um Benachrichtigungen zu aktivieren.</p>
+                        <p class="item-sub" id="push-status-text" style="margin-top:10px; font-size:13px;">${t('push_inactive_msg')}</p>
                    </div>
                    
                    <div class="floating-card">
-                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Neuigkeiten</h4>
+                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('news')}</h4>
                         <div class="account-item" onclick="toggleNotifySetting('notify_new_task', ${!settings.notify_new_task})">
-                            <div class="account-item-text">Neue Aufgaben (von anderen)</div>
+                            <div class="account-item-text">${t('new_tasks_others')}</div>
                             <div class="ios-toggle ${settings.notify_new_task ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
                         </div>
                          <div class="account-item" onclick="toggleNotifySetting('notify_new_event', ${!settings.notify_new_event})">
-                            <div class="account-item-text">Neue Termine (von anderen)</div>
+                            <div class="account-item-text">${t('new_events_others')}</div>
                             <div class="ios-toggle ${settings.notify_new_event ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
                         </div>
                    </div>
 
                    <div class="floating-card">
-                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Tägliche Erinnerung</h4>
+                        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('daily_reminder')}</h4>
                         
                         <div class="list-item" style="border-bottom: 1px solid var(--border);">
-                             <div class="item-content"><div class="item-title">Hausaufgaben (Morgen)</div></div>
+                             <div class="item-content"><div class="item-title">${t('homework_tmrw')}</div></div>
                              <input type="time" value="${settings.reminder_homework || ''}" onchange="saveNotifyTime('reminder_homework', this.value)" style="background:var(--tab-bg); border:none; color:var(--text-main); padding:8px; border-radius:8px;">
                         </div>
 
 
                         <div class="list-item">
-                             <div class="item-content"><div class="item-title">Klausuren/Termine (Morgen)</div></div>
+                             <div class="item-content"><div class="item-title">${t('exams_tmrw')}</div></div>
                              <input type="time" value="${settings.reminder_exam || ''}" onchange="saveNotifyTime('reminder_exam', this.value)" style="background:var(--tab-bg); border:none; color:var(--text-main); padding:8px; border-radius:8px;">
                         </div>
-                        <p class="item-sub" style="margin-top:10px; font-size:13px;">Wähle eine Uhrzeit für die Erinnerung. Leer lassen zum Deaktivieren.</p>
+                        <p class="item-sub" style="margin-top:10px; font-size:13px;">${t('reminder_hint')}</p>
                    </div>
                    
                    <div style="margin-top:20px; text-align:center;">
-                        <button class="ios-btn btn-sec" onclick="sendTestNotification()" style="width:auto; padding:10px 20px;">Test-Benachrichtigung senden</button>
+                        <button class="ios-btn btn-sec" onclick="sendTestNotification()" style="width:auto; padding:10px 20px;">${t('send_test')}</button>
                    </div>
                 `;
                 lucide.createIcons();
@@ -2674,7 +2698,7 @@
                     <div style="font-size:22px; font-weight:800; line-height:1.2; color:var(--text-main);">${title}</div>
                     <div style="display:flex; align-items:center; gap:8px; margin-top:10px; color:var(--text-sec); font-size:14px; font-weight:500;">
                         ${subject ? `<span>${subject}</span><span style="opacity:0.3">•</span>` : ''}
-                        <span>${new Date(date).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                        <span>${new Date(date).toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                         ${value ? `<span style="opacity:0.3">•</span><span style="color:var(--accent); font-weight:700;">${t('grade_value')}: ${value}</span>` : ''}
                     </div>
                 </div>
@@ -2765,24 +2789,24 @@
 
             document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
-                    <h2 style="margin:0; font-size:20px; font-weight:700;">${id ? 'Bearbeiten' : type}</h2>
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">${id ? (type === 'Aufgabe' ? t('edit_task') : (type === 'Termin' ? t('edit_event') : t('edit_grade'))) : (type === 'Aufgabe' ? t('new_task') : (type === 'Termin' ? t('new_event') : t('new_grade')))}</h2>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
                 </div>
                 ${(type === 'Aufgabe' || type === 'Note') ? `
-                    <div class="custom-picker-trigger" onclick="toggleOptionList('subject-list')"><span id="selected-subject-display">${selectedSubject || 'Fach wählen...'}</span><i data-lucide="chevron-down" style="width:18px"></i></div>
+                    <div class="custom-picker-trigger" onclick="toggleOptionList('subject-list')"><span id="selected-subject-display">${selectedSubject || t('choose_subject')}</span><i data-lucide="chevron-down" style="width:18px"></i></div>
                     <div class="picker-options" id="subject-list">
                         <!-- Loaded dynamically -->
                     </div>
                     </div>
                 ` : ''}
-                <input type="text" id="input-title" class="ios-input" placeholder="Titel" value="${titleVal}">
+                <input type="text" id="input-title" class="ios-input" placeholder="${t('title_placeholder')}" value="${titleVal}">
                 ${type === 'Aufgabe' ? `
                     ${(id && existingImagesJson !== '[]') ? (() => {
                         let imgs = [];
                         try { imgs = JSON.parse(existingImagesJson.replace(/&quot;/g, '"')); } catch (e) { }
                         if (imgs.length > 0) {
                             return `<div style="margin-bottom:10px;">
-                                <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">Vorhandene Bilder - zum Löschen antippen</label>
+                                <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">${t('existing_images')}</label>
                                 <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;">
                                     ${imgs.map(img => {
                                 // extracting filename/id might be needed if url is full path. 
@@ -2809,22 +2833,22 @@
                         }
                         return '';
                     })() : ''}
-                    <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">Bilder hinzufügen</label>
+                    <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">${t('add_images')}</label>
                     <input type="file" id="input-images" class="ios-input" multiple accept="image/*" style="display:none;" onchange="updateFileCount(this)">
                     <div class="ios-btn btn-sec" onclick="document.getElementById('input-images').click()" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:15px; cursor:pointer;">
                         <i data-lucide="image-plus" style="width:20px;"></i>
-                        <span id="file-count-text">Bilder auswählen...</span>
+                        <span id="file-count-text">${t('select_images')}</span>
                     </div>
                 ` : ''}
-                ${type === 'Note' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="Note" value="${valVal}">` : ''}
-                <div class="custom-picker-trigger" onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span id="selected-date-display">${selectedDate.toLocaleDateString('de-DE')}</span><i data-lucide="calendar" style="width:18px"></i></div>
+                ${type === 'Note' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="${t('grade_value')}" value="${valVal}">` : ''}
+                <div class="custom-picker-trigger" onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span id="selected-date-display">${selectedDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE')}</span><i data-lucide="calendar" style="width:18px"></i></div>
                 <div class="picker-options" id="calendar-picker-view" style="padding:15px">
                     <div class="calendar-header"><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(-1)"><i data-lucide="chevron-left"></i></div><span id="calendar-month-year" style="font-weight:600"></span><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(1)"><i data-lucide="chevron-right"></i></div></div>
                     <div class="calendar-days-grid" id="calendar-grid"></div>
                 </div>
-                <textarea id="input-desc" class="ios-input" placeholder="Beschreibung">${descVal}</textarea>
-                <button class="ios-btn" onclick="${saveFunction}">Speichern</button>
-                <button class="ios-btn btn-sec" onclick="closeSheet()">Abbrechen</button>`;
+                <textarea id="input-desc" class="ios-input" placeholder="${t('desc_placeholder')}">${descVal}</textarea>
+                <button class="ios-btn" onclick="${saveFunction}">${t('save')}</button>
+                <button class="ios-btn btn-sec" onclick="closeSheet()">${t('cancel')}</button>`;
             openSheetOverlay();
             lucide.createIcons();
 
