@@ -2273,10 +2273,14 @@
             }
             let type = editType || (currentView === 'tasks' ? "Aufgabe" : (currentView === 'calendar' ? "Termin" : "Note"));
 
-            // Fix date parsing
             if (editDate && editDate !== 'null' && editDate !== 'undefined') {
-                selectedDate = new Date(editDate);
-                if (isNaN(selectedDate.getTime())) selectedDate = new Date(); // Fallback if invalid
+                if (editDate.includes('-')) {
+                    const [y, m, d] = editDate.split('-').map(Number);
+                    selectedDate = new Date(y, m - 1, d);
+                } else {
+                    selectedDate = new Date(editDate);
+                }
+                if (isNaN(selectedDate.getTime())) selectedDate = new Date();
             } else {
                 selectedDate = new Date(); // Default today
             }
@@ -2404,7 +2408,10 @@
             const title = document.getElementById('input-title').value;
             const desc = document.getElementById('input-desc').value;
             const subject = selectedSubject;
-            const date = selectedDate.toISOString().split('T')[0];
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            const date = `${year}-${month}-${d}`;
             if (!title) return;
 
             const url = updateId ? `/api/tasks/${updateId}` : '/api/tasks';
@@ -2450,7 +2457,10 @@
         async function saveEvent(updateId = null) {
             const title = document.getElementById('input-title').value;
             const desc = document.getElementById('input-desc').value;
-            const date = selectedDate.toISOString().split('T')[0];
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            const date = `${year}-${month}-${d}`;
             if (!title) return;
 
             const method = updateId ? 'PUT' : 'POST';
@@ -2469,7 +2479,10 @@
         async function saveGrade(updateId = null) {
             const title = document.getElementById('input-title').value;
             const value = document.getElementById('input-value').value;
-            const date = selectedDate.toISOString().split('T')[0];
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
+            const date = `${year}-${month}-${d}`;
             if (!selectedSubject || !value) { alert('Bitte Fach und Note ausfüllen.'); return; }
 
             const method = updateId ? 'PUT' : 'POST';
