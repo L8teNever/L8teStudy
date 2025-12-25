@@ -1125,6 +1125,12 @@
             // Handle View Navigation
             if (event.state && event.state.view) {
                 window.isPoppingState = true;
+
+                if (event.state.view === 'sub_subject_details') {
+                    renderSubjectDetails(event.state.subject, event.state.avg, event.state.gradesJson, false);
+                    return;
+                }
+
                 // Find existing nav link for the view to pass element
                 const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
                 // Map view to title
@@ -1825,7 +1831,13 @@
             } catch (e) { console.error(e); }
         }
 
-        function renderSubjectDetails(subject, avg, gradesJson) {
+        function renderSubjectDetails(subject, avg, gradesJson, pushToHistory = true) {
+            if (pushToHistory) {
+                window.history.pushState({ view: 'sub_subject_details', subject, avg, gradesJson }, '', null);
+            }
+            previousView = currentView;
+            currentView = 'sub_subject_details';
+
             const grades = JSON.parse(gradesJson);
             const listHtml = grades.map(g => `
                 <div class="list-item" onclick="openDetails('Note', '${g.title || 'Note'}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id})">
@@ -1843,7 +1855,7 @@
                 <h3 style="margin:30px 0 10px 5px; font-size:18px;">Einzelnoten</h3>
                 <div class="floating-card" style="padding:10px; margin-bottom: 40px;">${listHtml}</div>`;
             document.getElementById('header-back-btn').style.display = 'block';
-            document.getElementById('header-back-btn').onclick = () => renderGrades();
+            document.getElementById('header-back-btn').onclick = () => window.history.back();
         }
 
         // --- Account & Settings Logic ---
@@ -2446,7 +2458,6 @@
                     <div class="calendar-header"><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(-1)"><i data-lucide="chevron-left"></i></div><span id="calendar-month-year" style="font-weight:600"></span><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(1)"><i data-lucide="chevron-right"></i></div></div>
                     <div class="calendar-days-grid" id="calendar-grid"></div>
                 </div>
-                <textarea id="input-desc" class="ios-input" placeholder="Beschreibung">${descVal}</textarea>
                 <textarea id="input-desc" class="ios-input" placeholder="Beschreibung">${descVal}</textarea>
                 <button class="ios-btn" onclick="${saveFunction}">Speichern</button>
                 <button class="ios-btn btn-sec" onclick="closeSheet()">Abbrechen</button>`;
