@@ -1002,6 +1002,83 @@
         let currentTaskTab = 'open';
         let cachedTasks = [];
 
+        // Translations
+        const translations = {
+            de: {
+                home: "Home", tasks: "Aufgaben", calendar: "Plan", grades: "Noten",
+                account: "Account", settings: "Einstellungen", admin: "Admin",
+                general: "Allgemein", language: "Sprache", appearance: "Erscheinungsbild",
+                darkmode: "Dunkelmodus", notifications: "Benachrichtigungen", security: "Sicherheit",
+                changepw: "Passwort ändern", logout: "Abmelden", install: "App installieren",
+                reportbug: "Bug melden", loading: "Lade...", error: "Fehler",
+                cancel: "Abbrechen", save: "Speichern", add: "Hinzufügen", delete: "Löschen",
+                edit: "Bearbeiten", done: "Fertig", search: "Suchen...", no_results: "Keine Ergebnisse.",
+                open: "Offen", completed: "Erledigt", tasks_empty: "Alles erledigt!",
+                events: "Termine", month: "Monat", event_empty: "Keine Termine.",
+                subject_new: "Neues Fach", subject_manage: "Fächer verwalten",
+                user_manage: "Benutzerverwaltung", activity: "Aktivität", activity_log: "Aktivitätsprotokoll",
+                backup: "Backup & Restore", push_allow: "Push erlauben",
+                confirm_delete: "Wirklich löschen?", password_new: "Neues Passwort",
+                password_current: "Aktuelles Passwort", password_repeat: "Passwort wiederholen",
+                title: "Titel", description: "Beschreibung", date: "Datum", time: "Zeit",
+                grade_value: "Note", weight: "Gewichtung",
+                monday: "Mo", tuesday: "Di", wednesday: "Mi", thursday: "Do", friday: "Fr", saturday: "Sa", sunday: "So",
+                jan: "Jan", feb: "Feb", mar: "Mär", apr: "Apr", may: "Mai", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", oct: "Okt", nov: "Nov", dec: "Dez"
+            },
+            en: {
+                home: "Home", tasks: "Tasks", calendar: "Plan", grades: "Grades",
+                account: "Account", settings: "Settings", admin: "Admin",
+                general: "General", language: "Language", appearance: "Appearance",
+                darkmode: "Dark Mode", notifications: "Notifications", security: "Security",
+                changepw: "Change Password", logout: "Log Out", install: "Install App",
+                reportbug: "Report Bug", loading: "Loading...", error: "Error",
+                cancel: "Cancel", save: "Save", add: "Add", delete: "Delete",
+                edit: "Edit", done: "Done", search: "Search...", no_results: "No results.",
+                open: "Open", completed: "Done", tasks_empty: "All clean!",
+                events: "Events", month: "Month", event_empty: "No events.",
+                subject_new: "New Subject", subject_manage: "Manage Subjects",
+                user_manage: "User Management", activity: "Activity", activity_log: "Activity Log",
+                backup: "Backup & Restore", push_allow: "Allow Push",
+                confirm_delete: "Really delete?", password_new: "New Password",
+                password_current: "Current Password", password_repeat: "Repeat Password",
+                title: "Title", description: "Description", date: "Date", time: "Time",
+                grade_value: "Grade", weight: "Weight",
+                monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun",
+                jan: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", may: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", oct: "Oct", nov: "Nov", dec: "Dec"
+            }
+        };
+
+        function t(key) {
+            const lang = localStorage.getItem('l8te_lang') || 'de';
+            return translations[lang][key] || key;
+        }
+
+        function updateAppLanguage() {
+            // Update Static Navigation
+            const navLinks = document.querySelectorAll('.bottom-nav .nav-link span');
+            if (navLinks.length >= 4) {
+                navLinks[0].innerText = t('home');
+                navLinks[1].innerText = t('tasks');
+                navLinks[2].innerText = t('calendar');
+                navLinks[3].innerText = t('grades');
+            }
+            // Update Header if on main view
+            const titles = { home: 'home', tasks: 'tasks', calendar: 'calendar', grades: 'grades', account: 'account', settings: 'settings' };
+            if (titles[currentView]) {
+                document.getElementById('current-page-title').innerText = t(titles[currentView]);
+            }
+
+            // Re-render current view to apply changes
+            if (currentView === 'home') renderHome();
+            else if (currentView === 'tasks') renderTasks();
+            else if (currentView === 'calendar') renderCalendar();
+            else if (currentView === 'grades') renderGrades();
+            else if (currentView === 'settings') renderSettingsPage();
+            else if (currentView === 'account') renderAccountHub();
+            else if (currentView === 'sub_admin') renderAdminContent();
+            else if (currentView === 'sub_admin_menu') renderAdminMenu();
+        }
+
         async function toggleTheme() {
             const body = document.body;
             const isDark = body.getAttribute('data-theme') === 'dark';
@@ -1668,17 +1745,17 @@
                 <div class="controls-row ${isSearchActive ? 'search-active' : ''}">
                     <!-- Tab Bar -->
                     <div class="tab-bar">
-                        <button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">Termine</button>
-                        <button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">Monat</button>
+                        <button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">${t('events')}</button>
+                        <button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">${t('month')}</button>
                     </div>
                      <!-- Search Button/Bar -->
                      <div class="search-container ${isSearchActive ? 'active' : ''}" onclick="if(!isSearchActive) toggleSearch(event)">
                         <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
-                        <input type="text" class="search-input" placeholder="Termine suchen...">
-                        <div class="search-close-btn" onmousedown="toggleSearch(event, false)">Abbrechen</div>
+                        <input type="text" class="search-input" placeholder="${t('search')}">
+                        <div class="search-close-btn" onmousedown="toggleSearch(event, false)">${t('cancel')}</div>
                     </div>
                 </div>
-                <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">Lade Termine...</div>`;
+                <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}</div>`;
             lucide.createIcons();
 
             // Re-attach search listener if active
@@ -1894,7 +1971,7 @@
         async function renderSettingsPage() {
             previousView = 'account';
             currentView = 'settings';
-            document.getElementById('current-page-title').innerText = 'Einstellungen';
+            document.getElementById('current-page-title').innerText = t('settings');
             document.getElementById('header-back-btn').style.display = 'block';
             document.getElementById('header-back-btn').onclick = () => { renderAccountHub(); currentView = 'account'; document.getElementById('header-back-btn').style.display = 'none'; };
 
@@ -1902,23 +1979,21 @@
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
-                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Erscheinungsbild & Benachrichtigungen</h4>
+                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('appearance')} & ${t('notifications')}</h4>
                     <div class="account-item" onclick="toggleTheme()">
-                        <div class="account-item-text">Dunkelmodus</div>
+                        <div class="account-item-text">${t('darkmode')}</div>
                         <div class="ios-toggle ${isDark ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
                     </div>
                     <div class="account-item" onclick="renderNotificationSettings()">
-                        <div class="account-item-text">Benachrichtigungen</div>
+                        <div class="account-item-text">${t('notifications')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                 </div>
-
-                </div>
                 
                 <div class="floating-card">
-                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Allgemein</h4>
+                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('general')}</h4>
                     <div class="account-item" onclick="renderLanguageSelection()">
-                        <div class="account-item-text">Sprache</div>
+                        <div class="account-item-text">${t('language')}</div>
                         <div style="display:flex; align-items:center;">
                             <span style="color:var(--text-sec); margin-right:10px; font-size:15px;" id="current-lang-display">Deutsch</span>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
@@ -1964,10 +2039,7 @@
         function setLanguage(lang) {
             localStorage.setItem('l8te_lang', lang);
             closeSheet();
-            if (lang === 'en') {
-                alert('Sprache auf Englisch gestellt. (Hinweis: Vollständige Übersetzung folgt in Kürze)');
-            }
-            renderSettingsPage();
+            updateAppLanguage();
         }
 
 
@@ -2183,18 +2255,15 @@
         function renderAdminMenu() {
             previousView = 'settings';
             currentView = 'sub_admin_menu';
-            document.getElementById('current-page-title').innerText = 'Admin';
+            document.getElementById('current-page-title').innerText = t('admin');
             document.getElementById('header-back-btn').style.display = 'block';
 
-            // Check if we pushed state already (to avoid loop if popping)
             if (!window.isPoppingState) {
                 window.history.pushState({ view: 'sub_admin_menu' }, '', null);
             }
             window.isPoppingState = false;
 
             document.getElementById('header-back-btn').onclick = () => {
-                // If we came from history, go back. But hard to know source.
-                // Assuming standard flow: Settings -> Admin Menu.
                 window.history.back();
             };
 
@@ -2202,17 +2271,17 @@
                 <div class="floating-card">
                     <div class="account-item" onclick="renderUserManagement()">
                         <div class="account-item-icon"><i data-lucide="users"></i></div>
-                        <div class="account-item-text">Benutzerverwaltung</div>
+                        <div class="account-item-text">${t('user_manage')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     <div class="account-item" onclick="renderSubjectManagement()">
                         <div class="account-item-icon"><i data-lucide="book"></i></div>
-                        <div class="account-item-text">Fächer verwalten</div>
+                        <div class="account-item-text">${t('subject_manage')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     <div class="account-item" onclick="renderActivityLog()">
                         <div class="account-item-icon"><i data-lucide="activity"></i></div>
-                        <div class="account-item-text">Aktivitätsprotokoll</div>
+                        <div class="account-item-text">${t('activity_log')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                 </div>
@@ -3071,6 +3140,7 @@
 
         window.onload = () => {
             const path = window.location.pathname;
+            updateAppLanguage(); // Initialize translations
             if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], 'Aufgaben');
             else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], 'Plan');
             else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], 'Noten');
