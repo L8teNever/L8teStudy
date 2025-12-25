@@ -2187,9 +2187,9 @@
             document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
             document.getElementById('app-container').innerHTML = `
-                <div class="floating-card" style="display:flex; align-items:center; padding:10px 15px; background:var(--tab-bg); border:none; margin-bottom:15px;">
-                    <i data-lucide="search" style="color:var(--text-sec); width:20px; margin-right:10px;"></i>
-                    <input type="text" class="search-input-simple" placeholder="Suchen..." oninput="filterActivityLog()" style="border:none; background:transparent; font-size:16px; width:100%; outline:none; color:var(--text-main);">
+                <div style="width:100%; height:46px; background:rgba(120, 120, 128, 0.2); border-radius:10px; display:flex; align-items:center; padding:0 10px; margin-bottom:15px;" onclick="document.getElementById('act-search').focus()">
+                    <i data-lucide="search" style="color:var(--text-sec); width:18px; height:18px; margin-right:8px; flex-shrink:0;"></i>
+                    <input type="text" id="act-search" class="search-input-simple" placeholder="Suchen" oninput="filterActivityLog()" style="flex:1; background:transparent; border:none; color:var(--text-main); font-size:16px; outline:none; padding:0; height:100%;">
                 </div>
                 <div id="activity-list-container">
                     <div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Aktivitäten...</div>
