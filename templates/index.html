@@ -15,6 +15,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="apple-touch-icon" href="/static/icon-192.png">
     <link rel="icon" href="/static/icon-192.png">
+    <script src="/static/translations.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         // Global Fetch Wrapper for CSRF
@@ -1002,132 +1003,12 @@
             name: "{{ user.username }}",
             email: "{{ user.username }}@l8testudy.app",
             darkMode: "{{ 'true' if user.dark_mode else 'false' }}" === 'true',
-            language: "{{ user.language }}" || 'de'
+            language: "{{ user.language }}" || 'de',
+            is_admin: "{{ 'true' if user.is_admin else 'false' }}" === 'true'
         };
         let currentTaskTab = 'open';
         let cachedTasks = [];
 
-        // Translations
-        const translations = {
-            de: {
-                home: "Home", tasks: "Aufgaben", calendar: "Plan", grades: "Noten",
-                account: "Account", settings: "Einstellungen", admin: "Admin",
-                general: "Allgemein", language: "Sprache", appearance: "Erscheinungsbild",
-                darkmode: "Dunkelmodus", notifications: "Benachrichtigungen", security: "Sicherheit",
-                changepw: "Passwort ändern", logout: "Abmelden", install: "App installieren",
-                reportbug: "Bug melden", loading: "Lade...", error: "Fehler",
-                cancel: "Abbrechen", save: "Speichern", add: "Hinzufügen", delete: "Löschen",
-                edit: "Bearbeiten", done: "Fertig", search: "Suchen...", no_results: "Keine Ergebnisse.",
-                open: "Offen", completed: "Erledigt", tasks_empty: "Alles erledigt!",
-                events: "Termine", month: "Monat", event_empty: "Keine Termine.",
-                subject_new: "Neues Fach", subject_manage: "Fächer verwalten",
-                user_manage: "Benutzerverwaltung", activity: "Aktivität", activity_log: "Aktivitätsprotokoll",
-                backup: "Backup & Restore", push_allow: "Push erlauben",
-                confirm_delete: "Wirklich löschen?", password_new: "Neues Passwort",
-                password_current: "Aktuelles Passwort", password_repeat: "Passwort wiederholen",
-                success_pw_change: "Passwort erfolgreich geändert.",
-                title: "Titel", description: "Beschreibung", date: "Datum", time: "Zeit",
-                grade_value: "Note", weight: "Gewichtung",
-                monday: "Mo", tuesday: "Di", wednesday: "Mi", thursday: "Do", friday: "Fr", saturday: "Sa", sunday: "So",
-                jan: "Jan", feb: "Feb", mar: "Mär", apr: "Apr", may: "Mai", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", oct: "Okt", nov: "Nov", dec: "Dez",
-                filter: "Filtern", by_user: "Nach Benutzer", by_action: "Nach Aktion", all: "Alle",
-                users: "Benutzer", new_user: "Neuer Benutzer", admin_rights: "Admin-Rechte", images: "Bilder",
-                msg_username: "Benutzername", msg_password: "Passwort", create: "Erstellen",
-                morning: "Guten Morgen.", today_is: "Heute ist der", next_event: "Nächster Termin",
-                due_tasks: "Fällige Aufgaben", loading_tasks: "Lade Aufgaben...",
-                no_upcoming_events: "Keine anstehenden Termine.", today: "Heute", tomorrow: "Morgen",
-                no_date: "Kein Datum", due: "Fällig",
-                no_open_tasks: "Keine offenen Aufgaben.", no_completed_tasks: "Keine erledigten Aufgaben.",
-                edit_task: "Aufgabe bearbeiten", new_task: "Neue Aufgabe", new_event: "Neuer Termin",
-                new_grade: "Neue Note", edit_grade: "Note bearbeiten", edit_event: "Termin bearbeiten",
-                choose_subject: "Fach wählen...", title_placeholder: "Titel",
-                existing_images: "Vorhandene Bilder - zum Löschen antippen", add_images: "Bilder hinzufügen",
-                select_images: "Bilder auswählen...", desc_placeholder: "Beschreibung",
-                average: "Durchschnitt", single_grades: "Einzelnoten", total_average: "Gesamtdurchschnitt",
-                no_grades_yet: "Noch keine Noten eingetragen.", save: "Speichern",
-                browser_push: "Browser Push", allow_push: "Push erlauben", push_active_msg: "Benachrichtigungen sind aktiviert. Tippe zum Deaktivieren.",
-                push_inactive_msg: "Tippe, um Benachrichtigungen zu aktivieren.", news: "Neuigkeiten", new_tasks_others: "Neue Aufgaben (von anderen)",
-                new_events_others: "Neue Termine (von anderen)", daily_reminder: "Tägliche Erinnerung", homework_tmrw: "Hausaufgaben (Morgen)",
-                exams_tmrw: "Klausuren/Termine (Morgen)", reminder_hint: "Wähle eine Uhrzeit für die Erinnerung. Leer lassen zum Deaktivieren.",
-                send_test: "Test-Benachrichtigung senden", view_details: "Details ansehen",
-                task: "Aufgabe", event: "Termin", grade: "Note", subject: "Fach",
-                load_subjects: "Lade Fächer...", existing_subjects: "Vorhandene Fächer",
-                no_subjects_found: "Keine Fächer gefunden.", error_loading: "Fehler beim Laden.",
-                error_adding: "Fehler beim Hinzufügen.", error_deleting: "Fehler beim Löschen.",
-                confirm_delete_subject: "Fach '{name}' wirklich löschen? Dies könnte Auswirkungen auf bestehende Aufgaben haben.",
-                day_initials: "M,D,M,D,F,S,S", images_selected: "Bilder ausgewählt",
-                subject_placeholder: "Fachname (z.B. Informatik)", add_btn: "Hinzufügen",
-                no_events_list: "Keine Termine.", confirm_delete: "Wirklich löschen?",
-                new_pw: "Neues Passwort", current_pw: "Aktuelles Passwort", pw_repeat: "Passwort wiederholen",
-                pw_error: "Die neuen Passwörter stimmen nicht überein.", pw_empty: "Bitte ein neues Passwort eingeben.",
-                pw_success: "Passwort erfolgreich geändert.", pw_change_error: "Fehler beim Ändern.",
-                notifications_disabled: "Benachrichtigungen deaktiviert.", error_disabling: "Fehler beim Deaktivieren.",
-                activity_search: "Aktivität suchen...", users: "Benutzer", load_users: "Lade Benutzer...",
-                new_user: "Neuer Benutzer", existing_users: "Vorhandene Benutzer", no_users: "Keine Benutzer gefunden.",
-                role: "Rolle", user: "Benutzer", admin: "Administrator", username_placeholder: "Benutzername",
-                email_placeholder: "E-Mail", password_placeholder: "Passwort", create_user: "Benutzer erstellen",
-                delete_user_confirm: "Benutzer '{name}' wirklich löschen?", error_creating: "Fehler beim Erstellen."
-            },
-            en: {
-                home: "Home", tasks: "Tasks", calendar: "Plan", grades: "Grades",
-                account: "Account", settings: "Settings", admin: "Admin",
-                general: "General", language: "Language", appearance: "Appearance",
-                darkmode: "Dark Mode", notifications: "Notifications", security: "Security",
-                changepw: "Change Password", logout: "Log Out", install: "Install App",
-                reportbug: "Report Bug", loading: "Loading...", error: "Error",
-                cancel: "Cancel", save: "Save", add: "Add", delete: "Delete",
-                edit: "Edit", done: "Done", search: "Search...", no_results: "No results.",
-                open: "Open", completed: "Done", tasks_empty: "All clean!",
-                events: "Events", month: "Month", event_empty: "No events.",
-                subject_new: "New Subject", subject_manage: "Manage Subjects",
-                user_manage: "User Management", activity: "Activity", activity_log: "Activity Log",
-                backup: "Backup & Restore", push_allow: "Allow Push",
-                confirm_delete: "Really delete?", password_new: "New Password",
-                password_current: "Current Password", password_repeat: "Repeat Password",
-                success_pw_change: "Password successfully changed.",
-                title: "Title", description: "Description", date: "Date", time: "Time",
-                grade_value: "Grade", weight: "Weight",
-                monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun",
-                jan: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", may: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", oct: "Oct", nov: "Nov", dec: "Dec",
-                filter: "Filter", by_user: "By User", by_action: "By Action", all: "All",
-                users: "Users", new_user: "New User", admin_rights: "Admin Rights", images: "Images",
-                msg_username: "Username", msg_password: "Password", create: "Create",
-                morning: "Good Morning.", today_is: "Today is", next_event: "Next Event",
-                due_tasks: "Due Tasks", loading_tasks: "Loading tasks...",
-                no_upcoming_events: "No upcoming events.", today: "Today", tomorrow: "Tomorrow",
-                no_date: "No Date", due: "Due",
-                no_open_tasks: "No open tasks.", no_completed_tasks: "No completed tasks.",
-                edit_task: "Edit Task", new_task: "New Task", new_event: "New Event",
-                new_grade: "New Grade", edit_grade: "Edit Grade", edit_event: "Edit Event",
-                choose_subject: "Select Subject...", title_placeholder: "Title",
-                existing_images: "Existing Images - Tap to delete", add_images: "Add Images",
-                select_images: "Select Images...", desc_placeholder: "Description",
-                average: "Average", single_grades: "Single Grades", total_average: "Total Average",
-                no_grades_yet: "No grades entered yet.", save: "Save",
-                browser_push: "Browser Push", allow_push: "Allow Push", push_active_msg: "Notifications enabled. Tap to disable.",
-                push_inactive_msg: "Tap to enable notifications.", news: "News", new_tasks_others: "New Tasks (from others)",
-                new_events_others: "New Events (from others)", daily_reminder: "Daily Reminder", homework_tmrw: "Homework (Tomorrow)",
-                exams_tmrw: "Exams/Events (Tomorrow)", reminder_hint: "Choose a time. Leave empty to disable.",
-                send_test: "Send Test Notification", view_details: "View Details",
-                task: "Task", event: "Event", grade: "Grade", subject: "Subject",
-                load_subjects: "Loading Subjects...", existing_subjects: "Existing Subjects",
-                no_subjects_found: "No subjects found.", error_loading: "Error loading.",
-                error_adding: "Error adding.", error_deleting: "Error deleting.",
-                confirm_delete_subject: "Really delete subject '{name}'? This may affect existing tasks.",
-                day_initials: "M,T,W,T,F,S,S", images_selected: "Images selected",
-                subject_placeholder: "Subject Name (e.g. Math)", add_btn: "Add",
-                no_events_list: "No events.", confirm_delete: "Really delete?",
-                new_pw: "New Password", current_pw: "Current Password", pw_repeat: "Repeat Password",
-                pw_error: "Passwords do not match.", pw_empty: "Please enter a new password.",
-                pw_success: "Password successfully changed.", pw_change_error: "Error changing password.",
-                notifications_disabled: "Notifications disabled.", error_disabling: "Error disabling.",
-                activity_search: "Search activity...", users: "Users", load_users: "Loading Users...",
-                new_user: "New User", existing_users: "Existing Users", no_users: "No users found.",
-                role: "Role", user: "User", admin: "Admin", username_placeholder: "Username",
-                email_placeholder: "Email", password_placeholder: "Password", create_user: "Create User",
-                delete_user_confirm: "Really delete user '{name}'?", error_creating: "Error creating."
-            }
-        };
 
         function t(key) {
             try {
@@ -1332,16 +1213,16 @@
                 // Find existing nav link for the view to pass element
                 const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
                 // Map view to title
-                let title = 'Übersicht';
-                if (event.state.view === 'tasks') title = 'Aufgaben';
-                if (event.state.view === 'calendar') title = 'Kalender';
-                if (event.state.view === 'grades') title = 'Noten';
-                if (event.state.view === 'settings') title = 'Einstellungen';
+                let title = t('home');
+                if (event.state.view === 'tasks') title = t('tasks');
+                if (event.state.view === 'calendar') title = t('calendar');
+                if (event.state.view === 'grades') title = t('grades');
+                if (event.state.view === 'settings') title = t('settings');
                 navigate(event.state.view, navLink, title);
             } else {
                 // identifying 'home' or default
                 window.isPoppingState = true;
-                navigate('home', document.querySelectorAll('.nav-link')[0], 'Übersicht');
+                navigate('home', document.querySelectorAll('.nav-link')[0], t('home'));
             }
         });
 
@@ -1428,7 +1309,7 @@
                     document.getElementById('home-next-event').innerHTML = `
                         <div class="floating-card" style="padding: 20px 24px 10px 24px;">
                             <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('next_event')}</h4>
-                            <div class="list-item" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                            <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
                                 <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
                                     <i data-lucide="calendar" style="width:18px; height:18px;"></i>
                                 </div>
@@ -1454,7 +1335,7 @@
                 if (!container) return; // Exit if user navigated away
                 if (dueTasks.length > 0) {
                     const listHtml = dueTasks.map(task => `
-                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
+                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('task', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
                             <div class="check-circle" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, false, true)"><i data-lucide="circle" style="width:14px; opacity:0"></i></div>
                             <div class="item-content"><div class="item-title">${task.title}</div><div class="item-sub">${t('due')}: ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}</div></div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
@@ -1559,8 +1440,8 @@
 
         async function renderCalendar(tab = 'termine') {
             const container = document.getElementById('app-container');
-            container.innerHTML = `< div class="controls-row" > <div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">Termine</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">Monat</button></div></div >
-                    <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">Lade Termine...</div>`;
+            container.innerHTML = `<div class="controls-row"><div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">${t('events')}</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">${t('month')}</button></div></div>
+                    <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}</div>`;
             lucide.createIcons();
 
             try {
@@ -1569,13 +1450,13 @@
                 if (tab === 'termine') {
                     const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
                     const listHtml = sortedEvents.map(e => `
-                        < div class="list-item" style = "padding: 18px 0;" onclick = "openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})" >
+                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
                              <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
                                 <i data-lucide="calendar" style="width:20px; height:20px;"></i>
                             </div>
                             <div class="item-content">
                                 <div class="item-title">${e.title}</div>
-                                <div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
+                                <div class="item-sub">${new Date(e.date).toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long' })}</div>
                             </div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div > `).join('');
@@ -1969,16 +1850,18 @@
 
         function openDayDetails(day, eventsJson) {
             const events = JSON.parse(eventsJson);
+            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
+            const locale = lang === 'en' ? 'en-US' : 'de-DE';
             if (events.length === 0) {
                 const dateStr = new Date(viewDate.getFullYear(), viewDate.getMonth(), day, 12).toISOString().split('T')[0];
-                openCreateMenu('Termin', '', null, dateStr);
+                openCreateMenu('event', '', null, dateStr);
             } else {
                 let listHtml = events.map(e => `
-                     <div class="list-item" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                     <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
                          <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
                             <i data-lucide="calendar" style="width:18px; height:18px;"></i>
                          </div>
-                         <div class="item-content"><div class="item-title">${e.title}</div><div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE')}</div></div>
+                         <div class="item-content"><div class="item-title">${e.title}</div><div class="item-sub">${new Date(e.date).toLocaleDateString(locale)}</div></div>
                          <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                      </div>`).join('');
 
@@ -2042,12 +1925,14 @@
             previousView = currentView;
             currentView = 'sub_subject_details';
 
+            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
+            const locale = lang === 'en' ? 'en-US' : 'de-DE';
             const grades = JSON.parse(gradesJson);
             const listHtml = grades.map(g => `
-                <div class="list-item" onclick="openDetails('Note', '${g.title || 'Note'}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id})">
+                <div class="list-item" onclick="openDetails('grade', '${g.title || t('grade')}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id})">
                     <div class="item-content">
-                        <div class="item-title">${g.title || 'Note'}</div>
-                        <div class="item-sub">${new Date(g.date).toLocaleDateString('de-DE')} • Gewichtung: ${g.weight}x</div>
+                        <div class="item-title">${g.title || t('grade')}</div>
+                        <div class="item-sub">${new Date(g.date).toLocaleDateString(locale)} • ${t('weight')}: ${g.weight}x</div>
                     </div>
                     <div style="font-weight:700; font-size:18px; color:var(--text-main);">${g.value}</div>
                 </div>`).join('');
@@ -2082,9 +1967,9 @@
                  <div class="floating-card">
                      <div class="account-header" style="text-align:center; padding:20px;">
                          <div style="width:80px; height:80px; background:var(--accent); border-radius:30px; margin:0 auto 15px auto; display:flex; align-items:center; justify-content:center; color:white; font-size:32px; font-weight:700;">
-                             ${window.currentUser?.username?.charAt(0).toUpperCase() || 'U'}
+                             ${window.currentUser?.name?.charAt(0).toUpperCase() || 'U'}
                          </div>
-                         <h2 style="margin:0">${window.currentUser?.username || 'User'}</h2>
+                         <h2 style="margin:0">${window.currentUser?.name || 'User'}</h2>
                          <p class="item-sub" style="margin-top:5px;">${window.currentUser?.email || ''}</p>
                      </div>
                  </div>
@@ -2160,22 +2045,22 @@
                     <div class="account-item" onclick="renderLanguageSelection()">
                         <div class="account-item-text">${t('language')}</div>
                         <div style="display:flex; align-items:center;">
-                            <span style="color:var(--text-sec); margin-right:10px; font-size:15px;" id="current-lang-display">Deutsch</span>
+                            <span style="color:var(--text-sec); margin-right:10px; font-size:15px;" id="current-lang-display">${savedLang === 'en' ? t('en') : t('de')}</span>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div>
                     </div>
                 </div>
 
                 <div class="floating-card">
-                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Sicherheit</h4>
+                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('security')}</h4>
                     <div class="account-item" onclick="renderChangePassword()">
-                        <div class="account-item-text">Passwort ändern</div>
+                        <div class="account-item-text">${t('changepw')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                 </div>
             `;
             const savedLang = localStorage.getItem('l8te_lang') || 'de';
-            const langLabel = savedLang === 'en' ? 'Englisch' : 'Deutsch';
+            const langLabel = savedLang === 'en' ? t('en') : t('de');
             document.getElementById('current-lang-display').innerText = langLabel;
 
             lucide.createIcons();
@@ -2185,15 +2070,15 @@
             const savedLang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
             document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
-                    <h3 style="margin:0">Sprache wählen</h3>
+                    <h3 style="margin:0">${t('choose_lang')}</h3>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
                 </div>
                 <div class="account-item" onclick="setLanguage('de')" style="cursor:pointer;">
-                    <div class="account-item-text">Deutsch</div>
+                    <div class="account-item-text">${t('de')}</div>
                     ${savedLang === 'de' ? '<i data-lucide="check" style="color:var(--accent); width:20px;"></i>' : ''}
                 </div>
                 <div class="account-item" onclick="setLanguage('en')" style="cursor:pointer;">
-                    <div class="account-item-text">Englisch</div>
+                    <div class="account-item-text">${t('en')}</div>
                     ${savedLang === 'en' ? '<i data-lucide="check" style="color:var(--accent); width:20px;"></i>' : ''}
                 </div>
             `;
@@ -2222,11 +2107,11 @@
 
 
         async function renderNotificationSettings() {
-            document.getElementById('current-page-title').innerText = 'Benachrichtigungen';
+            document.getElementById('current-page-title').innerText = t('notifications');
             document.getElementById('header-back-btn').style.display = 'block';
             document.getElementById('header-back-btn').onclick = () => renderSettingsPage();
 
-            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px;">Lade Einstellungen...</div>`;
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px;">${t('loading')}</div>`;
 
             try {
                 // Get Settings
@@ -2290,7 +2175,7 @@
                                 row.onclick = unsubscribePush;
                                 toggle.classList.add('active');
                                 toggle.style.opacity = '1';
-                                text.innerText = 'Benachrichtigungen sind aktiviert. Tippe zum Deaktivieren.';
+                                text.innerText = t('push_active_msg');
                             }
                         }
                     }).catch(e => console.log('SW check failed', e));
@@ -2331,9 +2216,9 @@
             try {
                 const res = await fetch('/api/notifications/test', { method: 'POST' });
                 const data = await res.json();
-                if (data.success) alert('Test gesendet! Schließe diesen Tab/Browser, wenn du nichts siehst (manchmal blockt der Fokus).');
-                else alert('Fehler: ' + (data.message || 'Unbekannt'));
-            } catch (e) { alert('Verbindungsfehler'); }
+                if (data.success) alert(t('test_sent_msg') || 'Test gesendet!');
+                else alert(t('error') + ': ' + (data.message || t('unknown')));
+            } catch (e) { alert(t('connection_error')); }
         }
 
 
@@ -2359,16 +2244,16 @@
                     body: JSON.stringify(sub)
                 });
 
-                alert('Benachrichtigungen aktiviert!');
+                alert(t('push_enabled_msg') || 'Benachrichtigungen aktiviert!');
                 renderNotificationSettings();
             } catch (e) {
                 console.error(e);
-                alert('Aktivierung fehlgeschlagen: ' + e);
+                alert(t('push_failed_msg') || 'Aktivierung fehlgeschlagen: ' + e);
             }
         }
 
         async function unsubscribePush() {
-            if (!confirm('Benachrichtigungen auf diesem Gerät deaktivieren?')) return;
+            if (!confirm(t('confirm_push_disable') || 'Benachrichtigungen auf diesem Gerät deaktivieren?')) return;
             try {
                 const reg = await navigator.serviceWorker.ready;
                 const sub = await reg.pushManager.getSubscription();
@@ -2507,92 +2392,11 @@
 
 
 
-        async function renderUserManagement() {
-            previousView = 'sub_admin_menu';
-            currentView = 'sub_users';
-            document.getElementById('current-page-title').innerText = t('users');
-            document.getElementById('header-back-btn').style.display = 'block';
 
-            if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_users' }, '', null);
-            }
-            window.isPoppingState = false;
-            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
-            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('load_users')}</div>`;
 
-            try {
-                const res = await fetch('/api/users');
-                const users = await res.json();
 
-                const listHtml = users.map(u => `
-                    <div class="list-item">
-                        <div class="item-content">
-                            <div class="item-title">${u.username} ${u.is_admin ? '<i data-lucide="shield" style="width:14px; color:var(--accent); fill:var(--accent);"></i>' : ''}</div>
-                            <div class="item-sub">${u.email || ''}</div>
-                        </div>
-                        ${!u.is_admin || users.length > 1 ? `
-                        <div style="color:var(--danger); cursor:pointer; padding:5px;" onclick="deleteUser(${u.id}, '${u.username}')">
-                            <i data-lucide="trash-2" style="width:18px;"></i>
-                        </div>` : ''}
-                    </div>`).join('');
 
-                document.getElementById('app-container').innerHTML = `
-                   <div class="floating-card" style="padding: 20px;">
-                        <h3 style="margin-top:0">${t('new_user')}</h3>
-                         <div style="display:flex; flex-direction:column; gap:10px;">
-                            <input type="text" id="new-user-name" class="ios-input" placeholder="${t('username_placeholder')}" style="margin:0;">
-                            <input type="email" id="new-user-email" class="ios-input" placeholder="${t('email_placeholder')}" style="margin:0;">
-                            <input type="password" id="new-user-pw" class="ios-input" placeholder="${t('password_placeholder')}" style="margin:0;">
-                            <button class="ios-btn" onclick="addUser()">${t('create_user')}</button>
-                        </div>
-                    </div>
-                    
-                    <h3 style="margin:20px 0 10px 5px; font-size:18px;">${t('existing_users')}</h3>
-                    <div class="floating-card" style="padding:0 20px;">
-                        ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_users')}</div>`}
-                    </div>
-                `;
-                lucide.createIcons();
-            } catch (e) {
-                console.error(e);
-                alert(t('error_loading'));
-            }
-        }
-
-        async function addUser() {
-            const username = document.getElementById('new-user-name').value.trim();
-            const email = document.getElementById('new-user-email').value.trim();
-            const password = document.getElementById('new-user-pw').value;
-            if (!username || !password) return alert(t('error'));
-
-            try {
-                const res = await fetch('/api/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    renderUserManagement();
-                } else {
-                    alert(data.message || t('error_creating'));
-                }
-            } catch (e) { console.error(e); alert(t('error')); }
-        }
-
-        async function deleteUser(id, name) {
-            if (!confirm(t('delete_user_confirm').replace('{name}', name))) return;
-            try {
-                const res = await fetch('/api/users/' + id, { method: 'DELETE' });
-                const data = await res.json();
-                if (data.success) {
-                    renderUserManagement();
-                } else {
-                    alert(t('error_deleting'));
-                }
-            } catch (e) { console.error(e); alert(t('error')); }
-        }
 
         function openActivityFilterMenu() {
             // Extract unique users and basic actions
@@ -2767,8 +2571,8 @@
                     closeSheet();
                     newIsAdmin = false;
                     renderUserManagement();
-                } else alert(data.message || 'Fehler');
-            } catch (e) { alert('Verbindungsfehler'); }
+                } else alert(data.message || t('error'));
+            } catch (e) { alert(t('connection_error')); }
         }
 
         async function deleteUser(id) {
@@ -2776,11 +2580,11 @@
             try {
                 await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
                 renderUserManagement();
-            } catch (e) { alert('Fehler'); }
+            } catch (e) { alert(t('error')); }
         }
 
         async function resetUserPassword(id) {
-            const newPw = prompt('Neues Passwort für diesen Benutzer eingeben:');
+            const newPw = prompt(t('password_new') + ':');
             if (!newPw) return;
 
             try {
@@ -2925,12 +2729,8 @@
                 openCreateUserMenu();
                 return;
             }
-            let type = editType || (currentView === 'tasks' ? "Aufgabe" : (currentView === 'calendar' ? "Termin" : "Note"));
-            // Map internal types to display types or handle inside rendering?
-            // The type variable is used for logic: type === 'Aufgabe' etc.
-            // If we changed callers to use 'task' instead of 'Aufgabe', we need to check that here.
-            // For now, let's normalize 'task' -> 'Aufgabe' for internal logic if needed, or update logic.
-            // To be safe and consistent with previous code where we used German strings as types:
+            let type = editType || (currentView === 'tasks' ? "task" : (currentView === 'calendar' ? "event" : "grade"));
+            // Normalize for internal logic
             if (type === 'task') type = 'Aufgabe';
             if (type === 'event') type = 'Termin';
             if (type === 'grade') type = 'Note';
@@ -3113,8 +2913,8 @@
                     imagesToDelete.clear();
                     closeSheet();
                     if (currentView === 'tasks') renderTasks(); else renderHome();
-                } else { alert('Fehler'); }
-            } catch (err) { alert('Verbindungsfehler'); }
+                } else { alert(t('error')); }
+            } catch (err) { alert(t('connection_error')); }
         }
 
         async function saveEvent(updateId = null) {
@@ -3136,7 +2936,7 @@
                     body: JSON.stringify({ title, description: desc, date })
                 });
                 closeSheet(); renderCalendar(currentView === 'calendar' ? 'termine' : 'monat');
-            } catch (e) { alert('Fehler'); }
+            } catch (e) { alert(t('error')); }
         }
 
         async function saveGrade(updateId = null) {
@@ -3146,7 +2946,7 @@
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const d = String(selectedDate.getDate()).padStart(2, '0');
             const date = `${year}-${month}-${d}`;
-            if (!selectedSubject || !value) { alert('Bitte Fach und Note ausfüllen.'); return; }
+            if (!selectedSubject || !value) { alert(t('error')); return; }
 
             const method = updateId ? 'PUT' : 'POST';
             const url = updateId ? `/api/grades/${updateId}` : '/api/grades';
@@ -3158,13 +2958,13 @@
                     body: JSON.stringify({ title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'), date })
                 });
                 closeSheet(); renderGrades();
-            } catch (e) { alert('Fehler'); }
+            } catch (e) { alert(t('error')); }
         }
 
 
         /* --- NAVIGATION HELPERS --- */
         function openAccountMenu() {
-            navigate('account', null, 'Account');
+            navigate('account', null, t('account'));
         }
 
 
@@ -3210,7 +3010,8 @@
         function selectPickerDate(day) {
             selectedDate = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth(), day);
             const display = document.getElementById('selected-date-display');
-            if (display) display.innerText = selectedDate.toLocaleDateString('de-DE');
+            const locale = (window.currentUser?.language === 'en') ? 'en-US' : 'de-DE';
+            if (display) display.innerText = selectedDate.toLocaleDateString(locale);
             toggleOptionList('calendar-picker-view');
         }
 
