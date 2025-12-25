@@ -54,6 +54,21 @@ def migrate_database():
             except Exception as e:
                 print(f"Migration check: {str(e)}")
             
+            # --- New Column Migrations ---
+            from sqlalchemy import text, inspect
+            
+            inspector = inspect(db.engine)
+            
+            # 1. Check for 'language' column in 'user' table
+            if 'user' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('user')]
+                if 'language' not in columns:
+                    print("⚠ Column 'language' missing in 'user' table. Adding it...")
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE user ADD COLUMN language VARCHAR(5) DEFAULT 'de'"))
+                        conn.commit()
+                    print("✓ Column 'language' added successfully.")
+            
             print("\n" + "="*60)
             print("Database migration completed successfully!")
             print("="*60)

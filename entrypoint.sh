@@ -17,8 +17,8 @@ if [ ! -f /data/l8testudy.db ]; then
 fi
 
 # Initialize database tables explicitly before starting workers
-echo "Initializing database..."
-python -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all(); print('Database initialized successfully')" || echo "Database initialization warning (tables may already exist)"
+echo "Running database migrations..."
+python migrate_db.py
 
 # Start the application
 # The database tables will be created automatically by app/__init__.py
