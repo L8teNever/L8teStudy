@@ -1074,7 +1074,15 @@
                 if (view === 'tasks') path = '/tasks';
                 else if (view === 'calendar') path = '/calendar';
                 else if (view === 'grades') path = '/grades';
-                window.history.replaceState({}, '', path);
+
+                // If we are just replacing the current view's URL (e.g. init), use replaceState.
+                // But for navigation, we want pushState.
+                // However, the `navigate` function is called by the tab bar.
+                // We should check if we are popping state to avoid loop.
+                if (!window.isPoppingState) {
+                    window.history.pushState({ view: view }, '', path);
+                }
+                window.isPoppingState = false;
 
                 // Render
                 if (view === 'tasks') renderTasks();
@@ -1099,6 +1107,70 @@
 
             }, 100);
         }
+
+        // --- History / Back Button Logic ---
+        window.addEventListener('popstate', (event) => {
+            // Check if we are closing a modal
+            const sheet = document.getElementById('sheet-overlay');
+            if (sheet && sheet.classList.contains('active')) {
+                // If the state was popped and it was a modal state, good.
+                // If we just hit back and a modal IS open, we presumably want to close it.
+                // But if the popped state corresponds to the *previous* view, we have a sync issue if we just close the modal.
+                // Strategy: When opening modal, we push state. When back is pressed, we pop state (event fires).
+                // We just need to close the visual element.
+                sheet.classList.remove('active');
+                return;
+            }
+
+            // Handle View Navigation
+            if (event.state && event.state.view) {
+                window.isPoppingState = true;
+                // Find existing nav link for the view to pass element
+                const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
+                // Map view to title
+                let title = 'Übersicht';
+                if (event.state.view === 'tasks') title = 'Aufgaben';
+                if (event.state.view === 'calendar') title = 'Kalender';
+                if (event.state.view === 'grades') title = 'Noten';
+                if (event.state.view === 'settings') title = 'Einstellungen';
+                navigate(event.state.view, navLink, title);
+            } else {
+                // identifying 'home' or default
+                window.isPoppingState = true;
+                navigate('home', document.querySelectorAll('.nav-link')[0], 'Übersicht');
+            }
+        });
+
+        function openSheetOverlay() {
+            document.getElementById('sheet-overlay').classList.add('active');
+            window.history.pushState({ modal: true }, '', null);
+        }
+
+        // Modified closeSheet to handle history
+        function closeSheet() {
+            const sheet = document.getElementById('sheet-overlay');
+            if (sheet.classList.contains('active')) {
+                sheet.classList.remove('active');
+                // If we have a modal state in history, go back one step to pop it.
+                // But how do we know if the current history state IS the modal state?
+                // If user pressed back button, the state is already popped (handled in popstate).
+                // If user pressed "X" button, we are still in modal state, so we must go back.
+
+                // We can't robustly know if we are "in" the modal state without tracking.
+                // But if we consistently pushState on open, we should history.back() on explicit close.
+                // HOWEVER: if popstate triggered this (via logic above? no, popstate just removes class),
+                // then we don't need to go back.
+
+                // Check if this call came from popstate? 
+                // Easier: In popstate, only remove class.
+                // In explicit close button, call history.back().
+                window.history.back();
+            }
+        }
+
+        // We need to override the old closeSheet behavior which might have been just class removal.
+        // Actually, previous closeSheet was: function closeSheet() { document.getElementById('sheet-overlay').classList.remove('active'); }
+        // We will replace usage of `classList.add('active')` with `openSheetOverlay()` in other parts of the code next.
 
         /* --- API LOGIC INTEGRATED --- */
         // --- PWA Installation Logic ---
@@ -2375,9 +2447,10 @@
                     <div class="calendar-days-grid" id="calendar-grid"></div>
                 </div>
                 <textarea id="input-desc" class="ios-input" placeholder="Beschreibung">${descVal}</textarea>
+                <textarea id="input-desc" class="ios-input" placeholder="Beschreibung">${descVal}</textarea>
                 <button class="ios-btn" onclick="${saveFunction}">Speichern</button>
                 <button class="ios-btn btn-sec" onclick="closeSheet()">Abbrechen</button>`;
-            document.getElementById('sheet-overlay').classList.add('active');
+            openSheetOverlay();
             lucide.createIcons();
 
             // Load subjects if subject list exists
@@ -2514,7 +2587,13 @@
 
 
 
-        function closeSheet() { document.getElementById('sheet-overlay').classList.remove('active'); }
+        function closeSheet() {
+            // If user clicks "X" or "Fertig" (explicit close), we want to go back in history to remove the modal state.
+            // But we first check if it's active.
+            if (document.getElementById('sheet-overlay').classList.contains('active')) {
+                window.history.back();
+            }
+        }
 
         /* --- PICKER HELPERS --- */
         function updateFileCount(input) {
