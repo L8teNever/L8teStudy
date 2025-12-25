@@ -985,6 +985,10 @@
 
     <script>
         try { lucide.createIcons(); } catch (e) { console.warn('Lucide icons failed to load:', e); }
+        window.onerror = function (msg, url, line) {
+            console.error("Global JS Error:", msg, "at line", line);
+            // alert("JS Error: " + msg + "\nLine: " + line); 
+        };
         let currentView = 'home';
         let previousView = 'home';
         let selectedSubject = null;
@@ -3186,6 +3190,7 @@
                 else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
                 else renderHome();
             };
+            console.log('Main Script Parsed Successfully');
     </script>
     <script>
             if ('serviceWorker' in navigator) {
