@@ -1329,7 +1329,10 @@
             for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>';
             for (let i = 1; i <= daysInMonth; i++) {
                 const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
-                const dateStr = dayDate.toISOString().split('T')[0];
+                const year = dayDate.getFullYear();
+                const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+                const d = String(dayDate.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${d}`;
                 const dayEvents = events.filter(e => e.date === dateStr);
                 const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
                 const dotHtml = dayEvents.length > 0 ? `<div class="event-dot"></div>` : '';
@@ -1342,7 +1345,11 @@
         function openDayDetails(day, eventsJson) {
             const events = JSON.parse(eventsJson);
             if (events.length === 0) {
-                const dateStr = new Date(viewDate.getFullYear(), viewDate.getMonth(), day, 12).toISOString().split('T')[0];
+                const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+                const year = targetDate.getFullYear();
+                const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+                const d = String(targetDate.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${d}`;
                 openCreateMenu('Termin', '', null, dateStr);
             } else {
                 let listHtml = events.map(e => `
