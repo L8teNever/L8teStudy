@@ -1049,7 +1049,24 @@
                 push_inactive_msg: "Tippe, um Benachrichtigungen zu aktivieren.", news: "Neuigkeiten", new_tasks_others: "Neue Aufgaben (von anderen)",
                 new_events_others: "Neue Termine (von anderen)", daily_reminder: "Tägliche Erinnerung", homework_tmrw: "Hausaufgaben (Morgen)",
                 exams_tmrw: "Klausuren/Termine (Morgen)", reminder_hint: "Wähle eine Uhrzeit für die Erinnerung. Leer lassen zum Deaktivieren.",
-                send_test: "Test-Benachrichtigung senden", view_details: "Details ansehen"
+                send_test: "Test-Benachrichtigung senden", view_details: "Details ansehen",
+                task: "Aufgabe", event: "Termin", grade: "Note", subject: "Fach",
+                load_subjects: "Lade Fächer...", existing_subjects: "Vorhandene Fächer",
+                no_subjects_found: "Keine Fächer gefunden.", error_loading: "Fehler beim Laden.",
+                error_adding: "Fehler beim Hinzufügen.", error_deleting: "Fehler beim Löschen.",
+                confirm_delete_subject: "Fach '{name}' wirklich löschen? Dies könnte Auswirkungen auf bestehende Aufgaben haben.",
+                day_initials: "M,D,M,D,F,S,S", images_selected: "Bilder ausgewählt",
+                subject_placeholder: "Fachname (z.B. Informatik)", add_btn: "Hinzufügen",
+                no_events_list: "Keine Termine.", confirm_delete: "Wirklich löschen?",
+                new_pw: "Neues Passwort", current_pw: "Aktuelles Passwort", pw_repeat: "Passwort wiederholen",
+                pw_error: "Die neuen Passwörter stimmen nicht überein.", pw_empty: "Bitte ein neues Passwort eingeben.",
+                pw_success: "Passwort erfolgreich geändert.", pw_change_error: "Fehler beim Ändern.",
+                notifications_disabled: "Benachrichtigungen deaktiviert.", error_disabling: "Fehler beim Deaktivieren.",
+                activity_search: "Aktivität suchen...", users: "Benutzer", load_users: "Lade Benutzer...",
+                new_user: "Neuer Benutzer", existing_users: "Vorhandene Benutzer", no_users: "Keine Benutzer gefunden.",
+                role: "Rolle", user: "Benutzer", admin: "Administrator", username_placeholder: "Benutzername",
+                email_placeholder: "E-Mail", password_placeholder: "Passwort", create_user: "Benutzer erstellen",
+                delete_user_confirm: "Benutzer '{name}' wirklich löschen?", error_creating: "Fehler beim Erstellen."
             },
             en: {
                 home: "Home", tasks: "Tasks", calendar: "Plan", grades: "Grades",
@@ -1091,7 +1108,24 @@
                 push_inactive_msg: "Tap to enable notifications.", news: "News", new_tasks_others: "New Tasks (from others)",
                 new_events_others: "New Events (from others)", daily_reminder: "Daily Reminder", homework_tmrw: "Homework (Tomorrow)",
                 exams_tmrw: "Exams/Events (Tomorrow)", reminder_hint: "Choose a time. Leave empty to disable.",
-                send_test: "Send Test Notification", view_details: "View Details"
+                send_test: "Send Test Notification", view_details: "View Details",
+                task: "Task", event: "Event", grade: "Grade", subject: "Subject",
+                load_subjects: "Loading Subjects...", existing_subjects: "Existing Subjects",
+                no_subjects_found: "No subjects found.", error_loading: "Error loading.",
+                error_adding: "Error adding.", error_deleting: "Error deleting.",
+                confirm_delete_subject: "Really delete subject '{name}'? This may affect existing tasks.",
+                day_initials: "M,T,W,T,F,S,S", images_selected: "Images selected",
+                subject_placeholder: "Subject Name (e.g. Math)", add_btn: "Add",
+                no_events_list: "No events.", confirm_delete: "Really delete?",
+                new_pw: "New Password", current_pw: "Current Password", pw_repeat: "Repeat Password",
+                pw_error: "Passwords do not match.", pw_empty: "Please enter a new password.",
+                pw_success: "Password successfully changed.", pw_change_error: "Error changing password.",
+                notifications_disabled: "Notifications disabled.", error_disabling: "Error disabling.",
+                activity_search: "Search activity...", users: "Users", load_users: "Loading Users...",
+                new_user: "New User", existing_users: "Existing Users", no_users: "No users found.",
+                role: "Role", user: "User", admin: "Admin", username_placeholder: "Username",
+                email_placeholder: "Email", password_placeholder: "Password", create_user: "Create User",
+                delete_user_confirm: "Really delete user '{name}'?", error_creating: "Error creating."
             }
         };
 
@@ -1482,7 +1516,7 @@
                     return;
                 }
                 const listHtml = filteredTasks.map(task => `
-                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
+                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('task', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
                         <div class="check-circle ${task.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})">
                             <i data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}"></i>
                         </div>
@@ -1875,20 +1909,20 @@
         function renderEventList(events) {
             const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
             const listHtml = sortedEvents.map(e => `
-                <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                <div class="list-item" style="padding: 18px 0;" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
                         <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
                         <i data-lucide="calendar" style="width:20px; height:20px;"></i>
                     </div>
                     <div class="item-content">
                         <div class="item-title">${e.title}</div>
-                        <div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
+                        <div class="item-sub">${new Date(e.date).toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}</div>
                     </div>
                     <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                 </div>`).join('');
 
             document.getElementById('calendar-content').innerHTML = listHtml ?
                 `<div class="floating-card" style="padding:0 24px">${listHtml}</div>` :
-                `<div class="floating-card" style="padding:40px; text-align:center"><p class="item-sub">Keine Termine.</p></div>`;
+                `<div class="floating-card" style="padding:40px; text-align:center"><p class="item-sub">${t('no_events_list')}</p></div>`;
             lucide.createIcons();
         }
 
@@ -1907,13 +1941,12 @@
         }
 
         function updateMainCalendarGrid(events = []) {
-            // Note: This logic for the main calendar grid differs slightly from the custom picker grid
             const grid = document.getElementById('main-calendar-grid');
             const title = document.getElementById('main-calendar-month-year');
             if (!grid || !title) return;
-            title.innerText = viewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            title.innerText = viewDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { month: 'long', year: 'numeric' });
             grid.innerHTML = '';
-            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
+            t('day_initials').split(',').forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
             const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
             const offset = firstDay === 0 ? 6 : firstDay - 1;
@@ -2033,15 +2066,71 @@
 
         // Main Account Menu (Hub)
         function openAccountMenu() {
-            // If already in settings or deeper, just navigate there, but standard behavior for user icon is usually to open the main menu
             renderAccountHub();
-            // We use the same container as other views, or we can use the sheet. 
-            // The prompt says "when clicking acc, first a page with settings, bugs, logout".
-            // So we treat this as a view 'account'.
-            if (currentView !== 'account') navigate('account', document.querySelector('.profile-btn'), 'Account');
+            if (currentView !== 'account') navigate('account', document.querySelector('.profile-btn'), t('account'));
         }
 
+        function renderAccountHub() {
+            previousView = 'home';
+            currentView = 'account';
+            document.getElementById('current-page-title').innerText = t('account');
+            document.getElementById('header-back-btn').style.display = 'none';
 
+            const isAdmin = window.currentUser && window.currentUser.is_admin;
+
+            document.getElementById('app-container').innerHTML = `
+                 <div class="floating-card">
+                     <div class="account-header" style="text-align:center; padding:20px;">
+                         <div style="width:80px; height:80px; background:var(--accent); border-radius:30px; margin:0 auto 15px auto; display:flex; align-items:center; justify-content:center; color:white; font-size:32px; font-weight:700;">
+                             ${window.currentUser?.username?.charAt(0).toUpperCase() || 'U'}
+                         </div>
+                         <h2 style="margin:0">${window.currentUser?.username || 'User'}</h2>
+                         <p class="item-sub" style="margin-top:5px;">${window.currentUser?.email || ''}</p>
+                     </div>
+                 </div>
+
+                 <div class="floating-card">
+                     <div class="account-item" onclick="renderSettingsPage()">
+                         <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="settings"></i></div>
+                         <div class="account-item-text">${t('settings')}</div>
+                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                     </div>
+                     ${isAdmin ? `
+                     <div class="account-item" onclick="renderAdminMenu()">
+                         <div class="account-item-icon" style="background:#FF9500; color:white;"><i data-lucide="shield"></i></div>
+                         <div class="account-item-text">${t('admin')}</div>
+                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                     </div>` : ''}
+                     <div class="account-item" onclick="window.location.href='https://github.com/L8te/L8teStudy/issues'">
+                         <div class="account-item-icon" style="background:#34C759; color:white;"><i data-lucide="bug"></i></div>
+                         <div class="account-item-text">${t('reportbug')}</div>
+                         <i data-lucide="external-link" style="width:18px; color:var(--text-sec)"></i>
+                     </div>
+                     <div class="account-item" style="border-bottom:none" onclick="installApp()" id="install-btn-row">
+                         <div class="account-item-icon" style="background:#5856D6; color:white;"><i data-lucide="download"></i></div>
+                         <div class="account-item-text">${t('install')}</div>
+                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                     </div>
+                 </div>
+
+                 <div class="floating-card">
+                     <div class="account-item" style="color:var(--danger);" onclick="window.location.href='/logout'">
+                         <div class="account-item-icon" style="background:rgba(255, 59, 48, 0.1); color:var(--danger);"><i data-lucide="log-out"></i></div>
+                         <div class="account-item-text">${t('logout')}</div>
+                     </div>
+                 </div>
+                 <div style="text-align:center; padding:20px; color:var(--text-sec); font-size:12px;">
+                     L8teStudy v3.0.0
+                 </div>
+             `;
+            lucide.createIcons();
+
+            // Hide install button if not installable
+            if (!deferredPrompt) {
+                const installRow = document.getElementById('install-btn-row');
+                if (installRow) installRow.style.display = 'none';
+            }
+        }
 
         // Sub-page: Settings
         async function renderSettingsPage() {
@@ -2292,11 +2381,11 @@
                         body: JSON.stringify({ endpoint: endpoint })
                     });
                 }
-                alert('Benachrichtigungen deaktiviert.');
+                alert(t('notifications_disabled'));
                 renderNotificationSettings();
             } catch (e) {
                 console.error(e);
-                alert('Fehler beim Deaktivieren: ' + e);
+                alert(t('error_disabling') + ': ' + e);
             }
         }
 
@@ -2322,16 +2411,16 @@
         function renderChangePassword() {
             previousView = 'settings'; // Virtual history
             currentView = 'sub_password';
-            document.getElementById('current-page-title').innerText = 'Passwort';
+            document.getElementById('current-page-title').innerText = t('msg_password');
             document.getElementById('header-back-btn').onclick = () => { renderSettingsPage(); }; // Back to Settings
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
-                    <h4 style="margin:0 0 15px 0; font-size:17px;">Neues Passwort</h4>
-                    <input type="password" id="old-pw" class="ios-input" placeholder="Aktuelles Passwort">
-                    <input type="password" id="new-pw" class="ios-input" placeholder="Neues Passwort">
-                    <input type="password" id="confirm-pw" class="ios-input" placeholder="Passwort wiederholen">
-                    <button class="ios-btn" onclick="saveNewPassword()">Speichern</button>
+                    <h4 style="margin:0 0 15px 0; font-size:17px;">${t('new_pw')}</h4>
+                    <input type="password" id="old-pw" class="ios-input" placeholder="${t('current_pw')}">
+                    <input type="password" id="new-pw" class="ios-input" placeholder="${t('new_pw')}">
+                    <input type="password" id="confirm-pw" class="ios-input" placeholder="${t('pw_repeat')}">
+                    <button class="ios-btn" onclick="saveNewPassword()">${t('save')}</button>
                     <p id="pw-error" style="color:var(--danger); font-size:13px; margin-top:10px; display:none;"></p>
                 </div>
             `;
@@ -2392,7 +2481,7 @@
                 <div class="controls-row search-active">
                     <div class="search-container active" style="position:relative; flex:1; width:auto; margin-left:0; cursor:text;" onclick="document.querySelector('.sub-search-input').focus()">
                         <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
-                        <input type="text" class="search-input sub-search-input" placeholder="${t('search')}" oninput="filterActivityLog()" style="opacity:1; transform:none;">
+                        <input type="text" class="search-input sub-search-input" placeholder="${t('activity_search')}" oninput="filterActivityLog()" style="opacity:1; transform:none;">
                     </div>
                     <div style="background:var(--tab-bg); min-width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; margin-left:10px; cursor:pointer;" onclick="openActivityFilterMenu()">
                         <i data-lucide="filter" style="color:var(--text-sec); width:20px;"></i>
@@ -2412,8 +2501,97 @@
                 currentActivityFilter = { user: null, action: null };
                 renderActivityLogList(cachedActivityLogs);
             } catch (e) {
-                document.getElementById('activity-list-container').innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">Fehler beim Laden.</div>`;
+                document.getElementById('activity-list-container').innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">${t('error_loading')}</div>`;
             }
+        }
+
+
+
+        async function renderUserManagement() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_users';
+            document.getElementById('current-page-title').innerText = t('users');
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_users' }, '', null);
+            }
+            window.isPoppingState = false;
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('load_users')}</div>`;
+
+            try {
+                const res = await fetch('/api/users');
+                const users = await res.json();
+
+                const listHtml = users.map(u => `
+                    <div class="list-item">
+                        <div class="item-content">
+                            <div class="item-title">${u.username} ${u.is_admin ? '<i data-lucide="shield" style="width:14px; color:var(--accent); fill:var(--accent);"></i>' : ''}</div>
+                            <div class="item-sub">${u.email || ''}</div>
+                        </div>
+                        ${!u.is_admin || users.length > 1 ? `
+                        <div style="color:var(--danger); cursor:pointer; padding:5px;" onclick="deleteUser(${u.id}, '${u.username}')">
+                            <i data-lucide="trash-2" style="width:18px;"></i>
+                        </div>` : ''}
+                    </div>`).join('');
+
+                document.getElementById('app-container').innerHTML = `
+                   <div class="floating-card" style="padding: 20px;">
+                        <h3 style="margin-top:0">${t('new_user')}</h3>
+                         <div style="display:flex; flex-direction:column; gap:10px;">
+                            <input type="text" id="new-user-name" class="ios-input" placeholder="${t('username_placeholder')}" style="margin:0;">
+                            <input type="email" id="new-user-email" class="ios-input" placeholder="${t('email_placeholder')}" style="margin:0;">
+                            <input type="password" id="new-user-pw" class="ios-input" placeholder="${t('password_placeholder')}" style="margin:0;">
+                            <button class="ios-btn" onclick="addUser()">${t('create_user')}</button>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin:20px 0 10px 5px; font-size:18px;">${t('existing_users')}</h3>
+                    <div class="floating-card" style="padding:0 20px;">
+                        ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_users')}</div>`}
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                alert(t('error_loading'));
+            }
+        }
+
+        async function addUser() {
+            const username = document.getElementById('new-user-name').value.trim();
+            const email = document.getElementById('new-user-email').value.trim();
+            const password = document.getElementById('new-user-pw').value;
+            if (!username || !password) return alert(t('error'));
+
+            try {
+                const res = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    renderUserManagement();
+                } else {
+                    alert(data.message || t('error_creating'));
+                }
+            } catch (e) { console.error(e); alert(t('error')); }
+        }
+
+        async function deleteUser(id, name) {
+            if (!confirm(t('delete_user_confirm').replace('{name}', name))) return;
+            try {
+                const res = await fetch('/api/users/' + id, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    renderUserManagement();
+                } else {
+                    alert(t('error_deleting'));
+                }
+            } catch (e) { console.error(e); alert(t('error')); }
         }
 
         function openActivityFilterMenu() {
@@ -2624,12 +2802,12 @@
             const errEl = document.getElementById('pw-error');
 
             if (newPw !== confirmPw) {
-                errEl.innerText = "Die neuen Passwörter stimmen nicht überein.";
+                errEl.innerText = t('pw_error');
                 errEl.style.display = 'block';
                 return;
             }
             if (!newPw) {
-                errEl.innerText = "Bitte ein neues Passwort eingeben.";
+                errEl.innerText = t('pw_empty');
                 errEl.style.display = 'block';
                 return;
             }
@@ -2642,14 +2820,14 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('Passwort erfolgreich geändert.');
+                    alert(t('pw_success'));
                     renderSettingsPage();
                 } else {
-                    errEl.innerText = data.message || "Fehler beim Ändern.";
+                    errEl.innerText = data.message || t('pw_change_error');
                     errEl.style.display = 'block';
                 }
             } catch (e) {
-                errEl.innerText = "Verbindungsfehler.";
+                errEl.innerText = t('connection_error');
                 errEl.style.display = 'block';
             }
         }
@@ -2690,7 +2868,7 @@
 
             document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
-                    <h2 style="margin:0; font-size:20px; font-weight:700;">${type} ${t('details')}</h2>
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">${t(type.toLowerCase()) || type} ${t('details')}</h2>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
                 </div>
 
@@ -2723,20 +2901,20 @@
         }
 
         async function deleteTask(id) {
-            if (!confirm('Wirklich löschen?')) return;
+            if (!confirm(t('confirm_delete'))) return;
             await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
             closeSheet();
             if (currentView === 'tasks') renderTasks();
             else renderHome();
         }
         async function deleteEvent(id) {
-            if (!confirm('Wirklich löschen?')) return;
+            if (!confirm(t('confirm_delete'))) return;
             await fetch(`/api/events/${id}`, { method: 'DELETE' });
             closeSheet();
             renderCalendar();
         }
         async function deleteGrade(id) {
-            if (!confirm('Wirklich löschen?')) return;
+            if (!confirm(t('confirm_delete'))) return;
             await fetch(`/api/grades/${id}`, { method: 'DELETE' });
             closeSheet();
             renderGrades();
@@ -2748,6 +2926,14 @@
                 return;
             }
             let type = editType || (currentView === 'tasks' ? "Aufgabe" : (currentView === 'calendar' ? "Termin" : "Note"));
+            // Map internal types to display types or handle inside rendering?
+            // The type variable is used for logic: type === 'Aufgabe' etc.
+            // If we changed callers to use 'task' instead of 'Aufgabe', we need to check that here.
+            // For now, let's normalize 'task' -> 'Aufgabe' for internal logic if needed, or update logic.
+            // To be safe and consistent with previous code where we used German strings as types:
+            if (type === 'task') type = 'Aufgabe';
+            if (type === 'event') type = 'Termin';
+            if (type === 'grade') type = 'Note';
 
             if (editDate && editDate !== 'null' && editDate !== 'undefined') {
                 if (editDate.includes('-')) {
@@ -2999,10 +3185,10 @@
             const count = input.files ? input.files.length : 0;
             const textEl = document.getElementById('file-count-text');
             if (count > 0) {
-                textEl.innerText = `${count} Bild${count > 1 ? 'er' : ''} ausgewählt`;
+                textEl.innerText = `${count} ${t('images_selected')}`;
                 textEl.style.fontWeight = '700';
             } else {
-                textEl.innerText = 'Bilder auswählen...';
+                textEl.innerText = t('select_images');
                 textEl.style.fontWeight = 'normal';
             }
         }
@@ -3038,10 +3224,10 @@
             const title = document.getElementById('calendar-month-year');
             if (!grid || !title) return;
 
-            title.innerText = pickerViewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+            title.innerText = pickerViewDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { month: 'long', year: 'numeric' });
             grid.innerHTML = '';
 
-            const weekdays = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
+            const weekdays = t('day_initials').split(',');
             weekdays.forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
 
             const firstDay = new Date(pickerViewDate.getFullYear(), pickerViewDate.getMonth(), 1).getDay();
@@ -3068,7 +3254,7 @@
         async function renderSubjectManagement() {
             previousView = 'sub_admin_menu';
             currentView = 'sub_subjects';
-            document.getElementById('current-page-title').innerText = 'Fächer';
+            document.getElementById('current-page-title').innerText = t('subjects');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -3078,7 +3264,7 @@
 
             document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
-            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Fächer...</div>`;
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('load_subjects')}</div>`;
 
             try {
                 const res = await fetch('/api/subjects');
@@ -3096,22 +3282,22 @@
 
                 document.getElementById('app-container').innerHTML = `
                     <div class="floating-card" style="padding: 20px;">
-                        <h3 style="margin-top:0">Neues Fach</h3>
+                        <h3 style="margin-top:0">${t('new_subject')}</h3>
                         <div style="display:flex; gap:10px;">
-                            <input type="text" id="new-subject-name" class="ios-input" placeholder="Fachname (z.B. Informatik)" style="margin:0;">
-                            <button class="ios-btn" style="width:auto; padding:0 20px;" onclick="addSubject()">Hinzufügen</button>
+                            <input type="text" id="new-subject-name" class="ios-input" placeholder="${t('subject_placeholder')}" style="margin:0;">
+                            <button class="ios-btn" style="width:auto; padding:0 20px;" onclick="addSubject()">${t('add_btn')}</button>
                         </div>
                     </div>
 
-                    <h3 style="margin:20px 0 10px 5px; font-size:18px;">Vorhandene Fächer</h3>
+                    <h3 style="margin:20px 0 10px 5px; font-size:18px;">${t('existing_subjects')}</h3>
                     <div class="floating-card" style="padding:0 20px;">
-                        ${listHtml || '<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Fächer gefunden.</div>'}
+                        ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_subjects_found')}</div>`}
                     </div>
                 `;
                 lucide.createIcons();
             } catch (e) {
                 console.error(e);
-                alert('Fehler beim Laden der Fächer');
+                alert(t('error_loading'));
             }
         }
 
@@ -3129,13 +3315,13 @@
                 if (data.success) {
                     renderSubjectManagement();
                 } else {
-                    alert(data.message || 'Fehler beim Hinzufügen');
+                    alert(data.message || t('error_adding'));
                 }
-            } catch (e) { console.error(e); alert('Fehler'); }
+            } catch (e) { console.error(e); alert(t('error')); }
         }
 
         async function deleteSubject(id, name) {
-            if (!confirm(`Fach "${name}" wirklich löschen? Dies könnte Auswirkungen auf bestehende Aufgaben haben.`)) return;
+            if (!confirm(t('confirm_delete_subject').replace('{name}', name))) return;
 
             try {
                 const res = await fetch(`/api/subjects/${id}`, { method: 'DELETE' });
@@ -3143,9 +3329,9 @@
                 if (data.success) {
                     renderSubjectManagement();
                 } else {
-                    alert('Fehler beim Löschen');
+                    alert(t('error_deleting'));
                 }
-            } catch (e) { console.error(e); alert('Fehler'); }
+            } catch (e) { console.error(e); alert(t('error')); }
         }
 
 
@@ -3203,7 +3389,7 @@
             // Check horizontal dominance and threshold
             if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
                 const views = ['home', 'tasks', 'calendar', 'grades'];
-                const titles = ['Home', 'Aufgaben', 'Plan', 'Noten'];
+                const titles = [t('home'), t('tasks'), t('calendar'), t('grades')];
                 const idx = views.indexOf(currentView);
 
                 if (idx === -1) return;
