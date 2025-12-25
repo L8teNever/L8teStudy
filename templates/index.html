@@ -1913,6 +1913,19 @@
                     </div>
                 </div>
 
+                </div>
+                
+                <div class="floating-card">
+                    <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Allgemein</h4>
+                    <div class="account-item" onclick="renderLanguageSelection()">
+                        <div class="account-item-text">Sprache</div>
+                        <div style="display:flex; align-items:center;">
+                            <span style="color:var(--text-sec); margin-right:10px; font-size:15px;" id="current-lang-display">Deutsch</span>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="floating-card">
                     <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">Sicherheit</h4>
                     <div class="account-item" onclick="renderChangePassword()">
@@ -1921,7 +1934,40 @@
                     </div>
                 </div>
             `;
+            const savedLang = localStorage.getItem('l8te_lang') || 'de';
+            const langLabel = savedLang === 'en' ? 'Englisch' : 'Deutsch';
+            document.getElementById('current-lang-display').innerText = langLabel;
+
             lucide.createIcons();
+        }
+
+        function renderLanguageSelection() {
+            const savedLang = localStorage.getItem('l8te_lang') || 'de';
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h3 style="margin:0">Sprache wählen</h3>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+                </div>
+                <div class="account-item" onclick="setLanguage('de')" style="cursor:pointer;">
+                    <div class="account-item-text">Deutsch</div>
+                    ${savedLang === 'de' ? '<i data-lucide="check" style="color:var(--accent); width:20px;"></i>' : ''}
+                </div>
+                <div class="account-item" onclick="setLanguage('en')" style="cursor:pointer;">
+                    <div class="account-item-text">Englisch</div>
+                    ${savedLang === 'en' ? '<i data-lucide="check" style="color:var(--accent); width:20px;"></i>' : ''}
+                </div>
+            `;
+            openSheetOverlay();
+            lucide.createIcons();
+        }
+
+        function setLanguage(lang) {
+            localStorage.setItem('l8te_lang', lang);
+            closeSheet();
+            if (lang === 'en') {
+                alert('Sprache auf Englisch gestellt. (Hinweis: Vollständige Übersetzung folgt in Kürze)');
+            }
+            renderSettingsPage();
         }
 
 
