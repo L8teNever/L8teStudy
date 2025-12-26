@@ -1020,6 +1020,11 @@
                 document.title = `${base} - ${context}`;
             }
         }
+
+        function setPageTitle(pageTitle) {
+            document.getElementById('current-page-title').innerText = pageTitle;
+            updateBrowserTitle(pageTitle);
+        }
         let currentTaskTab = 'open';
         let cachedTasks = [];
         let selectedSubjectId = null;
@@ -1060,7 +1065,7 @@
                 account: 'account', settings: 'settings', sub_admin: 'admin'
             };
             if (titles[currentView]) {
-                document.getElementById('current-page-title').innerText = t(titles[currentView]);
+                setPageTitle(t(titles[currentView]));
             }
 
             // Re-render current view to apply changes
@@ -1138,7 +1143,7 @@
                     settings: 'settings', account: 'account'
                 };
                 const translatedTitle = titleKeys[view] ? t(titleKeys[view]) : (view.charAt(0).toUpperCase() + view.slice(1));
-                document.getElementById('current-page-title').innerText = translatedTitle;
+                setPageTitle(translatedTitle);
 
                 document.querySelectorAll('.nav-link').forEach(n => {
                     n.classList.remove('active');
@@ -1931,7 +1936,7 @@
         function renderAccountHub() {
             previousView = 'home';
             currentView = 'account';
-            document.getElementById('current-page-title').innerText = t('account');
+            setPageTitle(t('account'));
             document.getElementById('header-back-btn').style.display = 'none';
 
             if (!window.isPoppingState) {
@@ -1999,7 +2004,7 @@
         async function renderSettingsPage() {
             previousView = 'account';
             currentView = 'settings';
-            document.getElementById('current-page-title').innerText = t('settings');
+            setPageTitle(t('settings'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2093,7 +2098,7 @@
         async function renderNotificationSettings() {
             previousView = 'settings';
             currentView = 'sub_notifications';
-            document.getElementById('current-page-title').innerText = t('notifications');
+            setPageTitle(t('notifications'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2288,7 +2293,7 @@
         function renderChangePassword() {
             previousView = 'settings'; // Virtual history
             currentView = 'sub_password';
-            document.getElementById('current-page-title').innerText = t('msg_password');
+            setPageTitle(t('msg_password'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2314,7 +2319,7 @@
         function renderAdminMenu() {
             previousView = 'settings';
             currentView = 'sub_admin_menu';
-            document.getElementById('current-page-title').innerText = t('admin_center');
+            setPageTitle(t('admin_center'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2355,7 +2360,12 @@
                         </div>
                         <div style="font-weight:700; font-size:15px;">${t('class_settings')}</div>
                     </div>
-                    ` : ''}
+                    ` : `
+                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; color:var(--text-sec); opacity:0.6; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                        <i data-lucide="settings" style="width:20px; margin-bottom:10px;"></i>
+                        <div style="font-weight:700; font-size:15px;">${t('class_settings')}</div>
+                    </div>
+                    `}
                 </div>
 
                 ${window.currentUser.is_super_admin ? `
@@ -2379,7 +2389,7 @@
         async function renderActivityLog(filterClassId = null, filterClassName = null) {
             previousView = 'sub_admin_menu';
             currentView = 'sub_activity';
-            document.getElementById('current-page-title').innerText = filterClassName ? `${t('log_label')}: ${filterClassName}` : t('activity');
+            setPageTitle(filterClassName ? `${t('log_label')}: ${filterClassName}` : t('activity'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2511,7 +2521,7 @@
         async function renderSchoolClassManagement() {
             previousView = 'sub_super_admin';
             currentView = 'sub_classes';
-            document.getElementById('current-page-title').innerText = t('stats_classes');
+            setPageTitle(t('stats_classes'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2601,7 +2611,7 @@
         async function renderUserManagement(filterClassId = null, filterClassName = null) {
             previousView = 'sub_admin_menu'; // Logically parent is admin menu now
             currentView = 'sub_users';
-            document.getElementById('current-page-title').innerText = filterClassName ? `${t('users_label')}: ${filterClassName}` : t('users');
+            setPageTitle(filterClassName ? `${t('users_label')}: ${filterClassName}` : t('users'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2653,7 +2663,7 @@
         function renderSingleClassAdmin(id, name) {
             previousView = 'sub_classes';
             currentView = 'sub_class_detail';
-            document.getElementById('current-page-title').innerText = name;
+            setPageTitle(name);
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2697,7 +2707,7 @@
         async function renderClassSettings(id) {
             previousView = window.currentUser.is_super_admin ? 'sub_class_detail' : 'sub_admin_menu';
             currentView = 'sub_class_settings';
-            document.getElementById('current-page-title').innerText = t('class_settings');
+            setPageTitle(t('class_settings'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2813,7 +2823,7 @@
         async function renderSuperAdminDashboard() {
             previousView = 'sub_admin_menu';
             currentView = 'sub_super_admin';
-            document.getElementById('current-page-title').innerText = t('superadmin_dashboard');
+            setPageTitle(t('superadmin_dashboard'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2822,56 +2832,28 @@
             window.isPoppingState = false;
 
             document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
-            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
 
-            try {
-                const res = await fetch('/api/admin/dashboard/stats');
-                const stats = await res.json();
-
-                document.getElementById('app-container').innerHTML = `
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
-                        <div class="floating-card" style="margin:0; text-align:center; padding:15px; background:linear-gradient(135deg, var(--accent), #5AC8FA); color:white; border:none;">
-                            <div style="font-size:28px; font-weight:800;">${stats.class_count}</div>
-                            <div style="font-size:11px; opacity:0.9; font-weight:700;">${t('stats_classes').toUpperCase()}</div>
-                        </div>
-                        <div class="floating-card" style="margin:0; text-align:center; padding:15px; background:linear-gradient(135deg, #FF2D55, #FF5E3A); color:white; border:none;">
-                            <div style="font-size:28px; font-weight:800;">${stats.user_count}</div>
-                            <div style="font-size:11px; opacity:0.9; font-weight:700;">${t('stats_users').toUpperCase()}</div>
-                        </div>
-                        <div class="floating-card" style="margin:0; text-align:center; padding:15px; background:linear-gradient(135deg, #5856D6, #AF52DE); color:white; border:none;">
-                            <div style="font-size:28px; font-weight:800;">${stats.task_count}</div>
-                            <div style="font-size:11px; opacity:0.9; font-weight:700;">${t('stats_tasks').toUpperCase()}</div>
-                        </div>
-                        <div class="floating-card" style="margin:0; text-align:center; padding:15px; background:linear-gradient(135deg, #FF9500, #FFCC00); color:white; border:none;">
-                            <div style="font-size:28px; font-weight:800;">${stats.event_count}</div>
-                            <div style="font-size:11px; opacity:0.9; font-weight:700;">${t('stats_events').toUpperCase()}</div>
-                        </div>
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card" style="padding: 20px;">
+                    <h4 style="margin:0 0 15px 0; font-size:16px; font-weight:700;">${t('global_management')}</h4>
+                    <div class="account-item" onclick="renderSchoolClassManagement()" style="padding:12px 0;">
+                            <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="school"></i></div>
+                            <div class="account-item-text">${t('manage_classes')}</div>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
-                    
-                    <div class="floating-card" style="padding: 20px;">
-                        <h4 style="margin:0 0 15px 0; font-size:16px; font-weight:700;">${t('global_management')}</h4>
-                        <div class="account-item" onclick="renderSchoolClassManagement()" style="padding:12px 0;">
-                             <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="school"></i></div>
-                             <div class="account-item-text">${t('manage_classes')}</div>
-                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                        </div>
-                        <div class="account-item" onclick="renderSubjectManagement()" style="padding:12px 0;">
-                             <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="book"></i></div>
-                             <div class="account-item-text">${t('global_subjects_sharing')}</div>
-                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                        </div>
-                        <div class="account-item" onclick="renderSharedContentManagement()" style="padding:12px 0;">
-                             <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="share-2"></i></div>
-                             <div class="account-item-text">${t('shared_content')}</div>
-                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                        </div>
+                    <div class="account-item" onclick="renderSubjectManagement()" style="padding:12px 0;">
+                            <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="book"></i></div>
+                            <div class="account-item-text">${t('global_subjects_sharing')}</div>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
-                `;
-                lucide.createIcons();
-            } catch (e) {
-                console.error(e);
-                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
-            }
+                    <div class="account-item" onclick="renderSharedContentManagement()" style="padding:12px 0;">
+                            <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="share-2"></i></div>
+                            <div class="account-item-text">${t('shared_content')}</div>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
         }
 
         async function saveNewUser() {
@@ -3054,7 +3036,7 @@
         async function renderSharedContentManagement() {
             previousView = 'sub_super_admin';
             currentView = 'sub_shared_content';
-            document.getElementById('current-page-title').innerText = t('shared_content');
+            setPageTitle(t('shared_content'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -3467,7 +3449,7 @@
         async function renderSubjectManagement(filterClassId = null, filterClassName = null) {
             previousView = filterClassId ? 'sub_class_detail' : 'sub_super_admin';
             currentView = 'sub_subjects';
-            document.getElementById('current-page-title').innerText = filterClassName ? `${t('subjects_label')}: ${filterClassName}` : t('subjects');
+            setPageTitle(filterClassName ? `${t('subjects_label')}: ${filterClassName}` : t('subjects'));
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -3670,40 +3652,7 @@
             } catch (e) { console.error(e); }
         }
 
-        let tutorialStep = 0;
-        function renderTutorial() {
-            const steps = [
-                { title: t('tutorial_welcome'), msg: t('tutorial_welcome_msg'), icon: 'sparkles' },
-                { title: t('tutorial_tasks'), msg: t('tutorial_tasks_msg'), icon: 'list-todo' },
-                { title: t('tutorial_calendar'), msg: t('tutorial_calendar_msg'), icon: 'calendar' },
-                { title: t('tutorial_grades'), msg: t('tutorial_grades_msg'), icon: 'graduation-cap' },
-                { title: t('tutorial_done'), msg: t('tutorial_done_msg'), icon: 'check-circle' }
-            ];
-
-            const step = steps[tutorialStep];
-            document.getElementById('sheet-content').innerHTML = `
-                <div style="text-align:center; padding: 20px 10px;">
-                    <div style="width:70px; height:70px; background:var(--accent); color:white; border-radius:35px; display:flex; align-items:center; justify-content:center; margin: 0 auto 20px auto;">
-                        <i data-lucide="${step.icon}" style="width:35px; height:35px;"></i>
-                    </div>
-                    <h2 style="margin:0 0 10px 0; font-size:24px; font-weight:700;">${step.title}</h2>
-                    <p style="color:var(--text-sec); line-height:1.5; font-size:16px; margin-bottom:30px;">${step.msg}</p>
-                    <button class="ios-btn" onclick="nextTutorialStep()">${tutorialStep === steps.length - 1 ? t('done') : t('next')}</button>
-                </div>
-            `;
-            document.getElementById('sheet-overlay').classList.add('active');
-            lucide.createIcons();
-        }
-
-        async function nextTutorialStep() {
-            tutorialStep++;
-            if (tutorialStep >= 5) {
-                await fetch('/api/tutorial/complete', { method: 'POST' });
-                closeSheet();
-                return;
-            }
-            renderTutorial();
-        }
+        // Tutorial removed as per user request
 
         async function deleteSubject(id, name) {
             if (!confirm(t('confirm_delete_subject').replace('{name}', name))) return;
@@ -3805,9 +3754,6 @@
             if (window.currentUser.needs_password_change) {
                 renderForcePasswordChange();
                 return;
-            }
-            if (!window.currentUser.has_seen_tutorial) {
-                renderTutorial();
             }
 
             if (path === '/') renderHome();

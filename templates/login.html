@@ -142,9 +142,11 @@
             if (className) {
                 document.querySelector('h1').innerText = className;
                 document.querySelector('p').innerText = "Login für " + className;
+                document.title = "L8teStudy - " + className;
             } else {
                 document.querySelector('h1').innerText = t('login_title');
                 document.querySelector('p').innerText = t('welcome_msg');
+                document.title = "L8teStudy - " + t('login_title');
             }
             document.getElementById('error-msg').innerText = t('invalid_credentials');
             document.getElementById('class_code').placeholder = t('class_code_placeholder');
