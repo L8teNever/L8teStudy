@@ -1004,7 +1004,8 @@
             email: "{{ user.username }}@l8testudy.app",
             darkMode: "{{ 'true' if user.dark_mode else 'false' }}" === 'true',
             language: "{{ user.language }}" || 'de',
-            is_admin: "{{ 'true' if user.is_admin else 'false' }}" === 'true'
+            is_admin: "{{ 'true' if user.is_admin else 'false' }}" === 'true',
+            is_super_admin: "{{ 'true' if user.is_super_admin else 'false' }}" === 'true'
         };
         let currentTaskTab = 'open';
         let cachedTasks = [];
@@ -2328,6 +2329,13 @@
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
+                    ${window.currentUser.is_super_admin ? `
+                    <div class="account-item" onclick="renderSchoolClassManagement()">
+                        <div class="account-item-icon"><i data-lucide="school"></i></div>
+                        <div class="account-item-text">Klassenverwaltung</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    ` : ''}
                     <div class="account-item" onclick="renderUserManagement()">
                         <div class="account-item-icon"><i data-lucide="users"></i></div>
                         <div class="account-item-text">${t('user_manage')}</div>
@@ -2479,6 +2487,95 @@
             }
 
             renderActivityLogList(filtered);
+        }
+
+        // Sub-page: School Class Management
+        async function renderSchoolClassManagement() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_classes';
+            document.getElementById('current-page-title').innerText = 'Klassen';
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_classes' }, '', null);
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => {
+                window.history.back();
+            };
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
+
+            try {
+                const res = await fetch('/api/admin/classes');
+                const classes = await res.json();
+
+                const listHtml = classes.map(c => `
+                    <div class="list-item">
+                        <div class="account-item-icon"><i data-lucide="school"></i></div>
+                        <div class="item-content">
+                            <div class="item-title">${c.name}</div>
+                            <div class="item-sub">Code: <strong>${c.code}</strong> • ${c.user_count} Benutzer</div>
+                        </div>
+                        <div style="display:flex;">
+                            <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteClass(${c.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>
+                        </div>
+                    </div>
+                `).join('');
+
+                const content = listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Klassen vorhanden</div>`;
+
+                document.getElementById('app-container').innerHTML = `
+                    <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${content}</div>
+                `;
+                document.getElementById('main-fab').classList.add('visible');
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+            }
+        }
+
+        async function openCreateClassMenu() {
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">Neue Klasse erstellen</h2>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
+                </div>
+                <input type="text" id="new-class-name" class="ios-input" placeholder="Klassenname">
+                <button class="ios-btn" onclick="saveNewClass()">Erstellen</button>
+            `;
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
+
+        async function saveNewClass() {
+            const name = document.getElementById('new-class-name').value;
+            if (!name) return alert('Name erforderlich');
+
+            try {
+                const res = await fetch('/api/admin/classes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeSheet();
+                    renderSchoolClassManagement();
+                } else alert(data.message || 'Fehler');
+            } catch (e) { alert('Verbindungsfehler'); }
+        }
+
+        async function deleteClass(id) {
+            if (!confirm('Klasse wirklich löschen? Dies geht nur wenn sie keine Benutzer mehr hat.')) return;
+            try {
+                const res = await fetch(`/api/admin/classes/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) renderSchoolClassManagement();
+                else alert(data.message || 'Fehler beim Löschen');
+            } catch (e) { alert('Verbindungsfehler'); }
         }
 
         // Sub-page: User Management
@@ -2726,6 +2823,10 @@
         function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
             if (currentView === 'sub_users') {
                 openCreateUserMenu();
+                return;
+            }
+            if (currentView === 'sub_classes') {
+                openCreateClassMenu();
                 return;
             }
             let type = editType || (currentView === 'tasks' ? "task" : (currentView === 'calendar' ? "event" : "grade"));

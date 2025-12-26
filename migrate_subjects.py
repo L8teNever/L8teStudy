@@ -15,9 +15,16 @@ with app.app_context():
                    'Geschichte', 'Kunst', 'Sport', 'Chemie', 'Religion']
         
         if Subject.query.count() == 0:
+            from app.models import SchoolClass
+            default_class = SchoolClass.query.first()
+            if not default_class:
+                default_class = SchoolClass(name="Standardklasse", code="CLASS1")
+                db.session.add(default_class)
+                db.session.commit()
+
             for name in defaults:
-                db.session.add(Subject(name=name))
+                db.session.add(Subject(name=name, class_id=default_class.id))
             db.session.commit()
-            print("Added default subjects.")
+            print(f"Added default subjects to class: {default_class.name}")
     else:
         print("Subject table already exists.")

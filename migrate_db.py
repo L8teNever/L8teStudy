@@ -6,7 +6,7 @@ Run this if you're upgrading from an older version.
 """
 
 from app import create_app, db
-from app.models import User, Task, TaskImage, TaskCompletion, Event, Grade, AuditLog
+from app.models import SchoolClass, User, Task, TaskImage, TaskCompletion, Event, Grade, AuditLog, Subject
 
 def migrate_database():
     """Create or update all database tables"""
@@ -16,59 +16,90 @@ def migrate_database():
         print("Starting database migration...")
         
         try:
-            # Create all tables
+            # Create all tables (this creates new tables like SchoolClass)
             db.create_all()
             print("✓ All database tables created/verified successfully")
             
-            # Check if TaskCompletion table exists and has data
-            try:
-                count = TaskCompletion.query.count()
-                print(f"✓ TaskCompletion table exists with {count} entries")
-            except Exception as e:
-                print(f"⚠ TaskCompletion table check: {str(e)}")
-            
-            # Check if we need to migrate old Task.is_done to TaskCompletion
-            try:
-                old_tasks = Task.query.filter(Task.is_done == True).all()
-                if old_tasks:
-                    print(f"Found {len(old_tasks)} tasks with old is_done=True")
-                    print("Migrating to TaskCompletion table...")
-                    
-                    for task in old_tasks:
-                        # Check if completion already exists
-                        completion = TaskCompletion.query.filter_by(
-                            user_id=task.user_id, 
-                            task_id=task.id
-                        ).first()
-                        
-                        if not completion:
-                            completion = TaskCompletion(
-                                user_id=task.user_id,
-                                task_id=task.id,
-                                is_done=True
-                            )
-                            db.session.add(completion)
-                    
-                    db.session.commit()
-                    print(f"✓ Migrated {len(old_tasks)} task completions")
-            except Exception as e:
-                print(f"Migration check: {str(e)}")
-            
-            # --- New Column Migrations ---
+            # --- Column Migrations ---
             from sqlalchemy import text, inspect
-            
             inspector = inspect(db.engine)
             
-            # 1. Check for 'language' column in 'user' table
-            if 'user' in inspector.get_table_names():
-                columns = [col['name'] for col in inspector.get_columns('user')]
-                if 'language' not in columns:
-                    print("⚠ Column 'language' missing in 'user' table. Adding it...")
-                    with db.engine.connect() as conn:
-                        conn.execute(text("ALTER TABLE user ADD COLUMN language VARCHAR(5) DEFAULT 'de'"))
-                        conn.commit()
-                    print("✓ Column 'language' added successfully.")
+            # Helper to add column if it doesn't exist
+            def add_column_if_missing(table_name, column_name, column_type):
+                if table_name in inspector.get_table_names():
+                    columns = [col['name'] for col in inspector.get_columns(table_name)]
+                    if column_name not in columns:
+                        print(f"⚠ Column '{column_name}' missing in '{table_name}' table. Adding it...")
+                        with db.engine.connect() as conn:
+                            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"))
+                            conn.commit()
+                        print(f"✓ Column '{column_name}' added successfully to '{table_name}'.")
+                        return True
+                return False
+
+            add_column_if_missing('user', 'is_super_admin', 'BOOLEAN DEFAULT 0')
+            add_column_if_missing('user', 'class_id', 'INTEGER REFERENCES school_class(id)')
+            add_column_if_missing('task', 'class_id', 'INTEGER REFERENCES school_class(id)')
+            add_column_if_missing('event', 'class_id', 'INTEGER REFERENCES school_class(id)')
+            add_column_if_missing('audit_log', 'class_id', 'INTEGER REFERENCES school_class(id)')
+            add_column_if_missing('subject', 'class_id', 'INTEGER REFERENCES school_class(id)')
+
+            # --- Data Migration ---
+            # 1. Ensure at least one class exists
+            default_class = SchoolClass.query.first()
+            if not default_class:
+                print("Creating default class...")
+                default_class = SchoolClass(name="Standardklasse", code="CLASS1")
+                db.session.add(default_class)
+                db.session.commit()
+                print(f"✓ Default class created: {default_class.name} (Code: {default_class.code})")
+
+            # 2. Assign all existing users to default class if they don't have one
+            # EXCEPT super admin if we decide so, but let's keep it simple.
+            users_to_fix = User.query.filter(User.class_id.is_(None), User.is_super_admin == False).all()
+            if users_to_fix:
+                print(f"Assigning {len(users_to_fix)} users to default class...")
+                for u in users_to_fix:
+                    u.class_id = default_class.id
+                db.session.commit()
+
+            # 3. Handle old 'admin' user - make it super admin maybe?
+            admin_user = User.query.filter_by(username='admin').first()
+            if admin_user and not admin_user.is_super_admin:
+                print("Setting 'admin' user as Super Admin...")
+                admin_user.is_super_admin = True
+                admin_user.class_id = None # Super admins are global
+                db.session.commit()
+
+            # 4. Assign shared content to default class
+            tasks_to_fix = Task.query.filter(Task.class_id.is_(None)).all()
+            if tasks_to_fix:
+                print(f"Migrating {len(tasks_to_fix)} tasks to default class...")
+                for t in tasks_to_fix:
+                    t.class_id = default_class.id
+                db.session.commit()
+
+            events_to_fix = Event.query.filter(Event.class_id.is_(None)).all()
+            if events_to_fix:
+                print(f"Migrating {len(events_to_fix)} events to default class...")
+                for e in events_to_fix:
+                    e.class_id = default_class.id
+                db.session.commit()
+
+            subjects_to_fix = Subject.query.filter(Subject.class_id.is_(None)).all()
+            if subjects_to_fix:
+                print(f"Migrating {len(subjects_to_fix)} subjects to default class...")
+                for s in subjects_to_fix:
+                    s.class_id = default_class.id
+                db.session.commit()
             
+            logs_to_fix = AuditLog.query.filter(AuditLog.class_id.is_(None)).all()
+            if logs_to_fix:
+                print(f"Migrating {len(logs_to_fix)} audit logs to default class...")
+                for l in logs_to_fix:
+                    l.class_id = default_class.id
+                db.session.commit()
+
             print("\n" + "="*60)
             print("Database migration completed successfully!")
             print("="*60)

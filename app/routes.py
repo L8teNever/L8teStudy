@@ -51,11 +51,24 @@ def login():
     
     username = data.get('username')
     password = data.get('password')
+    class_code = data.get('class_code')
     
     if not username or not password:
         return jsonify({'success': False, 'message': 'Username and password required'}), 400
     
-    user = User.query.filter_by(username=username).first()
+    user = None
+    if class_code:
+        from .models import SchoolClass
+        school_class = SchoolClass.query.filter_by(code=class_code.upper()).first()
+        if not school_class:
+            return jsonify({'success': False, 'message': 'Invalid class code'}), 401
+        user = User.query.filter_by(username=username, class_id=school_class.id).first()
+    else:
+        # Check for super admin without class code
+        user = User.query.filter_by(username=username, class_id=None).first()
+        if user and not user.is_super_admin:
+            return jsonify({'success': False, 'message': 'Class code required for regular users'}), 401
+
     if user and user.check_password(password):
         session.permanent = True
         login_user(user, remember=True)
@@ -81,9 +94,12 @@ def login_page():
 @login_required
 def get_tasks():
     try:
-        # Return ALL tasks that represent shared homework
-        # Filter by user_id only if we wanted private tasks, but user requested all tasks be shared.
-        tasks = Task.query.filter(Task.deleted_at.is_(None)).order_by(Task.due_date).all()
+        # Return tasks for the user's class
+        if current_user.is_super_admin:
+            # Super admin sees everything (maybe we add a filter later)
+            tasks = Task.query.filter(Task.deleted_at.is_(None)).order_by(Task.due_date).all()
+        else:
+            tasks = Task.query.filter(Task.deleted_at.is_(None), Task.class_id == current_user.class_id).order_by(Task.due_date).all()
         
         from .models import TaskCompletion
         
@@ -127,6 +143,7 @@ def create_task():
             
         new_task = Task(
             user_id=current_user.id,
+            class_id=current_user.class_id,
             title=data['title'],
             subject=data.get('subject', 'Allgemein'),
             due_date=due_date,
@@ -148,7 +165,7 @@ def create_task():
         
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, action=f"Created task: {new_task.title}")
+        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Created task: {new_task.title}")
         db.session.add(log)
         
         db.session.commit()
@@ -185,9 +202,8 @@ def update_task(id):
                 is_done_val = is_done_val.lower() == 'true'
             completion.is_done = bool(is_done_val)
         
-        # Handle Content Updates (Only Author or Admin)
-        # Note: Logic here implies if you send 'title', you are editing content.
-        if task.user_id == current_user.id or current_user.is_admin:
+        # Handle Content Updates (Only Author or Class/Super Admin)
+        if task.user_id == current_user.id or current_user.is_admin or current_user.is_super_admin:
             if 'title' in data:
                 task.title = data['title']
             if 'description' in data:
@@ -237,7 +253,7 @@ def update_task(id):
 @login_required
 def delete_task(id):
     task = Task.query.get_or_404(id)
-    if task.user_id != current_user.id:
+    if task.user_id != current_user.id and not current_user.is_super_admin:
         return jsonify({'success': False}), 403
         
     from datetime import datetime
@@ -245,7 +261,7 @@ def delete_task(id):
     
     # Audit Log
     from .models import AuditLog
-    log = AuditLog(user_id=current_user.id, action=f"Deleted task: {task.id}")
+    log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Deleted task: {task.id}")
     db.session.add(log)
 
     db.session.commit()
@@ -256,8 +272,11 @@ def delete_task(id):
 @login_required
 def get_events():
     try:
-        # Make events shared for everyone
-        events = Event.query.filter(Event.deleted_at.is_(None)).order_by(Event.date).all()
+        # Filter events by class
+        if current_user.is_super_admin:
+            events = Event.query.filter(Event.deleted_at.is_(None)).order_by(Event.date).all()
+        else:
+            events = Event.query.filter(Event.deleted_at.is_(None), Event.class_id == current_user.class_id).order_by(Event.date).all()
         return jsonify([{
             'id': e.id,
             'title': e.title,
@@ -285,6 +304,7 @@ def create_event():
             
         new_event = Event(
             user_id=current_user.id,
+            class_id=current_user.class_id,
             title=data['title'],
             date=event_date,
             description=data.get('description', '')
@@ -293,7 +313,7 @@ def create_event():
         
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, action=f"Created event: {new_event.title}")
+        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Created event: {new_event.title}")
         db.session.add(log)
         
         db.session.commit()
@@ -318,7 +338,7 @@ def update_event(id):
     # Actually, user said "mann soll auch die funktion haben die termine ... zu bearbeiten". "man" implies the user.
     # If the user created it, yes. If shared, maybe collaborative?
     # Let's stick to: Author or Admin can edit content.
-    if event.user_id != current_user.id and not current_user.is_admin:
+    if event.user_id != current_user.id and not current_user.is_admin and not current_user.is_super_admin:
          return jsonify({'success': False, 'message': 'Not authorized'}), 403
 
     data = request.json
@@ -333,7 +353,7 @@ def update_event(id):
             
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, action=f"Updated event: {event.title}")
+        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Updated event: {event.title}")
         db.session.add(log)
         
         db.session.commit()
@@ -356,7 +376,7 @@ def delete_event(id):
         
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, action=f"Deleted event: {event.id}")
+        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Deleted event: {event.id}")
         db.session.add(log)
         
         db.session.commit()
@@ -404,7 +424,7 @@ def create_grade():
         
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, action=f"Created grade: {new_grade.subject} {new_grade.value}")
+        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Created grade: {new_grade.subject} {new_grade.value}")
         db.session.add(log)
         
         db.session.commit()
@@ -433,7 +453,7 @@ def update_grade(id):
             
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, action=f"Updated grade: {grade.id}")
+        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Updated grade: {grade.id}")
         db.session.add(log)
         
         db.session.commit()
@@ -452,7 +472,7 @@ def delete_grade(id):
     
     # Audit Log
     from .models import AuditLog
-    log = AuditLog(user_id=current_user.id, action=f"Deleted grade: {grade.id}")
+    log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Deleted grade: {grade.id}")
     db.session.add(log)
     
     db.session.commit()
@@ -484,25 +504,33 @@ def change_password():
 @api_bp.route('/admin/users', methods=['GET'])
 @login_required
 def get_users():
-    if not current_user.is_admin:
+    if current_user.is_super_admin:
+        users = User.query.all()
+    elif current_user.is_admin:
+        users = User.query.filter_by(class_id=current_user.class_id).all()
+    else:
         return jsonify({'success': False}), 403
-    users = User.query.all()
-    return jsonify([{'id': u.id, 'username': u.username, 'is_admin': u.is_admin} for u in users])
+    return jsonify([{'id': u.id, 'username': u.username, 'is_admin': u.is_admin, 'class_name': u.school_class.name if u.school_class else 'Global'} for u in users])
 
 @api_bp.route('/admin/users', methods=['POST'])
 @login_required
 def create_user():
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.is_super_admin:
         return jsonify({'success': False}), 403
     data = request.json
     username = data.get('username')
     password = data.get('password')
     is_admin = data.get('is_admin', False)
     
-    if User.query.filter_by(username=username).first():
-        return jsonify({'success': False, 'message': 'User exists'}), 400
+    # Super admin can specify class_id, class admin is locked to their own class
+    target_class_id = current_user.class_id
+    if current_user.is_super_admin:
+        target_class_id = data.get('class_id') # Can be None for global admin
+
+    if User.query.filter_by(username=username, class_id=target_class_id).first():
+        return jsonify({'success': False, 'message': 'User exists in this class'}), 400
         
-    new_user = User(username=username, is_admin=is_admin)
+    new_user = User(username=username, is_admin=is_admin, class_id=target_class_id)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
@@ -511,7 +539,7 @@ def create_user():
 @api_bp.route('/admin/users/<int:id>/reset_password', methods=['POST'])
 @login_required
 def reset_user_password(id):
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.is_super_admin:
         return jsonify({'success': False}), 403
         
     user = User.query.get_or_404(id)
@@ -528,12 +556,17 @@ def reset_user_password(id):
 @api_bp.route('/admin/users/<int:id>', methods=['DELETE'])
 @login_required
 def delete_user(id):
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.is_super_admin:
         return jsonify({'success': False}), 403
+    
+    user = User.query.get_or_404(id)
+    
+    # Class admins can only delete users in their class
+    if not current_user.is_super_admin and user.class_id != current_user.class_id:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
     if id == current_user.id:
         return jsonify({'success': False, 'message': 'Cannot delete self'}), 400
-        
-    user = User.query.get_or_404(id)
     db.session.delete(user)
     db.session.commit()
     return jsonify({'success': True})
@@ -658,7 +691,10 @@ def send_test_notification():
 @api_bp.route('/subjects', methods=['GET'])
 @login_required
 def get_subjects():
-    subjects = Subject.query.order_by(Subject.name).all()
+    if current_user.is_super_admin:
+        subjects = Subject.query.order_by(Subject.name).all()
+    else:
+        subjects = Subject.query.filter_by(class_id=current_user.class_id).order_by(Subject.name).all()
     # If empty (shouldn't happen due to migration), return defaults
     if not subjects:
        defaults = ['Mathematik', 'Deutsch', 'Englisch', 'Physik', 'Biologie', 'Geschichte', 'Kunst', 'Sport', 'Chemie', 'Religion']
@@ -676,10 +712,10 @@ def add_subject():
     if not name:
         return jsonify({'success': False, 'message': 'Name required'}), 400
     
-    if Subject.query.filter_by(name=name).first():
+    if Subject.query.filter_by(name=name, class_id=current_user.class_id).first():
          return jsonify({'success': False, 'message': 'Subject exists'}), 400
 
-    db.session.add(Subject(name=name))
+    db.session.add(Subject(name=name, class_id=current_user.class_id))
     db.session.commit()
     return jsonify({'success': True})
 
@@ -704,8 +740,11 @@ def get_activity_log():
         return jsonify({'success': False}), 403
     
     from .models import AuditLog
-    # Join with User to get username
-    logs = AuditLog.query.join(User).order_by(AuditLog.timestamp.desc()).limit(100).all()
+    # Filter log by class
+    if current_user.is_super_admin:
+        logs = AuditLog.query.join(User).order_by(AuditLog.timestamp.desc()).limit(100).all()
+    else:
+        logs = AuditLog.query.filter_by(class_id=current_user.class_id).join(User).order_by(AuditLog.timestamp.desc()).limit(100).all()
     
     return jsonify([{
         'id': l.id,
@@ -713,3 +752,55 @@ def get_activity_log():
         'action': l.action,
         'timestamp': l.timestamp.strftime('%d.%m.%Y %H:%M')
     } for l in logs])
+
+# --- Super Admin Class Management ---
+
+@api_bp.route('/admin/classes', methods=['GET'])
+@login_required
+def get_classes():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    from .models import SchoolClass
+    classes = SchoolClass.query.all()
+    return jsonify([{
+        'id': c.id,
+        'name': c.name,
+        'code': c.code,
+        'user_count': c.users.count()
+    } for c in classes])
+
+@api_bp.route('/admin/classes', methods=['POST'])
+@login_required
+def create_class():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    data = request.json
+    name = data.get('name')
+    if not name:
+        return jsonify({'success': False, 'message': 'Name required'}), 400
+    
+    from .models import SchoolClass
+    new_class = SchoolClass(name=name)
+    # Code is auto-generated in model
+    db.session.add(new_class)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'id': new_class.id, 'code': new_class.code})
+
+@api_bp.route('/admin/classes/<int:id>', methods=['DELETE'])
+@login_required
+def delete_class(id):
+    if not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    from .models import SchoolClass
+    c = SchoolClass.query.get_or_404(id)
+    # Check if class has users
+    if c.users.count() > 0:
+        return jsonify({'success': False, 'message': 'Cannot delete class with users'}), 400
+        
+    db.session.delete(c)
+    db.session.commit()
+    return jsonify({'success': True})

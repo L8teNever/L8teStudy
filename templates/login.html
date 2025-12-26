@@ -117,6 +117,7 @@
         <div id="error-msg" class="error-msg">Ungültige Zugangsdaten</div>
 
         <form onsubmit="handleSubmit(event)">
+            <input type="text" id="class_code" class="ios-input" placeholder="Klassencode (6-stellig)" maxlength="6">
             <input type="text" id="username" class="ios-input" placeholder="Benutzername" required>
             <input type="password" id="password" class="ios-input" placeholder="Passwort" required>
             <button type="submit" class="ios-btn" id="submit-btn">Anmelden</button>
@@ -128,6 +129,7 @@
     <script>
         async function handleSubmit(e) {
             e.preventDefault();
+            const class_code = document.getElementById('class_code').value;
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('error-msg');
@@ -142,7 +144,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ class_code, username, password })
                 });
                 const data = await response.json();
 

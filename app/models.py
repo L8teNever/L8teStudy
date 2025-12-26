@@ -2,12 +2,31 @@ from . import db
 from flask_login import UserMixin
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+import string
+import random
+
+def generate_class_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+class SchoolClass(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), nullable=False)
+    code = db.Column(db.String(6), unique=True, nullable=False, default=generate_class_code)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    users = db.relationship('User', backref='school_class', lazy='dynamic')
+    tasks = db.relationship('Task', backref='school_class', lazy='dynamic')
+    events = db.relationship('Event', backref='school_class', lazy='dynamic')
+    subjects = db.relationship('Subject', backref='school_class', lazy='dynamic')
+    audit_logs = db.relationship('AuditLog', backref='school_class', lazy='dynamic')
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
+    username = db.Column(db.String(64), nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Boolean, default=False)  # This is now "Class Admin"
+    is_super_admin = db.Column(db.Boolean, default=False) # Access to all classes
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True) # Super admins don't need a class
     dark_mode = db.Column(db.Boolean, default=False)
     language = db.Column(db.String(5), default='de')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -20,7 +39,6 @@ class User(UserMixin, db.Model):
     # Notification Settings Relation
     notification_settings = db.relationship('NotificationSetting', backref='user', uselist=False, cascade="all, delete-orphan")
     push_subscriptions = db.relationship('PushSubscription', backref='user', lazy='dynamic', cascade="all, delete-orphan")
-
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -51,6 +69,7 @@ class PushSubscription(db.Model):
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
     title = db.Column(db.String(128), nullable=False)
     subject = db.Column(db.String(64))
     due_date = db.Column(db.DateTime)
@@ -75,6 +94,7 @@ class TaskCompletion(db.Model):
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
     title = db.Column(db.String(128), nullable=False)
     date = db.Column(db.DateTime, nullable=False)
     description = db.Column(db.Text)
@@ -83,6 +103,8 @@ class Event(db.Model):
 class Grade(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # Note: Grade is private, but we might want to keep class_id here too just in case
+    # However it is already linked via user_id -> User -> class_id
     subject = db.Column(db.String(64), nullable=False)
     value = db.Column(db.Float, nullable=False)
     weight = db.Column(db.Float, default=1.0) # e.g., 0.5 for written, 1.0 for exam
@@ -93,9 +115,14 @@ class Grade(db.Model):
 class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
     action = db.Column(db.String(256), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True, nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
+    name = db.Column(db.String(64), nullable=False)
+    # name is no longer unique globally, but unique within class
+    __table_args__ = (db.UniqueConstraint('class_id', 'name', name='_class_subject_uc'),)
+
