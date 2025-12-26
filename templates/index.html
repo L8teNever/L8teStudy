@@ -1200,15 +1200,31 @@
                     return;
                 }
                 if (event.state.view === 'sub_activity') {
-                    renderActivityLog();
+                    renderActivityLog(event.state.class_id, event.state.class_name);
                     return;
                 }
                 if (event.state.view === 'sub_users') {
-                    renderUserManagement();
+                    renderUserManagement(event.state.class_id, event.state.class_name);
                     return;
                 }
                 if (event.state.view === 'sub_subjects') {
                     renderSubjectManagement();
+                    return;
+                }
+                if (event.state.view === 'sub_classes') {
+                    renderSchoolClassManagement();
+                    return;
+                }
+                if (event.state.view === 'sub_class_detail') {
+                    renderSingleClassAdmin(event.state.id, event.state.name);
+                    return;
+                }
+                if (event.state.view === 'sub_super_admin') {
+                    renderSuperAdminDashboard();
+                    return;
+                }
+                if (event.state.view === 'sub_shared_content') {
+                    renderSharedContentManagement();
                     return;
                 }
 
@@ -2336,11 +2352,6 @@
                         <div class="account-item-text">Superadmin Dashboard</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
-                    <div class="account-item" onclick="renderSchoolClassManagement()">
-                        <div class="account-item-icon"><i data-lucide="school"></i></div>
-                        <div class="account-item-text">Klassenverwaltung</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
                     ` : ''}
                     <div class="account-item" onclick="renderUserManagement()">
                         <div class="account-item-icon"><i data-lucide="users"></i></div>
@@ -2495,7 +2506,7 @@
 
         // Sub-page: School Class Management
         async function renderSchoolClassManagement() {
-            previousView = 'sub_admin_menu';
+            previousView = 'sub_super_admin';
             currentView = 'sub_classes';
             document.getElementById('current-page-title').innerText = 'Klassen';
             document.getElementById('header-back-btn').style.display = 'block';
@@ -3375,7 +3386,7 @@
 
 
         async function renderSubjectManagement() {
-            previousView = 'sub_admin_menu';
+            previousView = 'sub_super_admin';
             currentView = 'sub_subjects';
             document.getElementById('current-page-title').innerText = t('subjects');
             document.getElementById('header-back-btn').style.display = 'block';
