@@ -937,6 +937,7 @@ def get_class(id):
     if not current_user.is_super_admin and current_user.class_id != id:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
+    from .models import SchoolClass
     school_class = SchoolClass.query.get_or_404(id)
     return jsonify({
         'id': school_class.id,
@@ -953,6 +954,7 @@ def update_class(id):
             return jsonify({'success': False, 'message': 'Unauthorized'}), 403
             
     data = request.json
+    from .models import SchoolClass
     school_class = SchoolClass.query.get_or_404(id)
     
     if 'name' in data and current_user.is_super_admin:
