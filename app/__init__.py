@@ -178,11 +178,17 @@ def create_app():
     scheduler.init_app(app)
     
     # Register Jobs
+    # Start scheduler for notifications
     from app.notifications import check_reminders
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        if not scheduler.get_job('check_reminders'):
-            scheduler.add_job(id='check_reminders', func=check_reminders, trigger='interval', seconds=30)
-        scheduler.start()
-        app.logger.info("Scheduler started for notifications")
+    # In Gunicorn/Docker, we want it to run. In dev with reloader, only in the main process.
+    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or os.environ.get('GUNICORN_VERSION'):
+        try:
+            if not scheduler.get_job('check_reminders'):
+                scheduler.add_job(id='check_reminders', func=check_reminders, trigger='interval', seconds=45)
+            if not scheduler.running:
+                scheduler.start()
+                app.logger.info("--- Notification Scheduler Started ---")
+        except Exception as e:
+            app.logger.error(f"Failed to start scheduler: {e}")
 
     return app

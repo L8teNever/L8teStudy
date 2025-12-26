@@ -107,11 +107,11 @@ def send_web_push(subscription_info, message_body):
             vapid_claims=VAPID_CLAIMS
         )
     except WebPushException as ex:
-        logger.error(f"WebPush failed: {ex}")
         # If 410 Gone (expired) or 403 Forbidden (VAPID mismatch), remove sub
         if ex.response and ex.response.status_code in [410, 403]:
+            logger.info(f"WebPush subscription invalid ({ex.response.status_code}), removing.")
             return False
-        # Other errors (401, 500 etc) are logged but we might keep the sub
+        logger.error(f"WebPush failed: {ex}")
     except Exception as e:
         logger.error(f"WebPush error: {e}")
     return True
@@ -188,7 +188,14 @@ def check_reminders():
         users = User.query.all()
         for user in users:
             settings = user.notification_settings
-            if not settings: continue
+            if not settings:
+                # Create defaults if entirely missing
+                settings = NotificationSetting(user_id=user.id)
+                db.session.add(settings)
+                db.session.commit()
+            
+            # Refresh to avoid races with other Gunicorn workers
+            db.session.refresh(settings)
             
             # Homework Reminder
             if settings.reminder_homework:
