@@ -2282,12 +2282,43 @@
             return outputArray;
         }
 
-        // SW Register
+        // Optimized SW & Push Initialization
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('SW Registered'))
-                    .catch(err => console.log('SW Failed', err));
+            window.addEventListener('load', async () => {
+                try {
+                    const reg = await navigator.serviceWorker.register('/service-worker.js');
+                    console.log('SW Registered');
+
+                    // Silent Sync: Check if we have a subscription and refresh it on the server
+                    if ('PushManager' in window) {
+                        const sub = await reg.pushManager.getSubscription();
+                        if (sub) {
+                            // Already have a sub? Let's refresh it silently on the server to be safe
+                            fetch('/api/notifications/subscribe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(sub)
+                            }).catch(e => console.log('Silent push sync failed', e));
+                        } else if (Notification.permission === 'granted') {
+                            // Permission is there but no sub? Auto-resubscribe
+                            console.log('Permission granted but no sub found, auto-resubscribing...');
+                            const keyRes = await fetch('/api/vapid_public_key');
+                            const keyData = await keyRes.json();
+                            const convertedVapidKey = urlBase64ToUint8Array(keyData.publicKey);
+                            const newSub = await reg.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: convertedVapidKey
+                            });
+                            await fetch('/api/notifications/subscribe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(newSub)
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.log('SW Initialization failed', err);
+                }
             });
         }
         function renderChangePassword() {
@@ -3788,15 +3819,6 @@
             else renderHome();
         };
         console.log('Main Script Parsed Successfully');
-    </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => console.log('SW registered'))
-                    .catch(err => console.log('SW registration failed: ', err));
-            });
-        }
     </script>
 </body>
 

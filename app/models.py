@@ -65,6 +65,10 @@ class NotificationSetting(db.Model):
     # Daily Reminders (Time stored as string "HH:MM", null means deactivated)
     reminder_homework = db.Column(db.String(5), nullable=True) # e.g. "17:00" for tasks due tomorrow
     reminder_exam = db.Column(db.String(5), nullable=True) # e.g. "19:00" for exams due soon
+    
+    # Tracking to avoid double-sending
+    last_homework_reminder_at = db.Column(db.Date, nullable=True)
+    last_exam_reminder_at = db.Column(db.Date, nullable=True)
 
 class PushSubscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)

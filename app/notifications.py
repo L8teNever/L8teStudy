@@ -153,39 +153,55 @@ def check_reminders():
     """Scheduled job to check for due tasks and alarms"""
     with scheduler.app.app_context():
         now = datetime.now()
+        today = now.date()
         current_time_str = now.strftime("%H:%M")
         
-        # 1. Check Homework Reminders (e.g. at 17:00 check for tasks due tomorrow)
+        # 1. Check all users
         users = User.query.all()
         for user in users:
             settings = user.notification_settings
             if not settings: continue
             
             # Homework Reminder
-            if settings.reminder_homework == current_time_str:
-                tomorrow = (now + timedelta(days=1)).date()
-                tasks_due = Task.query.filter(
-                    db.func.date(Task.due_date) == tomorrow,
-                    Task.deleted_at.is_(None)
-                ).all()
-                
-                count = 0
-                for t in tasks_due:
-                    # Check if user has NOT finished it
-                    # This requires checking TaskCompletion, which we haven't fully implemented in this loop yet
-                    # For now just notify about due tasks
-                    count += 1
-                
-                if count > 0:
-                    notify_user(user, "Hausaufgaben morgen", f"Du hast {count} Aufgaben für morgen fällig!", url='/tasks')
+            if settings.reminder_homework:
+                # If we are at or past the set time AND haven't sent it today
+                if current_time_str >= settings.reminder_homework and settings.last_homework_reminder_at != today:
+                    tomorrow = today + timedelta(days=1)
+                    
+                    # We check tasks for all classes the user might be in. 
+                    # If user.class_id is set, check THAT class.
+                    # Also tasks might be 'is_shared' (though we check per class).
+                    tasks_due = Task.query.filter(
+                        db.func.date(Task.due_date) == tomorrow,
+                        Task.class_id == user.class_id,
+                        Task.deleted_at.is_(None)
+                    ).all()
+                    
+                    count = 0
+                    for t in tasks_due:
+                        # Optional: Check if user already finished it
+                        from app.models import TaskCompletion
+                        comp = TaskCompletion.query.filter_by(user_id=user.id, task_id=t.id).first()
+                        if not comp or not comp.is_done:
+                            count += 1
+                    
+                    if count > 0:
+                        notify_user(user, "Hausaufgaben morgen", f"Du hast {count} Aufgaben für morgen fällig!", url='/tasks')
+                        settings.last_homework_reminder_at = today
+                        db.session.commit()
 
-            # Exam/Event Reminder (Simplification: Check events tomorrow)
-            if settings.reminder_exam == current_time_str:
-                tomorrow = (now + timedelta(days=1)).date()
-                events = Event.query.filter(
-                    db.func.date(Event.date) == tomorrow, 
-                    Event.deleted_at.is_(None)
-                ).all()
-                if events:
-                    notify_user(user, "Termin/Klausur morgen", f"Morgen: {events[0].title}" + (f" und {len(events)-1} weitere" if len(events)>1 else ""), url='/calendar')
+            # Exam/Event Reminder
+            if settings.reminder_exam:
+                if current_time_str >= settings.reminder_exam and settings.last_exam_reminder_at != today:
+                    tomorrow = today + timedelta(days=1)
+                    events = Event.query.filter(
+                        db.func.date(Event.date) == tomorrow,
+                        Event.class_id == user.class_id,
+                        Event.deleted_at.is_(None)
+                    ).all()
+                    
+                    if events:
+                        notify_user(user, "Termin/Klausur morgen", f"Morgen: {events[0].title}" + (f" und {len(events)-1} weitere" if len(events)>1 else ""), url='/calendar')
+                        settings.last_exam_reminder_at = today
+                        db.session.commit()
 

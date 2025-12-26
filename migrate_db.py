@@ -18,7 +18,7 @@ def migrate_database():
         try:
             # Create all tables (this creates new tables like SchoolClass)
             db.create_all()
-            print("✓ All database tables created/verified successfully")
+            print("All database tables created/verified successfully")
             
             # --- Column Migrations ---
             from sqlalchemy import text, inspect
@@ -48,6 +48,8 @@ def migrate_database():
             add_column_if_missing('audit_log', 'class_id', 'INTEGER REFERENCES school_class(id)')
             add_column_if_missing('user', 'needs_password_change', 'BOOLEAN DEFAULT 0')
             add_column_if_missing('user', 'has_seen_tutorial', 'BOOLEAN DEFAULT 0')
+            add_column_if_missing('notification_setting', 'last_homework_reminder_at', 'DATE')
+            add_column_if_missing('notification_setting', 'last_exam_reminder_at', 'DATE')
 
             # --- Data Migration ---
             # 1. Ensure at least one class exists
@@ -57,7 +59,7 @@ def migrate_database():
                 default_class = SchoolClass(name="Standardklasse", code="CLASS1")
                 db.session.add(default_class)
                 db.session.commit()
-                print(f"✓ Default class created: {default_class.name} (Code: {default_class.code})")
+                print(f"Default class created: {default_class.name} (Code: {default_class.code})")
 
             # 2. Migrate Subject-Class relationships to junction table
             if 'subject' in inspector.get_table_names():
@@ -69,7 +71,7 @@ def migrate_database():
                         for row in res:
                             conn.execute(text("INSERT OR IGNORE INTO subject_classes (subject_id, class_id) VALUES (:sid, :cid)"), {"sid": row[0], "cid": row[1]})
                         conn.commit()
-                    print("✓ Subjects migrated to junction table.")
+                    print("Subjects migrated to junction table.")
 
             # 3. Assign all existing users to default class if they don't have one
             users_to_fix = User.query.filter(User.class_id.is_(None), User.is_super_admin == False).all()
@@ -114,7 +116,7 @@ def migrate_database():
             print("="*60)
             
         except Exception as e:
-            print(f"\n❌ Error during migration: {str(e)}")
+            print(f"\nError during migration: {str(e)}")
             import traceback
             traceback.print_exc()
             return False
