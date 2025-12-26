@@ -58,9 +58,12 @@ def get_or_create_vapid_keys():
         try:
             with open(key_file, 'r') as f:
                 data = json.load(f)
+                logger.info(f"VAPID keys loaded from {key_file}")
                 return data['private_key'], data['public_key']
         except Exception as e:
             logger.error(f"Failed to load VAPID keys from {key_file}: {e}")
+    else:
+        logger.info(f"VAPID key file not found at {key_file}, will generate new.")
 
     # 3. Generate New Keys
     try:

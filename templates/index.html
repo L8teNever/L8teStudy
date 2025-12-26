@@ -2295,6 +2295,16 @@
             return outputArray;
         }
 
+        function arrayBufferToBase64(buffer) {
+            var binary = '';
+            var bytes = new Uint8Array(buffer);
+            var len = bytes.byteLength;
+            for (var i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
         // Optimized SW & Push Initialization
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {
@@ -2305,19 +2315,44 @@
                     // Silent Sync: Check if we have a subscription and refresh it on the server
                     if ('PushManager' in window) {
                         const sub = await reg.pushManager.getSubscription();
+
+                        // Get current server key
+                        const keyRes = await fetch('/api/vapid_public_key');
+                        const keyData = await keyRes.json();
+                        const serverPubKey = keyData.publicKey;
+
                         if (sub) {
-                            // Already have a sub? Let's refresh it silently on the server to be safe
-                            fetch('/api/notifications/subscribe', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(sub)
-                            }).catch(e => console.log('Silent push sync failed', e));
+                            // Check if keys match
+                            const subKey = sub.options.applicationServerKey;
+                            const currentSubKeyB64 = arrayBufferToBase64(subKey);
+
+                            if (currentSubKeyB64 !== serverPubKey) {
+                                console.log('VAPID Key mismatch detected! Auto-resubscribing...');
+                                await sub.unsubscribe();
+
+                                const convertedVapidKey = urlBase64ToUint8Array(serverPubKey);
+                                const newSub = await reg.pushManager.subscribe({
+                                    userVisibleOnly: true,
+                                    applicationServerKey: convertedVapidKey
+                                });
+                                await fetch('/api/notifications/subscribe', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(newSub)
+                                });
+                                console.log('Successfully re-subscribed with new VAPID key');
+                            } else {
+                                // Silent Sync: Refresh existing sub on server
+                                fetch('/api/notifications/subscribe', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(sub)
+                                }).catch(e => console.log('Silent push sync failed', e));
+                            }
                         } else if (Notification.permission === 'granted') {
                             // Permission is there but no sub? Auto-resubscribe
                             console.log('Permission granted but no sub found, auto-resubscribing...');
-                            const keyRes = await fetch('/api/vapid_public_key');
-                            const keyData = await keyRes.json();
-                            const convertedVapidKey = urlBase64ToUint8Array(keyData.publicKey);
+                            const convertedVapidKey = urlBase64ToUint8Array(serverPubKey);
                             const newSub = await reg.pushManager.subscribe({
                                 userVisibleOnly: true,
                                 applicationServerKey: convertedVapidKey
