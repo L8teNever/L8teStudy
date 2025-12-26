@@ -2202,7 +2202,7 @@
 
 
         async function subscribePush() {
-            if (!('serviceWorker' in navigator)) return alert('Browser unterstützt keine Push Notifications.');
+            if (!('serviceWorker' in navigator)) return alert(t('push_unsupported'));
 
             try {
                 const reg = await navigator.serviceWorker.ready;
@@ -2532,11 +2532,11 @@
         async function openCreateClassMenu() {
             document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
-                    <h2 style="margin:0; font-size:20px; font-weight:700;">Neue Klasse erstellen</h2>
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">${t('new_class_title')}</h2>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
                 </div>
-                <input type="text" id="new-class-name" class="ios-input" placeholder="Klassenname">
-                <button class="ios-btn" onclick="saveNewClass()">Erstellen</button>
+                <input type="text" id="new-class-name" class="ios-input" placeholder="${t('class_name_placeholder')}">
+                <button class="ios-btn" onclick="saveNewClass()">${t('create')}</button>
             `;
             document.getElementById('sheet-overlay').classList.add('active');
             lucide.createIcons();
@@ -2544,7 +2544,7 @@
 
         async function saveNewClass() {
             const name = document.getElementById('new-class-name').value;
-            if (!name) return alert('Name erforderlich');
+            if (!name) return alert(t('name_required'));
 
             try {
                 const res = await fetch('/api/admin/classes', {
@@ -2556,25 +2556,25 @@
                 if (data.success) {
                     closeSheet();
                     renderSchoolClassManagement();
-                } else alert(data.message || 'Fehler');
-            } catch (e) { alert('Verbindungsfehler'); }
+                } else alert(data.message || t('error'));
+            } catch (e) { alert(t('connection_error')); }
         }
 
         async function deleteClass(id) {
-            if (!confirm('Klasse wirklich löschen? Dies geht nur wenn sie keine Benutzer mehr hat.')) return;
+            if (!confirm(t('delete_class_confirm'))) return;
             try {
                 const res = await fetch(`/api/admin/classes/${id}`, { method: 'DELETE' });
                 const data = await res.json();
                 if (data.success) renderSchoolClassManagement();
-                else alert(data.message || 'Fehler beim Löschen');
-            } catch (e) { alert('Verbindungsfehler'); }
+                else alert(data.message || t('error_deleting'));
+            } catch (e) { alert(t('connection_error')); }
         }
 
         // Sub-page: User Management
         async function renderUserManagement(filterClassId = null, filterClassName = null) {
             previousView = 'sub_admin_menu'; // Logically parent is admin menu now
             currentView = 'sub_users';
-            document.getElementById('current-page-title').innerText = filterClassName ? `Nutzer: ${filterClassName}` : t('users');
+            document.getElementById('current-page-title').innerText = filterClassName ? `${t('users_label')}: ${filterClassName}` : t('users');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2600,8 +2600,8 @@
                     <div class="list-item">
                         <div class="account-item-icon"><i data-lucide="user"></i></div>
                         <div class="item-content">
-                            <div class="item-title">${u.username} ${u.is_admin ? '<span style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ADMIN</span>' : ''}</div>
-                            ${window.currentUser.is_super_admin && !filterClassId ? `<div class="item-sub">Klasse: ${u.class_name || 'Global'}</div>` : ''}
+                            <div class="item-title">${u.username} ${u.is_admin ? `<span style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">${t('admin').toUpperCase()}</span>` : ''}</div>
+                            ${window.currentUser.is_super_admin && !filterClassId ? `<div class="item-sub">${t('class_label')}: ${u.class_name || t('global_label')}</div>` : ''}
                         </div>
                         <div style="display:flex;">
                             <div style="color:var(--accent); padding:10px; cursor:pointer;" onclick="resetUserPassword(${u.id})"><i data-lucide="key" style="width:20px;"></i></div>
@@ -2613,7 +2613,7 @@
                 `).join('');
 
                 document.getElementById('app-container').innerHTML = `
-                    <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Benutzer gefunden</div>`}</div>
+                    <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_users')}</div>`}</div>
                 `;
                 document.getElementById('main-fab').classList.add('visible');
                 lucide.createIcons();
@@ -2640,28 +2640,28 @@
                 <div class="floating-card" style="padding: 10px;">
                     <div class="account-item" onclick="renderUserManagement(${id}, '${name}')">
                         <div class="account-item-icon"><i data-lucide="users"></i></div>
-                        <div class="account-item-text">Benutzer verwalten</div>
+                        <div class="account-item-text">${t('manage_users')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     <div class="account-item" onclick="renderActivityLog(${id}, '${name}')">
                         <div class="account-item-icon"><i data-lucide="activity"></i></div>
-                        <div class="account-item-text">Aktivitätsprotokoll</div>
+                        <div class="account-item-text">${t('activity_log')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     <div class="account-item" onclick="renderClassSettings(${id})">
                         <div class="account-item-icon"><i data-lucide="settings"></i></div>
-                        <div class="account-item-text">Klassen-Einstellungen</div>
+                        <div class="account-item-text">${t('class_settings')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     <div class="account-item" onclick="renderSubjectManagement(${id}, '${name}')">
                         <div class="account-item-icon"><i data-lucide="book"></i></div>
-                        <div class="account-item-text">Fächer verwalten</div>
+                        <div class="account-item-text">${t('manage_subjects')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                 </div>
                 
                 <div style="margin:20px 10px; font-size:13px; color:var(--text-sec);">
-                    <strong>Tipp:</strong> Globale Fächer können für diese Klasse im Hauptmenü unter "Globale Fächer & Sharing" zugewiesen werden.
+                    <strong>Tipp:</strong> ${t('global_subject_tip')}
                 </div>
             `;
             lucide.createIcons();
@@ -2670,7 +2670,7 @@
         async function renderClassSettings(id) {
             previousView = window.currentUser.is_super_admin ? 'sub_class_detail' : 'sub_admin_menu';
             currentView = 'sub_class_settings';
-            document.getElementById('current-page-title').innerText = 'Klassen-Einstellungen';
+            document.getElementById('current-page-title').innerText = t('class_settings');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2687,25 +2687,25 @@
 
                 document.getElementById('app-container').innerHTML = `
                     <div class="floating-card" style="padding:20px;">
-                        <h4 style="margin:0 0 15px 0;">Allgemein</h4>
+                        <h4 style="margin:0 0 15px 0;">${t('general')}</h4>
                         <div style="margin-bottom:15px;">
-                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:5px; display:block;">Klassen-Name</label>
+                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:5px; display:block;">${t('class_name')}</label>
                             <input type="text" id="edit-class-name" class="ios-input" value="${c.name}" ${!window.currentUser.is_super_admin ? 'disabled' : ''}>
-                            ${!window.currentUser.is_super_admin ? '<p style="font-size:11px; color:var(--text-sec); margin-top:5px;">Nur Super-Admins können den Namen ändern.</p>' : ''}
+                            ${!window.currentUser.is_super_admin ? `<p style="font-size:11px; color:var(--text-sec); margin-top:5px;">${t('super_admin_only_name')}</p>` : ''}
                         </div>
                         <div style="margin-bottom:20px;">
-                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:5px; display:block;">Klassencode / Login-ID</label>
+                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:5px; display:block;">${t('login_id')}</label>
                             <input type="text" id="edit-class-code" class="ios-input" value="${c.code}" placeholder="z.B. WRS1">
-                            <p style="font-size:11px; color:var(--text-sec); margin-top:5px;">Dieser Code wird für den Login benötigt. Er kann beliebig lang sein.</p>
+                            <p style="font-size:11px; color:var(--text-sec); margin-top:5px;">${t('login_id_hint')}</p>
                         </div>
                         <div style="padding:15px; background:rgba(0,113,227,0.1); border-radius:12px; margin-bottom:20px;">
-                            <label style="font-size:12px; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:8px; display:block;">Direkt-Login Link</label>
+                            <label style="font-size:12px; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:8px; display:block;">${t('direct_login_link')}</label>
                             <div style="font-size:13px; font-weight:500; word-break:break-all; background:white; padding:10px; border-radius:8px; border:1px solid rgba(0,0,0,0.05);">
-                                ${window.location.origin}/${c.code}/login
+                                ${window.location.origin}/${c.code}
                             </div>
-                            <p style="font-size:11px; color:var(--text-sec); margin-top:8px;">Kopiere diesen Link für deine Klasse, damit sie den Code nicht manuell eingeben müssen.</p>
+                            <p style="font-size:11px; color:var(--text-sec); margin-top:8px;">${t('direct_login_hint')}</p>
                         </div>
-                        <button class="ios-btn" onclick="saveClassSettings(${id})">Speichern</button>
+                        <button class="ios-btn" onclick="saveClassSettings(${id})">${t('save_btn')}</button>
                     </div>
                 `;
                 lucide.createIcons();
@@ -2718,7 +2718,7 @@
         async function saveClassSettings(id) {
             const name = document.getElementById('edit-class-name').value.trim();
             const code = document.getElementById('edit-class-code').value.trim();
-            if (!code) { alert("Code darf nicht leer sein"); return; }
+            if (!code) { alert(t('code_required')); return; }
 
             const body = { code };
             if (window.currentUser.is_super_admin) body.name = name;
@@ -2731,12 +2731,12 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert("Klassen-Einstellungen gespeichert");
+                    alert(t('save_success'));
                     renderClassSettings(id);
                 } else {
-                    alert(data.message || "Fehler beim Speichern");
+                    alert(data.message || t('error_save'));
                 }
-            } catch (e) { console.error(e); alert("Fehler"); }
+            } catch (e) { console.error(e); alert(t('error')); }
         }
 
         async function openCreateUserMenu() {
@@ -2749,9 +2749,9 @@
                     const res = await fetch('/api/admin/classes');
                     const classes = await res.json();
                     classSelectorHtml = `
-                        <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 10px 0 5px 5px;">Zugehörige Klasse</label>
+                        <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 10px 0 5px 5px;">${t('assigned_class')}</label>
                         <select id="new-user-class" class="ios-input" style="appearance:none; background:var(--tab-bg);">
-                            <option value="" ${currentFilterId === "" ? 'selected' : ''}>Global (Superadmin)</option>
+                            <option value="" ${currentFilterId === "" ? 'selected' : ''}>${t('global_superadmin')}</option>
                             ${classes.map(c => `<option value="${c.id}" ${currentFilterId == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
                         </select>
                     `;
@@ -2896,7 +2896,7 @@
                 const data = await res.json();
                 if (data.success) alert(t('success_pw_change'));
                 else alert(data.message || t('error'));
-            } catch (e) { alert('Verbindungsfehler'); }
+            } catch (e) { alert(t('connection_error')); }
         }
 
         async function saveNewPassword() {
@@ -2954,9 +2954,9 @@
                 actionBtns = `
                     <div style="display: flex; gap: 10px; margin-top: 30px;">
                         <button class="ios-btn btn-sec" style="flex: 1; margin-bottom: 0;" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date}', '${value || ''}', '${desc.replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">${t('edit')}</button>
-                        ${type === 'Aufgabe' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteTask(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
-                        ${type === 'Termin' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteEvent(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
-                        ${type === 'Note' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteGrade(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                        ${type === 'task' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteTask(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                        ${type === 'event' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteEvent(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                        ${type === 'grade' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteGrade(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
                     </div>`;
             }
 
@@ -3027,7 +3027,7 @@
         async function renderSharedContentManagement() {
             previousView = 'sub_super_admin';
             currentView = 'sub_shared_content';
-            document.getElementById('current-page-title').innerText = 'Shared Content';
+            document.getElementById('current-page-title').innerText = t('shared_content');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -3070,15 +3070,15 @@
 
                 document.getElementById('app-container').innerHTML = `
                     <div style="margin: 0 10px 15px 10px; font-size:14px; color:var(--text-sec); line-height:1.4;">
-                        Hier siehst du alle Aufgaben und Termine, die klassenübergreifend geteilt sind. Durch Klicken auf das Icon entziehst du die Freigabe.
+                        ${t('shared_content_desc')}
                     </div>
                     <div class="floating-card" style="padding:0 24px; margin-bottom:30px;">
-                        <h4 style="margin:20px 0 10px 0;">Geteilte Aufgaben</h4>
-                        ${taskHtml || '<div style="padding:20px; color:var(--text-sec); border-top:1px solid var(--border)">Keine geteilten Aufgaben</div>'}
+                        <h4 style="margin:20px 0 10px 0;">${t('shared_tasks')}</h4>
+                        ${taskHtml || `<div style="padding:20px; color:var(--text-sec); border-top:1px solid var(--border)">${t('no_shared_tasks')}</div>`}
                     </div>
                     <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">
-                        <h4 style="margin:20px 0 10px 0;">Geteilte Termine</h4>
-                        ${eventHtml || '<div style="padding:20px; color:var(--text-sec); border-top:1px solid var(--border)">Keine geteilten Termine</div>'}
+                        <h4 style="margin:20px 0 10px 0;">${t('shared_events')}</h4>
+                        ${eventHtml || `<div style="padding:20px; color:var(--text-sec); border-top:1px solid var(--border)">${t('no_shared_events')}</div>`}
                     </div>
                 `;
                 lucide.createIcons();
@@ -3089,7 +3089,7 @@
         }
 
         async function toggleItemSharing(type, id, status) {
-            if (!confirm(status ? "Soll dieser Inhalt geteilt werden?" : "Soll die Freigabe aufgehoben werden?")) return;
+            if (!confirm(status ? t('confirm_share') : t('confirm_unshare'))) return;
             try {
                 const res = await fetch(`/api/${type}/${id}`, {
                     method: 'PUT',
@@ -3113,10 +3113,7 @@
                 return;
             }
             let type = editType || (currentView === 'tasks' ? "task" : (currentView === 'calendar' ? "event" : "grade"));
-            // Normalize for internal logic
-            if (type === 'task') type = 'Aufgabe';
-            if (type === 'event') type = 'Termin';
-            if (type === 'grade') type = 'Note';
+            // Normalized types are now "task", "event", "grade"
 
             if (editDate && editDate !== 'null' && editDate !== 'undefined') {
                 if (editDate.includes('-')) {
@@ -3136,7 +3133,7 @@
             else selectedSubject = null;
 
             const safeId = id ? id : 'null';
-            const saveFunction = (type === 'Aufgabe') ? `saveTask(${safeId})` : (type === 'Termin' ? `saveEvent(${safeId})` : `saveGrade(${safeId})`);
+            const saveFunction = (type === 'task') ? `saveTask(${safeId})` : (type === 'event' ? `saveEvent(${safeId})` : `saveGrade(${safeId})`);
 
             const titleVal = editTitle === 'undefined' ? '' : editTitle;
             const descVal = editDesc === 'undefined' ? '' : editDesc;
@@ -3158,10 +3155,10 @@
 
             document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
-                    <h2 style="margin:0; font-size:20px; font-weight:700;">${id ? (type === 'Aufgabe' ? t('edit_task') : (type === 'Termin' ? t('edit_event') : t('edit_grade'))) : (type === 'Aufgabe' ? t('new_task') : (type === 'Termin' ? t('new_event') : t('new_grade')))}</h2>
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">${id ? (type === 'task' ? t('edit_task') : (type === 'event' ? t('edit_event') : t('edit_grade'))) : (type === 'task' ? t('new_task') : (type === 'event' ? t('new_event') : t('new_grade')))}</h2>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
                 </div>
-                ${(type === 'Aufgabe' || type === 'Note') ? `
+                ${(type === 'task' || type === 'grade') ? `
                     <div class="custom-picker-trigger" onclick="toggleOptionList('subject-list')"><span id="selected-subject-display">${selectedSubject || t('choose_subject')}</span><i data-lucide="chevron-down" style="width:18px"></i></div>
                     <div class="picker-options" id="subject-list">
                         <!-- Loaded dynamically -->
@@ -3169,7 +3166,7 @@
                     </div>
                 ` : ''}
                 <input type="text" id="input-title" class="ios-input" placeholder="${t('title_placeholder')}" value="${titleVal}">
-                ${type === 'Aufgabe' ? `
+                ${type === 'task' ? `
                     ${(id && existingImagesJson !== '[]') ? (() => {
                         let imgs = [];
                         try { imgs = JSON.parse(existingImagesJson.replace(/&quot;/g, '"')); } catch (e) { }
@@ -3209,7 +3206,7 @@
                         <span id="file-count-text">${t('select_images')}</span>
                     </div>
                 ` : ''}
-                ${type === 'Note' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="${t('grade_value')}" value="${valVal}">` : ''}
+                ${type === 'grade' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="${t('grade_value')}" value="${valVal}">` : ''}
                 <div class="custom-picker-trigger" onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span id="selected-date-display">${selectedDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE')}</span><i data-lucide="calendar" style="width:18px"></i></div>
                 <div class="picker-options" id="calendar-picker-view" style="padding:15px">
                     <div class="calendar-header"><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(-1)"><i data-lucide="chevron-left"></i></div><span id="calendar-month-year" style="font-weight:600"></span><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(1)"><i data-lucide="chevron-right"></i></div></div>
@@ -3536,7 +3533,7 @@
                 overlaySelectedClasses = new Set(activeClassIds);
                 openSheetOverlay();
                 lucide.createIcons();
-            } catch (e) { alert('Fehler beim Laden'); }
+            } catch (e) { alert(t('error_loading')); }
         }
 
         let overlaySelectedClasses = new Set();
@@ -3561,8 +3558,8 @@
                 if (res.ok) {
                     closeSheet();
                     renderSubjectManagement();
-                } else alert('Fehler beim Speichern');
-            } catch (e) { alert('Verbindungsfehler'); }
+                } else alert(t('error_save'));
+            } catch (e) { alert(t('connection_error')); }
         }
 
         async function addSubject() {

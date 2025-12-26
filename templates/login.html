@@ -127,7 +127,26 @@
         <p style="margin-top: 30px; font-size: 13px; color: var(--text-sec); opacity: 0.6;">L8teStudy v{{ version }}</p>
     </div>
 
+    <script src="/static/translations.js"></script>
     <script>
+        const browserLang = (navigator.language || navigator.userLanguage).split('-')[0];
+        const lang = translations[browserLang] ? browserLang : 'de';
+
+        function t(key) {
+            return (translations[lang] && translations[lang][key]) || (translations['de'] && translations['de'][key]) || key;
+        }
+
+        // Apply initial translations
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('h1').innerText = t('login_title');
+            document.querySelector('p').innerText = t('welcome_msg');
+            document.getElementById('error-msg').innerText = t('invalid_credentials');
+            document.getElementById('class_code').placeholder = t('class_code_placeholder');
+            document.getElementById('username').placeholder = t('msg_username');
+            document.getElementById('password').placeholder = t('msg_password');
+            document.getElementById('submit-btn').innerText = t('login_title');
+        });
+
         async function handleSubmit(e) {
             e.preventDefault();
             const class_code = document.getElementById('class_code').value;
@@ -153,13 +172,13 @@
                     window.location.href = '/';
                 } else {
                     errorMsg.style.display = 'block';
-                    errorMsg.innerText = data.message || 'Login fehlgeschlagen';
+                    errorMsg.innerText = data.message || t('login_failed');
                     submitBtn.disabled = false;
                 }
             } catch (err) {
                 console.error(err);
                 errorMsg.style.display = 'block';
-                errorMsg.innerText = 'Verbindungsfehler';
+                errorMsg.innerText = t('connection_error');
                 submitBtn.disabled = false;
             }
         }
