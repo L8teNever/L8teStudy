@@ -108,10 +108,10 @@ def send_web_push(subscription_info, message_body):
         )
     except WebPushException as ex:
         logger.error(f"WebPush failed: {ex}")
-        # If 410 Gone, remove subscription (expired/uninstalled)
-        if ex.response and ex.response.status_code == 410:
+        # If 410 Gone (expired) or 403 Forbidden (VAPID mismatch), remove sub
+        if ex.response and ex.response.status_code in [410, 403]:
             return False
-        # Other errors (401, 403, 500 etc) are logged but we might keep the sub
+        # Other errors (401, 500 etc) are logged but we might keep the sub
     except Exception as e:
         logger.error(f"WebPush error: {e}")
     return True
@@ -130,6 +130,7 @@ def notify_user(user, title, body, url='/'):
         "url": url
     }
     
+    sent_count = 0
     for sub in subs:
         sub_info = {
             "endpoint": sub.endpoint,
@@ -142,8 +143,11 @@ def notify_user(user, title, body, url='/'):
         if success is False:
             logger.info(f"Removing invalid subscription for user {user.username}")
             db.session.delete(sub)
+        else:
+            sent_count += 1
+    
     db.session.commit()
-    return True
+    return sent_count > 0
 
 def notify_new_task(task):
     """Notify all users (except author) that a new task was created"""

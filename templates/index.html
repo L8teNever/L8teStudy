@@ -1349,10 +1349,12 @@
             // 1. Fetch Next Event
             try {
                 const res = await fetch('/api/events');
+                if (currentView !== 'home') return;
                 const events = await res.json();
                 const upcoming = events
                     .filter(e => new Date(e.date) >= new Date().setHours(0, 0, 0, 0))
                     .sort((a, b) => new Date(a.date) - new Date(b.date));
+                if (!document.getElementById('home-next-event')) return;
 
                 if (upcoming.length > 0) {
                     const e = upcoming[0];
@@ -1386,6 +1388,7 @@
             // 3. Fetch Tasks
             try {
                 const res = await fetch('/api/tasks');
+                if (currentView !== 'home') return;
                 const tasks = await res.json();
                 const dueTasks = tasks.filter(t => !t.is_done).slice(0, 3);
                 const container = document.getElementById('home-due-tasks');
@@ -2114,6 +2117,7 @@
             try {
                 // Get Settings
                 const res = await fetch('/api/settings/notifications');
+                if (currentView !== 'sub_notifications') return;
                 const settings = await res.json();
 
                 // Render UI immediately
