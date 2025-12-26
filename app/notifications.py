@@ -166,27 +166,22 @@ def check_reminders():
             if settings.reminder_homework:
                 # If we are at or past the set time AND haven't sent it today
                 if current_time_str >= settings.reminder_homework and settings.last_homework_reminder_at != today:
-                    tomorrow = today + timedelta(days=1)
-                    
-                    # We check tasks for all classes the user might be in. 
-                    # If user.class_id is set, check THAT class.
-                    # Also tasks might be 'is_shared' (though we check per class).
-                    tasks_due = Task.query.filter(
-                        db.func.date(Task.due_date) == tomorrow,
+                    # Check ALL non-deleted tasks for this class
+                    all_tasks = Task.query.filter(
                         Task.class_id == user.class_id,
                         Task.deleted_at.is_(None)
                     ).all()
                     
                     count = 0
-                    for t in tasks_due:
-                        # Optional: Check if user already finished it
+                    for t in all_tasks:
+                        # Check if user already finished it
                         from app.models import TaskCompletion
                         comp = TaskCompletion.query.filter_by(user_id=user.id, task_id=t.id).first()
                         if not comp or not comp.is_done:
                             count += 1
                     
                     if count > 0:
-                        notify_user(user, "Hausaufgaben morgen", f"Du hast {count} Aufgaben für morgen fällig!", url='/tasks')
+                        notify_user(user, "Offene Aufgaben", f"Du hast noch {count} offene Aufgaben zu erledigen!", url='/tasks')
                         settings.last_homework_reminder_at = today
                         db.session.commit()
 

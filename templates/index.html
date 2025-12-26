@@ -1028,6 +1028,7 @@
         let currentTaskTab = 'open';
         let cachedTasks = [];
         let selectedSubjectId = null;
+        let taskFiles = [];
 
 
         function t(key) {
@@ -3144,6 +3145,7 @@
         }
 
         function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
+            taskFiles = []; // Reset file selection
             if (currentView === 'sub_users') {
                 openCreateUserMenu();
                 return;
@@ -3214,36 +3216,34 @@
                             return `<div style="margin-bottom:10px;">
                                 <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">${t('existing_images')}</label>
                                 <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;">
-                                    ${imgs.map(img => {
-                                // extracting filename/id might be needed if url is full path. 
-                                // But wait, the API returns full path.
-                                // We need the ID to delete it.
-                                // The current API structure for images in tasks list is just URL strings. 
-                                // I need to change the API to return object {id, url} to support deletion by ID.
-                                // OR, I can delete by filename, but ID is safer.
-                                // Let's assume for now I only have URL. I can't delete easily without ID.
-                                // I will assume for this step that I can't delete individual existing images yet unless I update the API GET.
-                                // BUT, the user explicitly asked for "delete some".
-
-                                // Quick fix: Update API GET to return objects.
-                                // But for now, let's render them. 
-                                return `<div id="img-container-${img.id}" onclick="toggleDeleteImage(${img.id})" style="position:relative; flex-shrink:0; cursor:pointer;">
-                                            <img src="${img.url}" style="height:80px; border-radius:10px; border:1px solid var(--border); transition: opacity 0.2s;">
+                                    ${imgs.map(img => `
+                                        <div id="img-container-${img.id}" onclick="toggleDeleteImage(${img.id})" style="position:relative; flex-shrink:0; cursor:pointer;">
+                                            <img src="${img.url}" style="height:80px; width:80px; object-fit:cover; border-radius:10px; border:1px solid var(--border); transition: opacity 0.2s;">
                                             <div id="del-overlay-${img.id}" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,59,48,0.6); border-radius:10px; display:none; align-items:center; justify-content:center;">
                                                 <i data-lucide="trash-2" style="color:white; width:24px;"></i>
                                             </div>
-                                        </div>`
-                            }).join('')}
+                                        </div>`).join('')}
                                 </div>
                             </div>`
                         }
                         return '';
                     })() : ''}
+                    
+                    <div id="new-images-preview" style="display:flex; gap:10px; overflow-x:auto; margin-bottom:10px;"></div>
+
                     <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">${t('add_images')}</label>
-                    <input type="file" id="input-images" class="ios-input" multiple accept="image/*" style="display:none;" onchange="updateFileCount(this)">
-                    <div class="ios-btn btn-sec" onclick="document.getElementById('input-images').click()" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:15px; cursor:pointer;">
-                        <i data-lucide="image-plus" style="width:20px;"></i>
-                        <span id="file-count-text">${t('select_images')}</span>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                        <input type="file" id="input-images-gallery" multiple accept="image/*" style="display:none;" onchange="handleTaskImages(this.files)">
+                        <div class="ios-btn btn-sec" onclick="document.getElementById('input-images-gallery').click()" style="display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; margin:0;">
+                            <i data-lucide="image" style="width:18px;"></i>
+                            <span style="font-size:14px;">Galerie</span>
+                        </div>
+
+                        <input type="file" id="input-images-camera" accept="image/*" capture="environment" style="display:none;" onchange="handleTaskImages(this.files)">
+                        <div class="ios-btn btn-sec" onclick="document.getElementById('input-images-camera').click()" style="display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; margin:0;">
+                            <i data-lucide="camera" style="width:18px;"></i>
+                            <span style="font-size:14px;">${t('take_photo')}</span>
+                        </div>
                     </div>
                 ` : ''}
                 ${type === 'grade' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="${t('grade_value')}" value="${valVal}">` : ''}
@@ -3319,10 +3319,9 @@
                 formData.append('is_shared', isShared ? 'true' : 'false');
                 formData.append('due_date', date);
 
-                const fileInput = document.getElementById('input-images');
-                if (fileInput && fileInput.files.length > 0) {
-                    for (let i = 0; i < fileInput.files.length; i++) {
-                        formData.append('images', fileInput.files[i]);
+                if (taskFiles.length > 0) {
+                    for (let i = 0; i < taskFiles.length; i++) {
+                        formData.append('images', taskFiles[i]);
                     }
                 }
 
@@ -3406,16 +3405,45 @@
         }
 
         /* --- PICKER HELPERS --- */
-        function updateFileCount(input) {
-            const count = input.files ? input.files.length : 0;
-            const textEl = document.getElementById('file-count-text');
-            if (count > 0) {
-                textEl.innerText = `${count} ${t('images_selected')}`;
-                textEl.style.fontWeight = '700';
-            } else {
-                textEl.innerText = t('select_images');
-                textEl.style.fontWeight = 'normal';
+        function handleTaskImages(files) {
+            if (!files) return;
+            for (let i = 0; i < files.length; i++) {
+                taskFiles.push(files[i]);
             }
+            renderImagePreviews();
+        }
+
+        function renderImagePreviews() {
+            const container = document.getElementById('new-images-preview');
+            if (!container) return;
+            container.innerHTML = '';
+
+            taskFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                const div = document.createElement('div');
+                div.style.cssText = 'position:relative; flex-shrink:0;';
+
+                reader.onload = (e) => {
+                    div.innerHTML = `
+                        <img src="${e.target.result}" style="width:80px; height:80px; object-fit:cover; border-radius:10px; border:1px solid var(--border);">
+                        <div onclick="removeTaskFile(${index})" style="position:absolute; top:-5px; right:-5px; width:22px; height:22px; background:var(--danger); color:white; border-radius:11px; display:flex; align-items:center; justify-content:center; border:2px solid var(--tab-bg); cursor:pointer;">
+                            <i data-lucide="x" style="width:14px; height:14px;"></i>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                };
+                reader.readAsDataURL(file);
+                container.appendChild(div);
+            });
+        }
+
+        function removeTaskFile(index) {
+            taskFiles.splice(index, 1);
+            renderImagePreviews();
+        }
+
+        function updateFileCount(input) {
+            // Deprecated, using previews now
         }
 
         function toggleOptionList(id) {

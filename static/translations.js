@@ -117,8 +117,8 @@ const translations = {
         new_tasks_others: "Neue Aufgaben (von anderen)",
         new_events_others: "Neue Termine (von anderen)",
         daily_reminder: "Tägliche Erinnerung",
-        homework_tmrw: "Hausaufgaben (Morgen)",
-        exams_tmrw: "Klausuren/Termine (Morgen)",
+        homework_tmrw: "Erinnerung: Offene Aufgaben",
+        exams_tmrw: "Erinnerung: Termine (Morgen)",
         reminder_hint: "Wähle eine Uhrzeit für die Erinnerung. Leer lassen zum Deaktivieren.",
         send_test: "Test-Benachrichtigung senden",
         view_details: "Details ansehen",
@@ -235,7 +235,8 @@ const translations = {
         global_subjects_sharing: "Globale Fächer & Sharing",
         system_activity: "System-Aktivität",
         subjects_label: "Fächer",
-        log_label: "Log"
+        log_label: "Log",
+        take_photo: "Foto aufnehmen"
     },
     en: {
         home: "Home",
@@ -355,8 +356,8 @@ const translations = {
         new_tasks_others: "New Tasks (from others)",
         new_events_others: "New Events (from others)",
         daily_reminder: "Daily Reminder",
-        homework_tmrw: "Homework (Tomorrow)",
-        exams_tmrw: "Exams/Events (Tomorrow)",
+        homework_tmrw: "Reminder: Pending Tasks",
+        exams_tmrw: "Reminder: Events (Tomorrow)",
         reminder_hint: "Choose a time. Leave empty to disable.",
         send_test: "Send Test Notification",
         view_details: "View Details",
@@ -473,6 +474,7 @@ const translations = {
         global_subjects_sharing: "Global Subjects & Sharing",
         system_activity: "System Activity",
         subjects_label: "Subjects",
-        log_label: "Log"
+        log_label: "Log",
+        take_photo: "Take Photo"
     }
 };
