@@ -107,10 +107,24 @@ def send_web_push(subscription_info, message_body):
             vapid_claims=VAPID_CLAIMS
         )
     except WebPushException as ex:
+        # Attempt to get status code from response
+        status_code = None
+        if ex.response and hasattr(ex.response, 'status_code'):
+            status_code = ex.response.status_code
+        
+        # Fallback: Check exception message for common error codes
+        if not status_code:
+            msg = str(ex)
+            if "410 Gone" in msg:
+                status_code = 410
+            elif "403 Forbidden" in msg:
+                status_code = 403
+
         # If 410 Gone (expired) or 403 Forbidden (VAPID mismatch), remove sub
-        if ex.response and ex.response.status_code in [410, 403]:
-            logger.info(f"WebPush subscription invalid ({ex.response.status_code}), removing.")
+        if status_code in [410, 403]:
+            logger.info(f"WebPush subscription invalid ({status_code}), removing.")
             return False
+            
         logger.error(f"WebPush failed: {ex}")
     except Exception as e:
         logger.error(f"WebPush error: {e}")
