@@ -741,17 +741,26 @@ def send_test_notification():
 @api_bp.route('/subjects', methods=['GET'])
 @login_required
 def get_subjects():
+    class_id = request.args.get('class_id')
     if current_user.is_super_admin:
-        subjects = Subject.query.order_by(Subject.name).all()
+        if class_id:
+            from .models import SchoolClass
+            subjects = Subject.query.join(Subject.classes).filter(SchoolClass.id == class_id).order_by(Subject.name).all()
+        else:
+            subjects = Subject.query.order_by(Subject.name).all()
     else:
         from .models import SchoolClass
         subjects = Subject.query.join(Subject.classes).filter(SchoolClass.id == current_user.class_id).order_by(Subject.name).all()
-    # If empty (shouldn't happen due to migration), return defaults
-    if not subjects:
+        
+    if not subjects and not class_id and current_user.is_super_admin:
        defaults = ['Mathematik', 'Deutsch', 'Englisch', 'Physik', 'Biologie', 'Geschichte', 'Kunst', 'Sport', 'Chemie', 'Religion']
-       return jsonify([{'id': i, 'name': n} for i, n in enumerate(defaults)])
+       return jsonify([{'id': i, 'name': n, 'class_names': []} for i, n in enumerate(defaults)])
        
-    return jsonify([{'id': s.id, 'name': s.name} for s in subjects])
+    return jsonify([{
+        'id': s.id, 
+        'name': s.name, 
+        'class_names': [c.name for c in s.classes]
+    } for s in subjects])
 
 @api_bp.route('/subjects', methods=['POST'])
 @login_required

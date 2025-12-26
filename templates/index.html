@@ -1216,7 +1216,7 @@
                     return;
                 }
                 if (event.state.view === 'sub_subjects') {
-                    renderSubjectManagement();
+                    renderSubjectManagement(event.state.class_id, event.state.class_name);
                     return;
                 }
                 if (event.state.view === 'sub_classes') {
@@ -2680,6 +2680,11 @@
                         <div class="account-item-text">Aktivitätsprotokoll</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    <div class="account-item" onclick="renderSubjectManagement(${id}, '${name}')">
+                        <div class="account-item-icon"><i data-lucide="book"></i></div>
+                        <div class="account-item-text">Fächer verwalten</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
                 </div>
                 
                 <div style="margin:20px 10px; font-size:13px; color:var(--text-sec);">
@@ -3393,14 +3398,14 @@
         }
 
 
-        async function renderSubjectManagement() {
-            previousView = 'sub_super_admin';
+        async function renderSubjectManagement(filterClassId = null, filterClassName = null) {
+            previousView = filterClassId ? 'sub_class_detail' : 'sub_super_admin';
             currentView = 'sub_subjects';
-            document.getElementById('current-page-title').innerText = t('subjects');
+            document.getElementById('current-page-title').innerText = filterClassName ? `Fächer: ${filterClassName}` : t('subjects');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_subjects' }, '', '/admin/subjects');
+                window.history.pushState({ view: 'sub_subjects', class_id: filterClassId, class_name: filterClassName }, '', filterClassId ? `/admin/subjects/${filterClassId}` : '/admin/subjects');
             }
             window.isPoppingState = false;
 
@@ -3408,15 +3413,19 @@
 
             document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('load_subjects')}</div>`;
 
+            const apiUrl = filterClassId ? `/api/subjects?class_id=${filterClassId}` : '/api/subjects';
+
             try {
-                const res = await fetch('/api/subjects');
+                const res = await fetch(apiUrl);
                 const subjects = await res.json();
+
+                window.lastAdminFilterClassId = filterClassId;
 
                 const listHtml = subjects.map(s => `
                     <div class="list-item" style="flex-wrap:wrap;">
                         <div class="item-content" style="flex:1;">
                             <div class="item-title">${s.name}</div>
-                            ${window.currentUser.is_super_admin ? `<div class="item-sub" style="font-size:11px;">Klasse(n): ${s.class_names ? s.class_names.join(', ') : 'Keine'}</div>` : ''}
+                            ${window.currentUser.is_super_admin && !filterClassId ? `<div class="item-sub" style="font-size:11px;">Klasse(n): ${s.class_names && s.class_names.length > 0 ? s.class_names.join(', ') : 'Keine / Global'}</div>` : ''}
                         </div>
                         <div style="display:flex;">
                             ${window.currentUser.is_super_admin ? `<div style="color:var(--accent); cursor:pointer; padding:8px;" onclick="openSubjectClassLinker(${s.id}, '${s.name}')"><i data-lucide="edit-3" style="width:18px;"></i></div>` : ''}
@@ -3518,15 +3527,17 @@
             const name = document.getElementById('new-subject-name').value.trim();
             if (!name) return;
 
+            const class_ids = window.lastAdminFilterClassId ? [window.lastAdminFilterClassId] : [];
+
             try {
                 const res = await fetch('/api/subjects', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
+                    body: JSON.stringify({ name, class_ids })
                 });
                 const data = await res.json();
                 if (data.success) {
-                    renderSubjectManagement();
+                    renderSubjectManagement(window.lastAdminFilterClassId);
                 } else {
                     alert(data.message || t('error_adding'));
                 }
@@ -3642,6 +3653,7 @@
             else if (path === '/admin/activity') renderActivityLog();
             else if (path.startsWith('/admin/activity/')) renderActivityLog(path.split('/').pop());
             else if (path === '/admin/subjects') renderSubjectManagement();
+            else if (path.startsWith('/admin/subjects/')) renderSubjectManagement(path.split('/').pop());
             else if (path === '/admin/classes') renderSchoolClassManagement();
             else if (path.startsWith('/admin/classes/')) renderSingleClassAdmin(path.split('/').pop(), 'Klasse');
             else if (path === '/superadmin') renderSuperAdminDashboard();
