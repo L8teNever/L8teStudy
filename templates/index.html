@@ -1005,8 +1005,21 @@
             darkMode: "{{ 'true' if user.dark_mode else 'false' }}" === 'true',
             language: "{{ user.language }}" || 'de',
             is_admin: "{{ 'true' if user.is_admin else 'false' }}" === 'true',
-            is_super_admin: "{{ 'true' if user.is_super_admin else 'false' }}" === 'true'
+            is_super_admin: "{{ 'true' if user.is_super_admin else 'false' }}" === 'true',
+            needs_password_change: "{{ 'true' if user.needs_password_change else 'false' }}" === 'true',
+            has_seen_tutorial: "{{ 'true' if user.has_seen_tutorial else 'false' }}" === 'true',
+            className: "{{ user.school_class.name if user.school_class else '' }}"
         };
+
+        function updateBrowserTitle(pageTitle) {
+            const base = "L8teStudy";
+            const context = window.currentUser?.className || "Portal";
+            if (pageTitle) {
+                document.title = `${base} - ${context} | ${pageTitle}`;
+            } else {
+                document.title = `${base} - ${context}`;
+            }
+        }
         let currentTaskTab = 'open';
         let cachedTasks = [];
         let selectedSubjectId = null;
@@ -2301,7 +2314,7 @@
         function renderAdminMenu() {
             previousView = 'settings';
             currentView = 'sub_admin_menu';
-            document.getElementById('current-page-title').innerText = t('admin');
+            document.getElementById('current-page-title').innerText = t('admin_center');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2309,42 +2322,56 @@
             }
             window.isPoppingState = false;
 
-            document.getElementById('header-back-btn').onclick = () => {
-                window.history.back();
-            };
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
             document.getElementById('app-container').innerHTML = `
-                <div class="floating-card">
-                    ${window.currentUser.is_super_admin ? `
-                    <div class="account-item" onclick="renderSuperAdminDashboard()">
-                        <div class="account-item-icon"><i data-lucide="layout-dashboard"></i></div>
-                        <div class="account-item-text">Superadmin Dashboard</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                <div style="margin: 0 10px 15px 10px; font-size:14px; color:var(--text-sec); line-height:1.4;">
+                    ${t('admin_center_desc')}
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; cursor:pointer;" onclick="renderUserManagement()">
+                        <div style="width:40px; height:40px; background:var(--accent); color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
+                            <i data-lucide="users" style="width:20px;"></i>
+                        </div>
+                        <div style="font-weight:700; font-size:15px;">${t('manage_users')}</div>
                     </div>
-                    ` : ''}
-                    <div class="account-item" onclick="renderUserManagement()">
-                        <div class="account-item-icon"><i data-lucide="users"></i></div>
-                        <div class="account-item-text">${t('user_manage')}</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; cursor:pointer;" onclick="renderSubjectManagement()">
+                        <div style="width:40px; height:40px; background:#5856D6; color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
+                            <i data-lucide="book-open" style="width:20px;"></i>
+                        </div>
+                        <div style="font-weight:700; font-size:15px;">${t('manage_subjects')}</div>
                     </div>
-                    <div class="account-item" onclick="renderSubjectManagement()">
-                        <div class="account-item-icon"><i data-lucide="book"></i></div>
-                        <div class="account-item-text">${t('subject_manage')}</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                    <div class="account-item" onclick="renderActivityLog()">
-                        <div class="account-item-icon"><i data-lucide="activity"></i></div>
-                        <div class="account-item-text">${t('activity_log')}</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; cursor:pointer;" onclick="renderActivityLog()">
+                        <div style="width:40px; height:40px; background:#FF9500; color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
+                            <i data-lucide="activity" style="width:20px;"></i>
+                        </div>
+                        <div style="font-weight:700; font-size:15px;">${t('system_activity')}</div>
                     </div>
                     ${window.currentUser.class_id ? `
-                    <div class="account-item" onclick="renderClassSettings(${window.currentUser.class_id})">
-                        <div class="account-item-icon"><i data-lucide="settings"></i></div>
-                        <div class="account-item-text">Klassen-Einstellungen</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; cursor:pointer;" onclick="renderClassSettings(${window.currentUser.class_id})">
+                        <div style="width:40px; height:40px; background:#8E8E93; color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
+                            <i data-lucide="settings" style="width:20px;"></i>
+                        </div>
+                        <div style="font-weight:700; font-size:15px;">${t('class_settings')}</div>
                     </div>
                     ` : ''}
                 </div>
+
+                ${window.currentUser.is_super_admin ? `
+                <div class="floating-card" style="padding:15px; border:1px solid var(--accent); background:rgba(0,122,255,0.05);">
+                    <div style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="renderSuperAdminDashboard()">
+                        <div style="width:40px; height:40px; background:var(--accent); color:white; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                            <i data-lucide="shield-check" style="width:20px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:700;">Superadmin Access</div>
+                            <div style="font-size:12px; color:var(--text-sec);">${t('superadmin_desc')}</div>
+                        </div>
+                        <i data-lucide="chevron-right" style="margin-left:auto; width:18px; color:var(--text-sec)"></i>
+                    </div>
+                </div>
+                ` : ''}
             `;
             lucide.createIcons();
         }
@@ -2352,7 +2379,7 @@
         async function renderActivityLog(filterClassId = null, filterClassName = null) {
             previousView = 'sub_admin_menu';
             currentView = 'sub_activity';
-            document.getElementById('current-page-title').innerText = filterClassName ? `Log: ${filterClassName}` : t('activity');
+            document.getElementById('current-page-title').innerText = filterClassName ? `${t('log_label')}: ${filterClassName}` : t('activity');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2484,7 +2511,7 @@
         async function renderSchoolClassManagement() {
             previousView = 'sub_super_admin';
             currentView = 'sub_classes';
-            document.getElementById('current-page-title').innerText = 'Klassen';
+            document.getElementById('current-page-title').innerText = t('stats_classes');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2507,7 +2534,7 @@
                         <div class="account-item-icon"><i data-lucide="school"></i></div>
                         <div class="item-content" onclick="renderSingleClassAdmin(${c.id}, '${c.name.replace(/'/g, "\\'")}')" style="cursor:pointer;">
                             <div class="item-title">${c.name}</div>
-                            <div class="item-sub">Code: <strong>${c.code}</strong> • ${c.user_count} Benutzer</div>
+                            <div class="item-sub">Code: <strong>${c.code}</strong> • ${c.user_count} ${t('users_label')}</div>
                         </div>
                         <div style="display:flex;">
                             <div style="color:var(--accent); padding:10px; cursor:pointer;" onclick="renderSingleClassAdmin(${c.id}, '${c.name.replace(/'/g, "\\'")}')"><i data-lucide="settings" style="width:20px;"></i></div>
@@ -2516,7 +2543,7 @@
                     </div>
                 `).join('');
 
-                const content = listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Klassen vorhanden</div>`;
+                const content = listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('error_loading')}</div>`;
 
                 document.getElementById('app-container').innerHTML = `
                     <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">${content}</div>
@@ -2786,7 +2813,7 @@
         async function renderSuperAdminDashboard() {
             previousView = 'sub_admin_menu';
             currentView = 'sub_super_admin';
-            document.getElementById('current-page-title').innerText = 'Superadmin Dashboard';
+            document.getElementById('current-page-title').innerText = t('superadmin_dashboard');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -2802,40 +2829,40 @@
                 const stats = await res.json();
 
                 document.getElementById('app-container').innerHTML = `
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                        <div class="floating-card" style="margin:0; text-align:center; padding:20px;">
-                            <div style="font-size:24px; font-weight:800; color:var(--accent);">${stats.class_count}</div>
-                            <div style="font-size:13px; color:var(--text-sec); font-weight:600;">KLASSEN</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+                        <div class="floating-card" style="margin:0; text-align:center; padding:15px; background:linear-gradient(135deg, var(--accent), #5AC8FA); color:white; border:none;">
+                            <div style="font-size:28px; font-weight:800;">${stats.class_count}</div>
+                            <div style="font-size:11px; opacity:0.9; font-weight:700;">${t('stats_classes').toUpperCase()}</div>
                         </div>
-                        <div class="floating-card" style="margin:0; text-align:center; padding:20px;">
-                            <div style="font-size:24px; font-weight:800; color:var(--accent);">${stats.user_count}</div>
-                            <div style="font-size:13px; color:var(--text-sec); font-weight:600;">BENUTZER</div>
+                        <div class="floating-card" style="margin:0; text-align:center; padding:15px; background:linear-gradient(135deg, #FF2D55, #FF5E3A); color:white; border:none;">
+                            <div style="font-size:28px; font-weight:800;">${stats.user_count}</div>
+                            <div style="font-size:11px; opacity:0.9; font-weight:700;">${t('stats_users').toUpperCase()}</div>
                         </div>
-                        <div class="floating-card" style="margin:0; text-align:center; padding:20px;">
-                            <div style="font-size:24px; font-weight:800; color:var(--accent);">${stats.task_count}</div>
-                            <div style="font-size:13px; color:var(--text-sec); font-weight:600;">AUFGABEN</div>
+                        <div class="floating-card" style="margin:0; text-align:center; padding:15px; background:linear-gradient(135deg, #5856D6, #AF52DE); color:white; border:none;">
+                            <div style="font-size:28px; font-weight:800;">${stats.task_count}</div>
+                            <div style="font-size:11px; opacity:0.9; font-weight:700;">${t('stats_tasks').toUpperCase()}</div>
                         </div>
-                        <div class="floating-card" style="margin:0; text-align:center; padding:20px;">
-                            <div style="font-size:24px; font-weight:800; color:var(--accent);">${stats.event_count}</div>
-                            <div style="font-size:13px; color:var(--text-sec); font-weight:600;">TERMINE</div>
+                        <div class="floating-card" style="margin:0; text-align:center; padding:15px; background:linear-gradient(135deg, #FF9500, #FFCC00); color:white; border:none;">
+                            <div style="font-size:28px; font-weight:800;">${stats.event_count}</div>
+                            <div style="font-size:11px; opacity:0.9; font-weight:700;">${t('stats_events').toUpperCase()}</div>
                         </div>
                     </div>
                     
                     <div class="floating-card" style="padding: 20px;">
-                        <h4 style="margin:0 0 15px 0; font-size:17px;">Globales Management</h4>
+                        <h4 style="margin:0 0 15px 0; font-size:16px; font-weight:700;">${t('global_management')}</h4>
                         <div class="account-item" onclick="renderSchoolClassManagement()" style="padding:12px 0;">
-                             <div class="account-item-icon"><i data-lucide="school"></i></div>
-                             <div class="account-item-text">Klassen verwalten</div>
+                             <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="school"></i></div>
+                             <div class="account-item-text">${t('manage_classes')}</div>
                              <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div>
                         <div class="account-item" onclick="renderSubjectManagement()" style="padding:12px 0;">
-                             <div class="account-item-icon"><i data-lucide="book"></i></div>
-                             <div class="account-item-text">Globale Fächer & Sharing</div>
+                             <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="book"></i></div>
+                             <div class="account-item-text">${t('global_subjects_sharing')}</div>
                              <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div>
                         <div class="account-item" onclick="renderSharedContentManagement()" style="padding:12px 0;">
-                             <div class="account-item-icon"><i data-lucide="share-2"></i></div>
-                             <div class="account-item-text">Geteilte Inhalte (Aufgaben/Termine)</div>
+                             <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="share-2"></i></div>
+                             <div class="account-item-text">${t('shared_content')}</div>
                              <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div>
                     </div>
@@ -2843,7 +2870,7 @@
                 lucide.createIcons();
             } catch (e) {
                 console.error(e);
-                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">Fehler beim Laden des Dashboards</div>`;
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
             }
         }
 
@@ -3440,7 +3467,7 @@
         async function renderSubjectManagement(filterClassId = null, filterClassName = null) {
             previousView = filterClassId ? 'sub_class_detail' : 'sub_super_admin';
             currentView = 'sub_subjects';
-            document.getElementById('current-page-title').innerText = filterClassName ? `Fächer: ${filterClassName}` : t('subjects');
+            document.getElementById('current-page-title').innerText = filterClassName ? `${t('subjects_label')}: ${filterClassName}` : t('subjects');
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
@@ -3583,6 +3610,101 @@
             } catch (e) { console.error(e); alert(t('error')); }
         }
 
+        async function renderForcePasswordChange() {
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">${t('force_pw_title')}</h2>
+                </div>
+                <div style="padding:10px; color:var(--text-sec); font-size:14px; line-height:1.4; margin-bottom:15px;">
+                    ${t('force_pw_msg')}
+                </div>
+                <input type="password" id="force-new-pw" class="ios-input" placeholder="${t('msg_password')}">
+                <input type="password" id="force-new-pw-confirm" class="ios-input" placeholder="${t('msg_password')} (Wiederholen)">
+                <div id="force-pw-error" style="color:var(--danger); font-size:12px; margin: 5px 0 15px 5px; display:none;"></div>
+                <button class="ios-btn" onclick="saveForcedPassword()">${t('save_btn')}</button>
+            `;
+            // Lock UI
+            const overlay = document.getElementById('sheet-overlay');
+            overlay.onclick = null; // Disable background click close
+            overlay.classList.add('active');
+            overlay.querySelector('.sheet-close-btn')?.remove(); // Ensure no close button
+            lucide.createIcons();
+        }
+
+        async function saveForcedPassword() {
+            const pw = document.getElementById('force-new-pw').value;
+            const conf = document.getElementById('force-new-pw-confirm').value;
+            const errDiv = document.getElementById('force-pw-error');
+
+            if (pw !== conf) {
+                errDiv.innerText = "Passwörter stimmen nicht überein";
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{7,}$/;
+            if (!regex.test(pw)) {
+                errDiv.innerText = t('pw_complexity_error');
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            const current = prompt("Bitte dein aktuelles (temporäres) Passwort zur Bestätigung eingeben:");
+            if (!current) return;
+
+            try {
+                const res = await fetch('/api/change_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: current, new_password: pw })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.currentUser.needs_password_change = false;
+                    closeSheet();
+                    location.reload();
+                } else {
+                    errDiv.innerText = data.message || t('error');
+                    errDiv.style.display = 'block';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        let tutorialStep = 0;
+        function renderTutorial() {
+            const steps = [
+                { title: t('tutorial_welcome'), msg: t('tutorial_welcome_msg'), icon: 'sparkles' },
+                { title: t('tutorial_tasks'), msg: t('tutorial_tasks_msg'), icon: 'list-todo' },
+                { title: t('tutorial_calendar'), msg: t('tutorial_calendar_msg'), icon: 'calendar' },
+                { title: t('tutorial_grades'), msg: t('tutorial_grades_msg'), icon: 'graduation-cap' },
+                { title: t('tutorial_done'), msg: t('tutorial_done_msg'), icon: 'check-circle' }
+            ];
+
+            const step = steps[tutorialStep];
+            document.getElementById('sheet-content').innerHTML = `
+                <div style="text-align:center; padding: 20px 10px;">
+                    <div style="width:70px; height:70px; background:var(--accent); color:white; border-radius:35px; display:flex; align-items:center; justify-content:center; margin: 0 auto 20px auto;">
+                        <i data-lucide="${step.icon}" style="width:35px; height:35px;"></i>
+                    </div>
+                    <h2 style="margin:0 0 10px 0; font-size:24px; font-weight:700;">${step.title}</h2>
+                    <p style="color:var(--text-sec); line-height:1.5; font-size:16px; margin-bottom:30px;">${step.msg}</p>
+                    <button class="ios-btn" onclick="nextTutorialStep()">${tutorialStep === steps.length - 1 ? t('done') : t('next')}</button>
+                </div>
+            `;
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
+
+        async function nextTutorialStep() {
+            tutorialStep++;
+            if (tutorialStep >= 5) {
+                await fetch('/api/tutorial/complete', { method: 'POST' });
+                closeSheet();
+                return;
+            }
+            renderTutorial();
+        }
+
         async function deleteSubject(id, name) {
             if (!confirm(t('confirm_delete_subject').replace('{name}', name))) return;
 
@@ -3679,6 +3801,14 @@
                 localStorage.setItem('l8te_lang', window.currentUser.language);
             }
             updateAppLanguage(); // Initialize translations
+
+            if (window.currentUser.needs_password_change) {
+                renderForcePasswordChange();
+                return;
+            }
+            if (!window.currentUser.has_seen_tutorial) {
+                renderTutorial();
+            }
 
             if (path === '/') renderHome();
             else if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));

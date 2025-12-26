@@ -40,9 +40,10 @@ def catch_all(path):
     if not current_user.is_authenticated:
         # Check if this path is a valid class code for a direct login link
         # We only do this for single-level paths (no extra slashes)
-        if '/' not in path:
+        clean_path = path.rstrip('/')
+        if '/' not in clean_path:
             from .models import SchoolClass
-            sc = SchoolClass.query.filter_by(code=path.upper()).first()
+            sc = SchoolClass.query.filter_by(code=clean_path.upper()).first()
             if sc:
                 return redirect(url_for('auth.login_page', class_code=sc.code))
         return redirect(url_for('auth.login_page'))
@@ -95,7 +96,15 @@ def logout():
 def login_page(class_code=None):
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
-    return render_template('login.html', prefilled_code=class_code)
+    
+    class_name = None
+    if class_code:
+        from .models import SchoolClass
+        sc = SchoolClass.query.filter_by(code=class_code.upper()).first()
+        if sc:
+            class_name = sc.name
+            
+    return render_template('login.html', prefilled_code=class_code, class_name=class_name)
 
 # --- API Routes ---
 
@@ -548,8 +557,16 @@ def change_password():
         
     if not current_user.check_password(current_pw):
         return jsonify({'success': False, 'message': 'Aktuelles Passwort falsch'}), 400
+
+    # Complexity check
+    import re
+    if len(new_pw) < 7:
+        return jsonify({'success': False, 'message': 'Passwort muss mindestens 7 Zeichen lang sein'}), 400
+    if not re.search("[a-z]", new_pw) or not re.search("[A-Z]", new_pw) or not re.search("[0-9]", new_pw):
+        return jsonify({'success': False, 'message': 'Passwort muss Groß-, Kleinschreibung und Zahlen enthalten'}), 400
         
     current_user.set_password(new_pw)
+    current_user.needs_password_change = False
     db.session.commit()
     
     return jsonify({'success': True})
@@ -557,6 +574,13 @@ def change_password():
 
 
 # --- Admin Routes ---
+@api_bp.route('/tutorial/complete', methods=['POST'])
+@login_required
+def complete_tutorial():
+    current_user.has_seen_tutorial = True
+    db.session.commit()
+    return jsonify({'success': True})
+
 @api_bp.route('/admin/users', methods=['GET'])
 @login_required
 def get_users():
@@ -592,6 +616,7 @@ def create_user():
         
     new_user = User(username=username, is_admin=is_admin, class_id=target_class_id)
     new_user.set_password(password)
+    new_user.needs_password_change = True
     db.session.add(new_user)
     db.session.commit()
     return jsonify({'success': True})
@@ -610,6 +635,7 @@ def reset_user_password(id):
         return jsonify({'success': False, 'message': 'Missing password'}), 400
         
     user.set_password(new_pw)
+    user.needs_password_change = True
     db.session.commit()
     return jsonify({'success': True})
 

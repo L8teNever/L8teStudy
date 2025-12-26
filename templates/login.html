@@ -111,8 +111,8 @@
 
 <body data-theme="light">
     <div class="login-card">
-        <h1>Anmelden</h1>
-        <p>Willkommen bei L8teStudy</p>
+        <h1>{{ class_name if class_name else t('login_title') }}</h1>
+        <p>{{ 'Login für ' + class_name if class_name else t('welcome_msg') }}</p>
 
         <div id="error-msg" class="error-msg">Ungültige Zugangsdaten</div>
 
@@ -138,8 +138,14 @@
 
         // Apply initial translations
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelector('h1').innerText = t('login_title');
-            document.querySelector('p').innerText = t('welcome_msg');
+            const className = "{{ class_name if class_name else '' }}";
+            if (className) {
+                document.querySelector('h1').innerText = className;
+                document.querySelector('p').innerText = "Login für " + className;
+            } else {
+                document.querySelector('h1').innerText = t('login_title');
+                document.querySelector('p').innerText = t('welcome_msg');
+            }
             document.getElementById('error-msg').innerText = t('invalid_credentials');
             document.getElementById('class_code').placeholder = t('class_code_placeholder');
             document.getElementById('username').placeholder = t('msg_username');

@@ -46,6 +46,8 @@ def migrate_database():
             add_column_if_missing('event', 'subject_id', 'INTEGER REFERENCES subject(id)')
             add_column_if_missing('event', 'is_shared', 'BOOLEAN DEFAULT 0')
             add_column_if_missing('audit_log', 'class_id', 'INTEGER REFERENCES school_class(id)')
+            add_column_if_missing('user', 'needs_password_change', 'BOOLEAN DEFAULT 0')
+            add_column_if_missing('user', 'has_seen_tutorial', 'BOOLEAN DEFAULT 0')
 
             # --- Data Migration ---
             # 1. Ensure at least one class exists
