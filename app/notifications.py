@@ -6,8 +6,11 @@ from datetime import datetime, timedelta
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
-    # Fallback for very old python versions if needed, but 3.9+ has it
     from backports.zoneinfo import ZoneInfo
+
+from app import db, scheduler
+from app.models import User, PushSubscription, NotificationSetting, Task, Event
+from pywebpush import webpush, WebPushException
 
 def get_local_now():
     """Returns the current time in Europe/Berlin timezone"""
@@ -131,6 +134,7 @@ def notify_user(user, title, body, url='/'):
         success = send_web_push(sub_info, payload)
         if success is False:
             logger.info(f"Removing invalid subscription for user {user.username}")
+            db.session.delete(sub)
     db.session.commit()
     return True
 
