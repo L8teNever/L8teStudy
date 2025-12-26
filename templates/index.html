@@ -1135,15 +1135,23 @@
                 });
 
                 // Update URL
-                let path = '/';
-                if (view === 'tasks') path = '/tasks';
-                else if (view === 'calendar') path = '/calendar';
-                else if (view === 'grades') path = '/grades';
+                const pathMap = {
+                    home: '/',
+                    tasks: '/tasks',
+                    calendar: '/calendar',
+                    grades: '/grades',
+                    settings: '/settings',
+                    account: '/account',
+                    sub_admin_menu: '/admin',
+                    sub_users: '/admin/users',
+                    sub_activity: '/admin/activity',
+                    sub_subjects: '/admin/subjects',
+                    sub_classes: '/admin/classes',
+                    sub_super_admin: '/superadmin',
+                    sub_shared_content: '/superadmin/shared'
+                };
+                let path = pathMap[view] || '/';
 
-                // If we are just replacing the current view's URL (e.g. init), use replaceState.
-                // But for navigation, we want pushState.
-                // However, the `navigate` function is called by the tab bar.
-                // We should check if we are popping state to avoid loop.
                 if (!window.isPoppingState) {
                     window.history.pushState({ view: view }, '', path);
                 }
@@ -1938,7 +1946,7 @@
 
         function renderSubjectDetails(subject, avg, gradesJson, pushToHistory = true) {
             if (pushToHistory) {
-                window.history.pushState({ view: 'sub_subject_details', subject, avg, gradesJson }, '', null);
+                window.history.pushState({ view: 'sub_subject_details', subject, avg, gradesJson }, '', `/subject/${encodeURIComponent(subject)}`);
             }
             previousView = currentView;
             currentView = 'sub_subject_details';
@@ -2336,7 +2344,7 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_admin_menu' }, '', null);
+                window.history.pushState({ view: 'sub_admin_menu' }, '', '/admin');
             }
             window.isPoppingState = false;
 
@@ -2380,7 +2388,7 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_activity', class_id: filterClassId, class_name: filterClassName }, '', null);
+                window.history.pushState({ view: 'sub_activity', class_id: filterClassId, class_name: filterClassName }, '', filterClassId ? `/admin/activity/${filterClassId}` : '/admin/activity');
             }
             window.isPoppingState = false;
 
@@ -2512,7 +2520,7 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_classes' }, '', null);
+                window.history.pushState({ view: 'sub_classes' }, '', '/admin/classes');
             }
             window.isPoppingState = false;
 
@@ -2602,7 +2610,7 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_users', class_id: filterClassId, class_name: filterClassName }, '', null);
+                window.history.pushState({ view: 'sub_users', class_id: filterClassId, class_name: filterClassName }, '', filterClassId ? `/admin/users/${filterClassId}` : '/admin/users');
             }
             window.isPoppingState = false;
 
@@ -2654,7 +2662,7 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_class_detail', id, name }, '', null);
+                window.history.pushState({ view: 'sub_class_detail', id, name }, '', `/admin/classes/${id}`);
             }
             window.isPoppingState = false;
 
@@ -2732,7 +2740,7 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_super_admin' }, '', null);
+                window.history.pushState({ view: 'sub_super_admin' }, '', '/superadmin');
             }
             window.isPoppingState = false;
 
@@ -2973,7 +2981,7 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_shared_content' }, '', null);
+                window.history.pushState({ view: 'sub_shared_content' }, '', '/superadmin/shared');
             }
             window.isPoppingState = false;
 
@@ -3392,7 +3400,7 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_subjects' }, '', null);
+                window.history.pushState({ view: 'sub_subjects' }, '', '/admin/subjects');
             }
             window.isPoppingState = false;
 
@@ -3621,9 +3629,28 @@
                 localStorage.setItem('l8te_lang', window.currentUser.language);
             }
             updateAppLanguage(); // Initialize translations
-            if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));
+
+            if (path === '/') renderHome();
+            else if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));
             else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'));
             else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
+            else if (path === '/settings') renderSettingsPage();
+            else if (path === '/account') renderAccountHub();
+            else if (path === '/admin') renderAdminMenu();
+            else if (path === '/admin/users') renderUserManagement();
+            else if (path.startsWith('/admin/users/')) renderUserManagement(path.split('/').pop());
+            else if (path === '/admin/activity') renderActivityLog();
+            else if (path.startsWith('/admin/activity/')) renderActivityLog(path.split('/').pop());
+            else if (path === '/admin/subjects') renderSubjectManagement();
+            else if (path === '/admin/classes') renderSchoolClassManagement();
+            else if (path.startsWith('/admin/classes/')) renderSingleClassAdmin(path.split('/').pop(), 'Klasse');
+            else if (path === '/superadmin') renderSuperAdminDashboard();
+            else if (path === '/superadmin/shared') renderSharedContentManagement();
+            else if (path.startsWith('/subject/')) {
+                const sub = decodeURIComponent(path.split('/').pop());
+                // Note: This won't have the avg/gradesJson pre-cached, so subject detail might need adjustment to fetch if missing.
+                renderSubjectDetails(sub, '?', '[]');
+            }
             else renderHome();
         };
         console.log('Main Script Parsed Successfully');
