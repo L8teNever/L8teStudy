@@ -117,7 +117,8 @@
         <div id="error-msg" class="error-msg">Ungültige Zugangsdaten</div>
 
         <form onsubmit="handleSubmit(event)">
-            <input type="text" id="class_code" class="ios-input" placeholder="Klassencode (6-stellig)" maxlength="6">
+            <input type="{{ 'hidden' if prefilled_code else 'text' }}" id="class_code" class="ios-input"
+                placeholder="Klassencode" value="{{ prefilled_code if prefilled_code else '' }}">
             <input type="text" id="username" class="ios-input" placeholder="Benutzername" required>
             <input type="password" id="password" class="ios-input" placeholder="Passwort" required>
             <button type="submit" class="ios-btn" id="submit-btn">Anmelden</button>

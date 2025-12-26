@@ -1227,6 +1227,10 @@
                     renderSingleClassAdmin(event.state.id, event.state.name);
                     return;
                 }
+                if (event.state.view === 'sub_class_settings') {
+                    renderClassSettings(event.state.id);
+                    return;
+                }
                 if (event.state.view === 'sub_super_admin') {
                     renderSuperAdminDashboard();
                     return;
@@ -2376,6 +2380,13 @@
                         <div class="account-item-text">${t('activity_log')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    ${window.currentUser.class_id ? `
+                    <div class="account-item" onclick="renderClassSettings(${window.currentUser.class_id})">
+                        <div class="account-item-icon"><i data-lucide="settings"></i></div>
+                        <div class="account-item-text">Klassen-Einstellungen</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    ` : ''}
                 </div>
             `;
             lucide.createIcons();
@@ -2680,6 +2691,11 @@
                         <div class="account-item-text">Aktivitätsprotokoll</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    <div class="account-item" onclick="renderClassSettings(${id})">
+                        <div class="account-item-icon"><i data-lucide="settings"></i></div>
+                        <div class="account-item-text">Klassen-Einstellungen</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
                     <div class="account-item" onclick="renderSubjectManagement(${id}, '${name}')">
                         <div class="account-item-icon"><i data-lucide="book"></i></div>
                         <div class="account-item-text">Fächer verwalten</div>
@@ -2692,6 +2708,78 @@
                 </div>
             `;
             lucide.createIcons();
+        }
+
+        async function renderClassSettings(id) {
+            previousView = window.currentUser.is_super_admin ? 'sub_class_detail' : 'sub_admin_menu';
+            currentView = 'sub_class_settings';
+            document.getElementById('current-page-title').innerText = 'Klassen-Einstellungen';
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_class_settings', id: id }, '', `/admin/classes/${id}/settings`);
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
+
+            try {
+                const res = await fetch(`/api/admin/classes/${id}`);
+                const c = await res.json();
+
+                document.getElementById('app-container').innerHTML = `
+                    <div class="floating-card" style="padding:20px;">
+                        <h4 style="margin:0 0 15px 0;">Allgemein</h4>
+                        <div style="margin-bottom:15px;">
+                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:5px; display:block;">Klassen-Name</label>
+                            <input type="text" id="edit-class-name" class="ios-input" value="${c.name}" ${!window.currentUser.is_super_admin ? 'disabled' : ''}>
+                            ${!window.currentUser.is_super_admin ? '<p style="font-size:11px; color:var(--text-sec); margin-top:5px;">Nur Super-Admins können den Namen ändern.</p>' : ''}
+                        </div>
+                        <div style="margin-bottom:20px;">
+                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:5px; display:block;">Klassencode / Login-ID</label>
+                            <input type="text" id="edit-class-code" class="ios-input" value="${c.code}" placeholder="z.B. WRS1">
+                            <p style="font-size:11px; color:var(--text-sec); margin-top:5px;">Dieser Code wird für den Login benötigt. Er kann beliebig lang sein.</p>
+                        </div>
+                        <div style="padding:15px; background:rgba(0,113,227,0.1); border-radius:12px; margin-bottom:20px;">
+                            <label style="font-size:12px; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:8px; display:block;">Direkt-Login Link</label>
+                            <div style="font-size:13px; font-weight:500; word-break:break-all; background:white; padding:10px; border-radius:8px; border:1px solid rgba(0,0,0,0.05);">
+                                ${window.location.origin}/${c.code}/login
+                            </div>
+                            <p style="font-size:11px; color:var(--text-sec); margin-top:8px;">Kopiere diesen Link für deine Klasse, damit sie den Code nicht manuell eingeben müssen.</p>
+                        </div>
+                        <button class="ios-btn" onclick="saveClassSettings(${id})">Speichern</button>
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+            }
+        }
+
+        async function saveClassSettings(id) {
+            const name = document.getElementById('edit-class-name').value.trim();
+            const code = document.getElementById('edit-class-code').value.trim();
+            if (!code) { alert("Code darf nicht leer sein"); return; }
+
+            const body = { code };
+            if (window.currentUser.is_super_admin) body.name = name;
+
+            try {
+                const res = await fetch(`/api/admin/classes/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert("Klassen-Einstellungen gespeichert");
+                    renderClassSettings(id);
+                } else {
+                    alert(data.message || "Fehler beim Speichern");
+                }
+            } catch (e) { console.error(e); alert("Fehler"); }
         }
 
         async function openCreateUserMenu() {
@@ -3658,6 +3746,11 @@
             else if (path.startsWith('/admin/classes/')) renderSingleClassAdmin(path.split('/').pop(), 'Klasse');
             else if (path === '/superadmin') renderSuperAdminDashboard();
             else if (path === '/superadmin/shared') renderSharedContentManagement();
+            else if (path.includes('/settings') && path.includes('/admin/classes/')) {
+                const parts = path.split('/');
+                const id = parts[parts.indexOf('classes') + 1];
+                renderClassSettings(id);
+            }
             else if (path.startsWith('/subject/')) {
                 const sub = decodeURIComponent(path.split('/').pop());
                 // Note: This won't have the avg/gradesJson pre-cached, so subject detail might need adjustment to fetch if missing.

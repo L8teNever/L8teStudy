@@ -81,11 +81,12 @@ def logout():
     logout_user()
     return redirect(url_for('auth.login_page')) # Assuming we have a standalone login page or handle it via index
 
-@auth_bp.route('/login-page') 
-def login_page():
+@auth_bp.route('/login-page')
+@auth_bp.route('/<class_code>/login')
+def login_page(class_code=None):
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
-    return render_template('login.html')
+    return render_template('login.html', prefilled_code=class_code)
 
 # --- API Routes ---
 
@@ -920,6 +921,43 @@ def get_classes():
         'code': c.code,
         'user_count': c.users.count()
     } for c in classes])
+
+@api_bp.route('/admin/classes/<int:id>', methods=['GET'])
+@login_required
+def get_class(id):
+    if not current_user.is_super_admin and current_user.class_id != id:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    school_class = SchoolClass.query.get_or_404(id)
+    return jsonify({
+        'id': school_class.id,
+        'name': school_class.name,
+        'code': school_class.code
+    })
+
+@api_bp.route('/admin/classes/<int:id>', methods=['PUT'])
+@login_required
+def update_class(id):
+    if not current_user.is_super_admin:
+        # Check if they are admin of this class
+        if not (current_user.is_admin and current_user.class_id == id):
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+            
+    data = request.json
+    school_class = SchoolClass.query.get_or_404(id)
+    
+    if 'name' in data and current_user.is_super_admin:
+        school_class.name = data['name']
+    if 'code' in data:
+        new_code = data['code'].upper().strip()
+        # Check if code already exists
+        existing = SchoolClass.query.filter_by(code=new_code).first()
+        if existing and existing.id != id:
+            return jsonify({'success': False, 'message': 'Code bereits vergeben'}), 400
+        school_class.code = new_code
+        
+    db.session.commit()
+    return jsonify({'success': True})
 
 @api_bp.route('/admin/classes', methods=['POST'])
 @login_required
