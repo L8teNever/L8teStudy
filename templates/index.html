@@ -1215,6 +1215,14 @@
                     renderUserManagement(event.state.class_id, event.state.class_name);
                     return;
                 }
+                if (event.state.view === 'sub_password') {
+                    renderChangePassword();
+                    return;
+                }
+                if (event.state.view === 'sub_notifications') {
+                    renderNotificationSettings();
+                    return;
+                }
                 if (event.state.view === 'sub_subjects') {
                     renderSubjectManagement(event.state.class_id, event.state.class_name);
                     return;
@@ -1607,83 +1615,6 @@
             } catch (e) { console.error(e); }
         }
 
-        function renderSubjectDetails(subject, avg, gradesJson) {
-            const grades = JSON.parse(gradesJson);
-            const listHtml = grades.map(g => `
-                <div class="list-item" onclick="openDetails('Note', '${g.title || 'Note'}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id})">
-                    <div class="item-content">
-                        <div class="item-title">${g.title || 'Note'}</div>
-                        <div class="item-sub">${new Date(g.date).toLocaleDateString('de-DE')} • Gewichtung: ${g.weight}x</div>
-                    </div>
-                    <div style="font-weight:700; font-size:18px; color:var(--text-main);">${g.value}</div>
-                </div>`).join('');
-            document.getElementById('app-container').innerHTML = `
-                <div class="floating-card" style="text-align:center;">
-                    <h2 style="margin:0">${subject}</h2>
-                    <div style="color:var(--accent); font-size:32px; font-weight:700; margin:10px 0;">${avg}</div>
-                </div>
-                <h3 style="margin:30px 0 10px 5px; font-size:18px;">Einzelnoten</h3>
-                <div class="floating-card" style="padding:10px; margin-bottom: 40px;">${listHtml}</div>`;
-            document.getElementById('header-back-btn').style.display = 'block';
-            document.getElementById('header-back-btn').onclick = () => renderGrades();
-        }
-
-        function openAccountMenu() {
-            renderAccountHub();
-            if (currentView !== 'account') navigate('account', document.querySelector('.profile-btn'), 'Account');
-        }
-
-        function renderAccountHub() {
-            const user = window.currentUser || { name: 'User', email: 'user@example.com' };
-            document.getElementById('app-container').innerHTML = `
-                <div class="floating-card" style="text-align:center; padding:30px 20px;">
-                    <div style="width:80px; height:80px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; margin:0 auto 15px auto;">
-                        <i data-lucide="user" style="width:40px; height:40px;"></i>
-                    </div>
-                    <h2 style="margin:0; font-size:22px;">${user.name}</h2>
-                    <p class="item-sub">${user.email}</p>
-                </div>
-                
-                <div class="floating-card">
-                    <div class="account-item" onclick="navigate('settings', null, 'Einstellungen')">
-                        <div class="account-item-icon"><i data-lucide="settings"></i></div>
-                        <div class="account-item-text">Einstellungen</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                    ${isAdmin ? `
-                    <div class="account-item" onclick="renderAdminMenu()">
-                        <div class="account-item-icon"><i data-lucide="shield"></i></div>
-                        <div class="account-item-text">Admin Einstellungen</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>` : ''}
-                    <div class="account-item" onclick="window.open('https://github.com/L8teNever/L8teStudy/issues', '_blank')">
-                        <div class="account-item-icon"><i data-lucide="bug"></i></div>
-                        <div class="account-item-text">Bug melden</div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                </div>
-
-                ${deferredPrompt ? `
-                <div class="floating-card" style="background: var(--accent); color: white; border: none;" onclick="installApp()">
-                    <div class="account-item" style="border:none;">
-                        <div class="account-item-icon" style="background:rgba(255,255,255,0.2); color:white;"><i data-lucide="download"></i></div>
-                        <div class="account-item-text" style="color:white; font-weight:700;">App installieren</div>
-                    </div>
-                </div>` : ''}
-
-                <div class="floating-card">
-                    <div class="account-item" onclick="location.href='/logout'">
-                        <div class="account-item-icon" style="color:var(--danger); background:rgba(255,59,48,0.1)"><i data-lucide="log-out"></i></div>
-                        <div class="account-item-text" style="color:var(--danger)">Abmelden</div>
-                    </div>
-                </div>
-                <!-- Version -->
-            `;
-            // Update header title
-            document.getElementById('current-page-title').innerText = 'Account';
-            document.getElementById('header-back-btn').style.display = 'none'; // Top level
-            lucide.createIcons();
-        }
 
         let cachedEvents = [];
         let cachedActivityLogs = [];
@@ -1990,6 +1921,11 @@
             document.getElementById('current-page-title').innerText = t('account');
             document.getElementById('header-back-btn').style.display = 'none';
 
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'account' }, '', '/account');
+            }
+            window.isPoppingState = false;
+
             const isAdmin = window.currentUser && window.currentUser.is_admin;
 
             document.getElementById('app-container').innerHTML = `
@@ -2052,7 +1988,13 @@
             currentView = 'settings';
             document.getElementById('current-page-title').innerText = t('settings');
             document.getElementById('header-back-btn').style.display = 'block';
-            document.getElementById('header-back-btn').onclick = () => { renderAccountHub(); currentView = 'account'; document.getElementById('header-back-btn').style.display = 'none'; };
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'settings' }, '', '/settings');
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
             const isDark = document.body.getAttribute('data-theme') === 'dark';
             const savedLang = localStorage.getItem('l8te_lang') || 'de';
@@ -2136,9 +2078,17 @@
 
 
         async function renderNotificationSettings() {
+            previousView = 'settings';
+            currentView = 'sub_notifications';
             document.getElementById('current-page-title').innerText = t('notifications');
             document.getElementById('header-back-btn').style.display = 'block';
-            document.getElementById('header-back-btn').onclick = () => renderSettingsPage();
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_notifications' }, '', '/settings/notifications');
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => window.history.back();
 
             document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px;">${t('loading')}</div>`;
 
@@ -2326,7 +2276,14 @@
             previousView = 'settings'; // Virtual history
             currentView = 'sub_password';
             document.getElementById('current-page-title').innerText = t('msg_password');
-            document.getElementById('header-back-btn').onclick = () => { renderSettingsPage(); }; // Back to Settings
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_password' }, '', '/settings/password');
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); }; // Back to Settings
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
@@ -3397,9 +3354,6 @@
 
 
         /* --- NAVIGATION HELPERS --- */
-        function openAccountMenu() {
-            navigate('account', null, t('account'));
-        }
 
 
 
@@ -3734,6 +3688,8 @@
             else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'));
             else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
             else if (path === '/settings') renderSettingsPage();
+            else if (path === '/settings/password') renderChangePassword();
+            else if (path === '/settings/notifications') renderNotificationSettings();
             else if (path === '/account') renderAccountHub();
             else if (path === '/admin') renderAdminMenu();
             else if (path === '/admin/users') renderUserManagement();

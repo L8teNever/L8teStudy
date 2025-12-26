@@ -30,13 +30,22 @@ def uploaded_file(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
 
 @main_bp.route('/')
-@login_required
 def index():
+    if not current_user.is_authenticated:
+        return redirect(url_for('auth.login_page'))
     return render_template('index.html', user=current_user)
 
 @main_bp.route('/<path:path>')
-@login_required
 def catch_all(path):
+    if not current_user.is_authenticated:
+        # Check if this path is a valid class code for a direct login link
+        # We only do this for single-level paths (no extra slashes)
+        if '/' not in path:
+            from .models import SchoolClass
+            sc = SchoolClass.query.filter_by(code=path.upper()).first()
+            if sc:
+                return redirect(url_for('auth.login_page', class_code=sc.code))
+        return redirect(url_for('auth.login_page'))
     return render_template('index.html', user=current_user)
 
 # --- Auth Routes ---
