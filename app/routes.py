@@ -178,7 +178,8 @@ def create_task():
         
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Created task: {new_task.title}")
+        target_class_id = current_user.class_id or new_task.class_id
+        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Created task: {new_task.title}")
         db.session.add(log)
         
         db.session.commit()
@@ -274,7 +275,8 @@ def delete_task(id):
     
     # Audit Log
     from .models import AuditLog
-    log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Deleted task: {task.id}")
+    target_class_id = current_user.class_id or task.class_id
+    log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted task: {task.id}")
     db.session.add(log)
 
     db.session.commit()
@@ -338,7 +340,8 @@ def create_event():
         
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Created event: {new_event.title}")
+        target_class_id = current_user.class_id or new_event.class_id
+        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Created event: {new_event.title}")
         db.session.add(log)
         
         db.session.commit()
@@ -378,7 +381,8 @@ def update_event(id):
             
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Updated event: {event.title}")
+        target_class_id = current_user.class_id or event.class_id
+        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Updated event: {event.title}")
         db.session.add(log)
         
         db.session.commit()
@@ -393,7 +397,7 @@ def update_event(id):
 def delete_event(id):
     try:
         event = Event.query.get_or_404(id)
-        if event.user_id != current_user.id:
+        if event.user_id != current_user.id and not current_user.is_super_admin:
             return jsonify({'success': False}), 403
             
         from datetime import datetime
@@ -401,7 +405,8 @@ def delete_event(id):
         
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Deleted event: {event.id}")
+        target_class_id = current_user.class_id or event.class_id
+        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted event: {event.id}")
         db.session.add(log)
         
         db.session.commit()
@@ -449,7 +454,8 @@ def create_grade():
         
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Created grade: {new_grade.subject} {new_grade.value}")
+        target_class_id = current_user.class_id or (current_user.school_class.id if current_user.school_class else Grade.query.get(new_grade.id).author.class_id)
+        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Created grade: {new_grade.subject} {new_grade.value}")
         db.session.add(log)
         
         db.session.commit()
@@ -478,7 +484,8 @@ def update_grade(id):
             
         # Audit Log
         from .models import AuditLog
-        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Updated grade: {grade.id}")
+        target_class_id = current_user.class_id or grade.author.class_id
+        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Updated grade: {grade.id}")
         db.session.add(log)
         
         db.session.commit()
@@ -497,7 +504,8 @@ def delete_grade(id):
     
     # Audit Log
     from .models import AuditLog
-    log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Deleted grade: {grade.id}")
+    target_class_id = current_user.class_id or grade.author.class_id
+    log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted grade: {grade.id}")
     db.session.add(log)
     
     db.session.commit()
@@ -529,8 +537,12 @@ def change_password():
 @api_bp.route('/admin/users', methods=['GET'])
 @login_required
 def get_users():
+    class_id = request.args.get('class_id')
     if current_user.is_super_admin:
-        users = User.query.all()
+        if class_id:
+            users = User.query.filter_by(class_id=class_id).all()
+        else:
+            users = User.query.all()
     elif current_user.is_admin:
         users = User.query.filter_by(class_id=current_user.class_id).all()
     else:
@@ -755,13 +767,17 @@ def add_subject():
 @api_bp.route('/subjects/<int:id>', methods=['DELETE'])
 @login_required
 def delete_subject(id):
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.is_super_admin:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    subject = Subject.query.get(id)
-    if subject:
-        db.session.delete(subject)
-        db.session.commit()
+    subject = Subject.query.get_or_404(id)
+    # Check access
+    if not current_user.is_super_admin:
+        if current_user.school_class not in subject.classes:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+    db.session.delete(subject)
+    db.session.commit()
     return jsonify({'success': True})
 
 
@@ -773,11 +789,17 @@ def get_activity_log():
         return jsonify({'success': False}), 403
     
     from .models import AuditLog
+    class_id = request.args.get('class_id')
+    
     # Filter log by class
     if current_user.is_super_admin:
-        logs = AuditLog.query.join(User).order_by(AuditLog.timestamp.desc()).limit(100).all()
+        query = AuditLog.query
+        if class_id:
+            query = query.filter_by(class_id=class_id)
+        logs = query.join(User).order_by(AuditLog.timestamp.desc()).limit(100).all()
     else:
         logs = AuditLog.query.filter_by(class_id=current_user.class_id).join(User).order_by(AuditLog.timestamp.desc()).limit(100).all()
+    
     
     return jsonify([{
         'id': l.id,
