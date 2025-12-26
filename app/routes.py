@@ -159,6 +159,8 @@ def create_task():
             class_id=current_user.class_id,
             title=data['title'],
             subject=data.get('subject', 'Allgemein'),
+            subject_id=data.get('subject_id'),
+            is_shared=data.get('is_shared', 'false').lower() == 'true',
             due_date=due_date,
             description=data.get('description', '')
         )
@@ -222,6 +224,12 @@ def update_task(id):
                 task.title = data['title']
             if 'description' in data:
                 task.description = data['description']
+            if 'subject_id' in data:
+                task.subject_id = data['subject_id']
+            if 'is_shared' in data:
+                val = data['is_shared']
+                if isinstance(val, str): val = val.lower() == 'true'
+                task.is_shared = bool(val)
             
             # Handle Deleted Images
             if 'deleted_images' in data:
@@ -334,7 +342,9 @@ def create_event():
             class_id=current_user.class_id,
             title=data['title'],
             date=event_date,
-            description=data.get('description', '')
+            description=data.get('description', ''),
+            subject_id=data.get('subject_id'),
+            is_shared=data.get('is_shared', False)
         )
         db.session.add(new_event)
         
@@ -378,7 +388,10 @@ def update_event(id):
         if 'date' in data:
             from datetime import datetime
             event.date = datetime.strptime(data['date'], '%Y-%m-%d')
-            
+        if 'subject_id' in data:
+            event.subject_id = data['subject_id']
+        if 'is_shared' in data:
+            event.is_shared = bool(data['is_shared'])
         # Audit Log
         from .models import AuditLog
         target_class_id = current_user.class_id or event.class_id
@@ -822,6 +835,34 @@ def get_admin_dashboard_stats():
         'user_count': User.query.count(),
         'task_count': Task.query.filter_by(deleted_at=None).count(),
         'event_count': Event.query.filter_by(deleted_at=None).count(),
+    })
+
+@api_bp.route('/admin/shared-content', methods=['GET'])
+@login_required
+def get_shared_content():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False}), 403
+    
+    from .models import Task, Event
+    tasks = Task.query.filter_by(is_shared=True, deleted_at=None).all()
+    events = Event.query.filter_by(is_shared=True, deleted_at=None).all()
+    
+    return jsonify({
+        'tasks': [{
+            'id': t.id, 
+            'title': t.title, 
+            'subject': t.subject.name if t.subject else 'Kein Fach',
+            'due_date': t.due_date.strftime('%Y-%m-%d') if t.due_date else None,
+            'description': t.description,
+            'is_shared': t.is_shared
+        } for t in tasks],
+        'events': [{
+            'id': e.id, 
+            'title': e.title, 
+            'date': e.date.strftime('%Y-%m-%d'),
+            'description': e.description,
+            'is_shared': e.is_shared
+        } for e in events]
     })
 
 @api_bp.route('/subjects/<int:id>/classes', methods=['POST'])

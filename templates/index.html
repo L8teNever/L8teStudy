@@ -2764,6 +2764,11 @@
                              <div class="account-item-text">Globale Fächer & Sharing</div>
                              <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div>
+                        <div class="account-item" onclick="renderSharedContentManagement()" style="padding:12px 0;">
+                             <div class="account-item-icon"><i data-lucide="share-2"></i></div>
+                             <div class="account-item-text">Geteilte Inhalte (Aufgaben/Termine)</div>
+                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        </div>
                     </div>
                 `;
                 lucide.createIcons();
@@ -2950,6 +2955,85 @@
             renderGrades();
         }
 
+        async function renderSharedContentManagement() {
+            previousView = 'sub_super_admin';
+            currentView = 'sub_shared_content';
+            document.getElementById('current-page-title').innerText = 'Shared Content';
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_shared_content' }, '', null);
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
+
+            try {
+                const res = await fetch('/api/admin/shared-content');
+                const data = await res.json();
+
+                const taskHtml = data.tasks.map(t => `
+                    <div class="list-item">
+                        <div class="account-item-icon"><i data-lucide="check-square"></i></div>
+                        <div class="item-content">
+                            <div class="item-title">${t.title}</div>
+                            <div class="item-sub">${t.subject} • Bis ${t.due_date || 'Kein Datum'}</div>
+                        </div>
+                        <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="toggleItemSharing('tasks', ${t.id}, false)">
+                            <i data-lucide="share-2" style="width:20px;"></i>
+                        </div>
+                    </div>
+                `).join('');
+
+                const eventHtml = data.events.map(e => `
+                    <div class="list-item">
+                        <div class="account-item-icon"><i data-lucide="calendar"></i></div>
+                        <div class="item-content">
+                            <div class="item-title">${e.title}</div>
+                            <div class="item-sub">${e.date}</div>
+                        </div>
+                        <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="toggleItemSharing('events', ${e.id}, false)">
+                            <i data-lucide="share-2" style="width:20px;"></i>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('app-container').innerHTML = `
+                    <div style="margin: 0 10px 15px 10px; font-size:14px; color:var(--text-sec); line-height:1.4;">
+                        Hier siehst du alle Aufgaben und Termine, die klassenübergreifend geteilt sind. Durch Klicken auf das Icon entziehst du die Freigabe.
+                    </div>
+                    <div class="floating-card" style="padding:0 24px; margin-bottom:30px;">
+                        <h4 style="margin:20px 0 10px 0;">Geteilte Aufgaben</h4>
+                        ${taskHtml || '<div style="padding:20px; color:var(--text-sec); border-top:1px solid var(--border)">Keine geteilten Aufgaben</div>'}
+                    </div>
+                    <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">
+                        <h4 style="margin:20px 0 10px 0;">Geteilte Termine</h4>
+                        ${eventHtml || '<div style="padding:20px; color:var(--text-sec); border-top:1px solid var(--border)">Keine geteilten Termine</div>'}
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+            }
+        }
+
+        async function toggleItemSharing(type, id, status) {
+            if (!confirm(status ? "Soll dieser Inhalt geteilt werden?" : "Soll die Freigabe aufgehoben werden?")) return;
+            try {
+                const res = await fetch(`/api/${type}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_shared: status })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    renderSharedContentManagement();
+                }
+            } catch (e) { console.error(e); }
+        }
+
         function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
             if (currentView === 'sub_users') {
                 openCreateUserMenu();
@@ -3057,12 +3141,6 @@
                     </div>
                 ` : ''}
                 ${type === 'Note' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="${t('grade_value')}" value="${valVal}">` : ''}
-                ${(type === 'Aufgabe' || type === 'Termin') && window.currentUser.is_admin ? `
-                <div class="account-item" onclick="toggleSharing()" style="border:none; margin-bottom:15px; background:var(--tab-bg); border-radius:12px; padding:15px;">
-                    <div class="account-item-text">Mit anderen Klassen teilen (via Fach)</div>
-                    <div id="sharing-toggle" class="ios-toggle"><div class="ios-toggle-knob"></div></div>
-                </div>
-                ` : ''}
                 <div class="custom-picker-trigger" onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span id="selected-date-display">${selectedDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE')}</span><i data-lucide="calendar" style="width:18px"></i></div>
                 <div class="picker-options" id="calendar-picker-view" style="padding:15px">
                     <div class="calendar-header"><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(-1)"><i data-lucide="chevron-left"></i></div><span id="calendar-month-year" style="font-weight:600"></span><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(1)"><i data-lucide="chevron-right"></i></div></div>
