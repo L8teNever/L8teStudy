@@ -41,15 +41,19 @@ def get_or_create_vapid_keys():
     if priv and pub:
         return priv, pub
 
-    # 2. Check File in instance folder (secure storage)
-    # Ensure instance folder exists
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    instance_dir = os.path.join(base_dir, 'instance')
-    key_file = os.path.join(instance_dir, 'vapid.json')
+    # 2. Check File in instance/data folder (secure storage)
+    # Priority: Env Var > /data (Docker volume) > local instance folder
+    key_file = os.environ.get('VAPID_KEY_PATH')
+    if not key_file:
+        if os.path.exists('/data'):
+            key_file = '/data/vapid.json'
+        else:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            instance_dir = os.path.join(base_dir, 'instance')
+            if not os.path.exists(instance_dir):
+                os.makedirs(instance_dir, exist_ok=True)
+            key_file = os.path.join(instance_dir, 'vapid.json')
     
-    if not os.path.exists(instance_dir):
-        os.makedirs(instance_dir, exist_ok=True)
-        
     if os.path.exists(key_file):
         try:
             with open(key_file, 'r') as f:
@@ -207,12 +211,11 @@ def check_reminders():
                             db.session.commit()
                             logger.info(f"[Scheduler] Homework notification sent to {user.username} (Count: {count})")
                         else:
-                            logger.info(f"[Scheduler] Could not send homework reminder to {user.username} (No subscriptions). Will retry next minute.")
+                            logger.info(f"[Scheduler] Could not send homework reminder to {user.username} (No subscriptions).")
                     else:
-                        logger.info(f"[Scheduler] No open tasks for {user.username}, marking as checked.")
-                        settings.last_homework_reminder_at = today
-                        db.session.add(settings)
-                        db.session.commit()
+                        # We DON'T mark it as sent today if there were no tasks.
+                        # This allows the user to add a task later and still get the reminder if it's past the time.
+                        logger.debug(f"[Scheduler] No open tasks for {user.username}, skipping for now.")
 
             # Exam/Event Reminder
             if settings.reminder_exam:
@@ -233,11 +236,6 @@ def check_reminders():
                             db.session.add(settings)
                             db.session.commit()
                             logger.info(f"[Scheduler] Event notification sent to {user.username}")
-                        else:
-                            logger.info(f"[Scheduler] Could not send event reminder to {user.username} (No subscriptions).")
                     else:
-                        logger.info(f"[Scheduler] No events tomorrow for {user.username}, marking as checked.")
-                        settings.last_exam_reminder_at = today
-                        db.session.add(settings)
-                        db.session.commit()
+                        logger.debug(f"[Scheduler] No events tomorrow for {user.username}, skipping.")
 

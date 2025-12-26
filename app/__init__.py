@@ -96,6 +96,23 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
 
+    @app.context_processor
+    def utility_processor():
+        def t(key):
+            # Simple pass-through for server-side rendering
+            # The actual translation happens via JS in index.html, 
+            # but for login.html we need at least a dummy or simple mapping.
+            mapping = {
+                'login_title': 'Anmelden',
+                'welcome_msg': 'Willkommen bei L8teStudy',
+                'login_btn': 'Anmelden',
+                'class_code': 'Klassencode',
+                'username': 'Benutzername',
+                'password': 'Passwort'
+            }
+            return mapping.get(key, key)
+        return dict(t=t)
+
     def update_version_file():
         version_file = os.path.join(app.root_path, '..', 'version.txt')
         version = "1.1.18" # Default fallback
@@ -164,7 +181,7 @@ def create_app():
     from app.notifications import check_reminders
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         if not scheduler.get_job('check_reminders'):
-            scheduler.add_job(id='check_reminders', func=check_reminders, trigger='interval', minutes=1)
+            scheduler.add_job(id='check_reminders', func=check_reminders, trigger='interval', seconds=30)
         scheduler.start()
         app.logger.info("Scheduler started for notifications")
 
