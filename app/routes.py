@@ -703,14 +703,14 @@ def get_notification_settings():
         db.session.add(settings)
         db.session.commit()
     
-    from datetime import datetime
+    from app.notifications import get_local_now
     from app import scheduler
     return jsonify({
         'notify_new_task': settings.notify_new_task,
         'notify_new_event': settings.notify_new_event,
         'reminder_homework': settings.reminder_homework,
         'reminder_exam': settings.reminder_exam,
-        'server_time': datetime.now().strftime("%H:%M"),
+        'server_time': get_local_now().strftime("%H:%M"),
         'scheduler_running': scheduler.running
     })
 

@@ -3,9 +3,15 @@ import json
 import os
 import logging
 from datetime import datetime, timedelta
-from app import db, scheduler
-from app.models import User, PushSubscription, NotificationSetting, Task, Event
-from pywebpush import webpush, WebPushException
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    # Fallback for very old python versions if needed, but 3.9+ has it
+    from backports.zoneinfo import ZoneInfo
+
+def get_local_now():
+    """Returns the current time in Europe/Berlin timezone"""
+    return datetime.now(ZoneInfo("Europe/Berlin"))
 
 logger = logging.getLogger(__name__)
 
@@ -101,11 +107,11 @@ def send_web_push(subscription_info, message_body):
     return True
 
 def notify_user(user, title, body, url='/'):
-    """Sends a notification to a specific user via all their subscriptions"""
+    """Sends a notification to a specific user via all their subscriptions. Returns True if at least one sub exists."""
     subs = PushSubscription.query.filter_by(user_id=user.id).all()
     if not subs:
         logger.info(f"Notification skipped: User {user.username} has no push subscriptions.")
-        return
+        return False
 
     payload = {
         "title": title,
@@ -125,9 +131,8 @@ def notify_user(user, title, body, url='/'):
         success = send_web_push(sub_info, payload)
         if success is False:
             logger.info(f"Removing invalid subscription for user {user.username}")
-            db.session.delete(sub)
-    
     db.session.commit()
+    return True
 
 def notify_new_task(task):
     """Notify all users (except author) that a new task was created"""
@@ -158,7 +163,7 @@ def notify_new_event(event):
 def check_reminders():
     """Scheduled job to check for due tasks and alarms"""
     with scheduler.app.app_context():
-        now = datetime.now()
+        now = get_local_now()
         today = now.date()
         current_time_str = now.strftime("%H:%M")
         
@@ -191,11 +196,14 @@ def check_reminders():
                             count += 1
                     
                     if count > 0:
-                        notify_user(user, "Offene Aufgaben", f"Du hast noch {count} offene Aufgaben zu erledigen!", url='/tasks')
-                        settings.last_homework_reminder_at = today
-                        db.session.add(settings)
-                        db.session.commit() # Commit immediately to mark as sent
-                        logger.info(f"[Scheduler] Homework notification sent to {user.username} (Count: {count})")
+                        sent = notify_user(user, "Offene Aufgaben", f"Du hast noch {count} offene Aufgaben zu erledigen!", url='/tasks')
+                        if sent:
+                            settings.last_homework_reminder_at = today
+                            db.session.add(settings)
+                            db.session.commit()
+                            logger.info(f"[Scheduler] Homework notification sent to {user.username} (Count: {count})")
+                        else:
+                            logger.info(f"[Scheduler] Could not send homework reminder to {user.username} (No subscriptions). Will retry next minute.")
                     else:
                         logger.info(f"[Scheduler] No open tasks for {user.username}, marking as checked.")
                         settings.last_homework_reminder_at = today
@@ -215,11 +223,14 @@ def check_reminders():
                     ).all()
                     
                     if events:
-                        notify_user(user, "Termin/Klausur morgen", f"Morgen: {events[0].title}" + (f" und {len(events)-1} weitere" if len(events)>1 else ""), url='/calendar')
-                        settings.last_exam_reminder_at = today
-                        db.session.add(settings)
-                        db.session.commit() # Commit immediately
-                        logger.info(f"[Scheduler] Event notification sent to {user.username}")
+                        sent = notify_user(user, "Termin/Klausur morgen", f"Morgen: {events[0].title}" + (f" und {len(events)-1} weitere" if len(events)>1 else ""), url='/calendar')
+                        if sent:
+                            settings.last_exam_reminder_at = today
+                            db.session.add(settings)
+                            db.session.commit()
+                            logger.info(f"[Scheduler] Event notification sent to {user.username}")
+                        else:
+                            logger.info(f"[Scheduler] Could not send event reminder to {user.username} (No subscriptions).")
                     else:
                         logger.info(f"[Scheduler] No events tomorrow for {user.username}, marking as checked.")
                         settings.last_exam_reminder_at = today

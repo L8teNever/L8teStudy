@@ -10,3 +10,4 @@ flask-wtf
 flask-talisman
 flask-limiter
 flask-migrate
+tzdata
