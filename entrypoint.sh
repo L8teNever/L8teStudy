@@ -19,6 +19,7 @@ fi
 # Initialize database tables explicitly before starting workers
 echo "Running database migrations..."
 python migrate_db.py
+python migrate_subjects.py
 
 # Start the application
 # The database tables will be created automatically by app/__init__.py

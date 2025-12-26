@@ -23,8 +23,10 @@ with app.app_context():
                 db.session.commit()
 
             for name in defaults:
-                db.session.add(Subject(name=name, class_id=default_class.id))
+                new_sub = Subject(name=name)
+                new_sub.classes.append(default_class)
+                db.session.add(new_sub)
             db.session.commit()
-            print(f"Added default subjects to class: {default_class.name}")
+            print(f"Added default subjects and linked to class: {default_class.name}")
     else:
         print("Subject table already exists.")

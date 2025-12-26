@@ -8,6 +8,12 @@ import random
 def generate_class_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+# Junction table for subjects shared between classes
+subject_classes = db.Table('subject_classes',
+    db.Column('subject_id', db.Integer, db.ForeignKey('subject.id'), primary_key=True),
+    db.Column('class_id', db.Integer, db.ForeignKey('school_class.id'), primary_key=True)
+)
+
 class SchoolClass(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), nullable=False)
@@ -17,7 +23,7 @@ class SchoolClass(db.Model):
     users = db.relationship('User', backref='school_class', lazy='dynamic')
     tasks = db.relationship('Task', backref='school_class', lazy='dynamic')
     events = db.relationship('Event', backref='school_class', lazy='dynamic')
-    subjects = db.relationship('Subject', backref='school_class', lazy='dynamic')
+    # Use relationship through junction table for shared subjects
     audit_logs = db.relationship('AuditLog', backref='school_class', lazy='dynamic')
 
 class User(UserMixin, db.Model):
@@ -70,8 +76,10 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
+    is_shared = db.Column(db.Boolean, default=False) # If true, visible to all classes linked to subject_id
     title = db.Column(db.String(128), nullable=False)
-    subject = db.Column(db.String(64))
+    subject = db.Column(db.String(64)) # Legacy/Cache
     due_date = db.Column(db.DateTime)
     description = db.Column(db.Text)
     # is_done on Task is deprecated in favor of TaskCompletion table for per-user status
@@ -95,6 +103,8 @@ class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
+    is_shared = db.Column(db.Boolean, default=False) 
     title = db.Column(db.String(128), nullable=False)
     date = db.Column(db.DateTime, nullable=False)
     description = db.Column(db.Text)
@@ -121,8 +131,10 @@ class AuditLog(db.Model):
 
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
     name = db.Column(db.String(64), nullable=False)
-    # name is no longer unique globally, but unique within class
-    __table_args__ = (db.UniqueConstraint('class_id', 'name', name='_class_subject_uc'),)
+    # New many-to-many relationship
+    classes = db.relationship('SchoolClass', secondary=subject_classes, backref='subjects')
+    
+    tasks = db.relationship('Task', backref='subject_rel', lazy='dynamic')
+    events = db.relationship('Event', backref='subject_rel', lazy='dynamic')
 

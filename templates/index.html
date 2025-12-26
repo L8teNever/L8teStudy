@@ -1009,6 +1009,7 @@
         };
         let currentTaskTab = 'open';
         let cachedTasks = [];
+        let selectedSubjectId = null;
 
 
         function t(key) {
@@ -2330,6 +2331,11 @@
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
                     ${window.currentUser.is_super_admin ? `
+                    <div class="account-item" onclick="renderSuperAdminDashboard()">
+                        <div class="account-item-icon"><i data-lucide="layout-dashboard"></i></div>
+                        <div class="account-item-text">Superadmin Dashboard</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
                     <div class="account-item" onclick="renderSchoolClassManagement()">
                         <div class="account-item-icon"><i data-lucide="school"></i></div>
                         <div class="account-item-text">Klassenverwaltung</div>
@@ -2651,6 +2657,65 @@
             if (newIsAdmin) toggle.classList.add('active'); else toggle.classList.remove('active');
         }
 
+        async function renderSuperAdminDashboard() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_super_admin';
+            document.getElementById('current-page-title').innerText = 'Superadmin Dashboard';
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_super_admin' }, '', null);
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
+
+            try {
+                const res = await fetch('/api/admin/dashboard/stats');
+                const stats = await res.json();
+
+                document.getElementById('app-container').innerHTML = `
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+                        <div class="floating-card" style="margin:0; text-align:center; padding:20px;">
+                            <div style="font-size:24px; font-weight:800; color:var(--accent);">${stats.class_count}</div>
+                            <div style="font-size:13px; color:var(--text-sec); font-weight:600;">KLASSEN</div>
+                        </div>
+                        <div class="floating-card" style="margin:0; text-align:center; padding:20px;">
+                            <div style="font-size:24px; font-weight:800; color:var(--accent);">${stats.user_count}</div>
+                            <div style="font-size:13px; color:var(--text-sec); font-weight:600;">BENUTZER</div>
+                        </div>
+                        <div class="floating-card" style="margin:0; text-align:center; padding:20px;">
+                            <div style="font-size:24px; font-weight:800; color:var(--accent);">${stats.task_count}</div>
+                            <div style="font-size:13px; color:var(--text-sec); font-weight:600;">AUFGABEN</div>
+                        </div>
+                        <div class="floating-card" style="margin:0; text-align:center; padding:20px;">
+                            <div style="font-size:24px; font-weight:800; color:var(--accent);">${stats.event_count}</div>
+                            <div style="font-size:13px; color:var(--text-sec); font-weight:600;">TERMINE</div>
+                        </div>
+                    </div>
+                    
+                    <div class="floating-card" style="padding: 20px;">
+                        <h4 style="margin:0 0 15px 0; font-size:17px;">Globales Management</h4>
+                        <div class="account-item" onclick="renderSchoolClassManagement()" style="padding:12px 0;">
+                             <div class="account-item-icon"><i data-lucide="school"></i></div>
+                             <div class="account-item-text">Klassen verwalten</div>
+                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        </div>
+                        <div class="account-item" onclick="renderSubjectManagement()" style="padding:12px 0;">
+                             <div class="account-item-icon"><i data-lucide="book"></i></div>
+                             <div class="account-item-text">Globale Fächer & Sharing</div>
+                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">Fehler beim Laden des Dashboards</div>`;
+            }
+        }
+
         async function saveNewUser() {
             const username = document.getElementById('new-user-name').value;
             const password = document.getElementById('new-user-pw').value;
@@ -2927,6 +2992,12 @@
                     </div>
                 ` : ''}
                 ${type === 'Note' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="${t('grade_value')}" value="${valVal}">` : ''}
+                ${(type === 'Aufgabe' || type === 'Termin') && window.currentUser.is_admin ? `
+                <div class="account-item" onclick="toggleSharing()" style="border:none; margin-bottom:15px; background:var(--tab-bg); border-radius:12px; padding:15px;">
+                    <div class="account-item-text">Mit anderen Klassen teilen (via Fach)</div>
+                    <div id="sharing-toggle" class="ios-toggle"><div class="ios-toggle-knob"></div></div>
+                </div>
+                ` : ''}
                 <div class="custom-picker-trigger" onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span id="selected-date-display">${selectedDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE')}</span><i data-lucide="calendar" style="width:18px"></i></div>
                 <div class="picker-options" id="calendar-picker-view" style="padding:15px">
                     <div class="calendar-header"><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(-1)"><i data-lucide="chevron-left"></i></div><span id="calendar-month-year" style="font-weight:600"></span><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(1)"><i data-lucide="chevron-right"></i></div></div>
@@ -2945,15 +3016,21 @@
                     .then(res => res.json())
                     .then(data => {
                         subjectList.innerHTML = data.map(s =>
-                            `<div class="picker-option" onclick="selectSubject('${s.name}')">${s.name}</div>`
+                            `<div class="picker-option" data-id="${s.id}" onclick="selectSubject('${s.name}')">${s.name}</div>`
                         ).join('');
                     })
                     .catch(e => {
                         console.error("Subject load error", e);
-                        // Fallback
                         subjectList.innerHTML = '<div style="padding:10px; color:var(--text-sec); text-align:center;">Laden fehlgeschlagen</div>';
                     });
             }
+        }
+
+        let isShared = false;
+        function toggleSharing() {
+            isShared = !isShared;
+            const toggle = document.getElementById('sharing-toggle');
+            if (isShared) toggle.classList.add('active'); else toggle.classList.remove('active');
         }
 
         let imagesToDelete = new Set();
@@ -2989,6 +3066,8 @@
                 formData.append('title', title);
                 formData.append('description', desc);
                 formData.append('subject', subject || '');
+                formData.append('subject_id', selectedSubjectId || '');
+                formData.append('is_shared', isShared ? 'true' : 'false');
                 formData.append('due_date', date);
 
                 const fileInput = document.getElementById('input-images');
@@ -3033,7 +3112,7 @@
                 await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, description: desc, date })
+                    body: JSON.stringify({ title, description: desc, date, subject_id: selectedSubjectId, is_shared: isShared })
                 });
                 closeSheet(); renderCalendar(currentView === 'calendar' ? 'termine' : 'monat');
             } catch (e) { alert(t('error')); }
@@ -3172,16 +3251,27 @@
                 const subjects = await res.json();
 
                 const listHtml = subjects.map(s => `
-                    <div class="list-item">
-                        <div class="item-content">
+                    <div class="list-item" style="flex-wrap:wrap;">
+                        <div class="item-content" style="flex:1;">
                             <div class="item-title">${s.name}</div>
+                            ${window.currentUser.is_super_admin ? `<div class="item-sub" style="font-size:11px;">Klasse(n): ${s.class_names ? s.class_names.join(', ') : 'Keine'}</div>` : ''}
                         </div>
-                        <div style="color:var(--danger); cursor:pointer; padding:5px;" onclick="deleteSubject(${s.id}, '${s.name}')">
-                            <i data-lucide="trash-2" style="width:18px;"></i>
+                        <div style="display:flex;">
+                            ${window.currentUser.is_super_admin ? `<div style="color:var(--accent); cursor:pointer; padding:8px;" onclick="openSubjectClassLinker(${s.id}, '${s.name}')"><i data-lucide="edit-3" style="width:18px;"></i></div>` : ''}
+                            <div style="color:var(--danger); cursor:pointer; padding:8px;" onclick="deleteSubject(${s.id}, '${s.name}')">
+                                <i data-lucide="trash-2" style="width:18px;"></i>
+                            </div>
                         </div>
                     </div>`).join('');
 
-                document.getElementById('app-container').innerHTML = `
+                const superAdminAdd = window.currentUser.is_super_admin ? `
+                    <div class="floating-card" style="padding: 20px;">
+                        <h3 style="margin-top:0">${t('new_subject')} (Superadmin)</h3>
+                        <input type="text" id="new-subject-name" class="ios-input" placeholder="${t('subject_placeholder')}">
+                        <p style="font-size:12px; color:var(--text-sec); margin-bottom:10px;">Bitte die Klassen nach der Erstellung über das Stift-Icon zuweisen.</p>
+                        <button class="ios-btn" onclick="addSubject()">${t('add_btn')}</button>
+                    </div>
+                ` : `
                     <div class="floating-card" style="padding: 20px;">
                         <h3 style="margin-top:0">${t('new_subject')}</h3>
                         <div style="display:flex; gap:10px;">
@@ -3189,9 +3279,12 @@
                             <button class="ios-btn" style="width:auto; padding:0 20px;" onclick="addSubject()">${t('add_btn')}</button>
                         </div>
                     </div>
+                `;
 
+                document.getElementById('app-container').innerHTML = `
+                    ${superAdminAdd}
                     <h3 style="margin:20px 0 10px 5px; font-size:18px;">${t('existing_subjects')}</h3>
-                    <div class="floating-card" style="padding:0 20px;">
+                    <div class="floating-card" style="padding:0 24px;">
                         ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_subjects_found')}</div>`}
                     </div>
                 `;
@@ -3200,6 +3293,63 @@
                 console.error(e);
                 alert(t('error_loading'));
             }
+        }
+
+        async function openSubjectClassLinker(subId, subName) {
+            try {
+                const res = await fetch('/api/admin/classes');
+                const classes = await res.json();
+
+                const subRes = await fetch(`/api/subjects/${subId}`);
+                const subData = await subRes.json();
+                const activeClassIds = subData.class_ids || [];
+
+                document.getElementById('sheet-content').innerHTML = `
+                    <div class="sheet-header">
+                        <h2 style="margin:0; font-size:20px; font-weight:700;">Fach zuweisen: ${subName}</h2>
+                        <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        ${classes.map(c => `
+                            <div class="account-item" onclick="toggleSubjectClass(${c.id})" style="border:none; background:var(--tab-bg); border-radius:12px; margin-bottom:10px;">
+                                <div class="account-item-text">${c.name}</div>
+                                <div id="class-toggle-${c.id}" class="ios-toggle ${activeClassIds.includes(c.id) ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="ios-btn" onclick="saveSubjectClasses(${subId})">Speichern</button>
+                `;
+
+                overlaySelectedClasses = new Set(activeClassIds);
+                openSheetOverlay();
+                lucide.createIcons();
+            } catch (e) { alert('Fehler beim Laden'); }
+        }
+
+        let overlaySelectedClasses = new Set();
+        function toggleSubjectClass(id) {
+            const toggle = document.getElementById(`class-toggle-${id}`);
+            if (overlaySelectedClasses.has(id)) {
+                overlaySelectedClasses.delete(id);
+                toggle.classList.remove('active');
+            } else {
+                overlaySelectedClasses.add(id);
+                toggle.classList.add('active');
+            }
+        }
+
+        async function saveSubjectClasses(subId) {
+            try {
+                const res = await fetch(`/api/subjects/${subId}/classes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ class_ids: Array.from(overlaySelectedClasses) })
+                });
+                if (res.ok) {
+                    closeSheet();
+                    renderSubjectManagement();
+                } else alert('Fehler beim Speichern');
+            } catch (e) { alert('Verbindungsfehler'); }
         }
 
         async function addSubject() {

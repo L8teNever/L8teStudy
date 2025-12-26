@@ -40,9 +40,12 @@ def migrate_database():
             add_column_if_missing('user', 'is_super_admin', 'BOOLEAN DEFAULT 0')
             add_column_if_missing('user', 'class_id', 'INTEGER REFERENCES school_class(id)')
             add_column_if_missing('task', 'class_id', 'INTEGER REFERENCES school_class(id)')
+            add_column_if_missing('task', 'subject_id', 'INTEGER REFERENCES subject(id)')
+            add_column_if_missing('task', 'is_shared', 'BOOLEAN DEFAULT 0')
             add_column_if_missing('event', 'class_id', 'INTEGER REFERENCES school_class(id)')
+            add_column_if_missing('event', 'subject_id', 'INTEGER REFERENCES subject(id)')
+            add_column_if_missing('event', 'is_shared', 'BOOLEAN DEFAULT 0')
             add_column_if_missing('audit_log', 'class_id', 'INTEGER REFERENCES school_class(id)')
-            add_column_if_missing('subject', 'class_id', 'INTEGER REFERENCES school_class(id)')
 
             # --- Data Migration ---
             # 1. Ensure at least one class exists
@@ -54,8 +57,19 @@ def migrate_database():
                 db.session.commit()
                 print(f"✓ Default class created: {default_class.name} (Code: {default_class.code})")
 
-            # 2. Assign all existing users to default class if they don't have one
-            # EXCEPT super admin if we decide so, but let's keep it simple.
+            # 2. Migrate Subject-Class relationships to junction table
+            if 'subject' in inspector.get_table_names():
+                cols = [col['name'] for col in inspector.get_columns('subject')]
+                if 'class_id' in cols:
+                    print("Migrating subjects to junction table...")
+                    with db.engine.connect() as conn:
+                        res = conn.execute(text("SELECT id, class_id FROM subject WHERE class_id IS NOT NULL"))
+                        for row in res:
+                            conn.execute(text("INSERT OR IGNORE INTO subject_classes (subject_id, class_id) VALUES (:sid, :cid)"), {"sid": row[0], "cid": row[1]})
+                        conn.commit()
+                    print("✓ Subjects migrated to junction table.")
+
+            # 3. Assign all existing users to default class if they don't have one
             users_to_fix = User.query.filter(User.class_id.is_(None), User.is_super_admin == False).all()
             if users_to_fix:
                 print(f"Assigning {len(users_to_fix)} users to default class...")
@@ -63,15 +77,15 @@ def migrate_database():
                     u.class_id = default_class.id
                 db.session.commit()
 
-            # 3. Handle old 'admin' user - make it super admin maybe?
+            # 4. Handle old 'admin' user
             admin_user = User.query.filter_by(username='admin').first()
             if admin_user and not admin_user.is_super_admin:
                 print("Setting 'admin' user as Super Admin...")
                 admin_user.is_super_admin = True
-                admin_user.class_id = None # Super admins are global
+                admin_user.class_id = None 
                 db.session.commit()
 
-            # 4. Assign shared content to default class
+            # 5. Assign shared content to default class
             tasks_to_fix = Task.query.filter(Task.class_id.is_(None)).all()
             if tasks_to_fix:
                 print(f"Migrating {len(tasks_to_fix)} tasks to default class...")
@@ -84,13 +98,6 @@ def migrate_database():
                 print(f"Migrating {len(events_to_fix)} events to default class...")
                 for e in events_to_fix:
                     e.class_id = default_class.id
-                db.session.commit()
-
-            subjects_to_fix = Subject.query.filter(Subject.class_id.is_(None)).all()
-            if subjects_to_fix:
-                print(f"Migrating {len(subjects_to_fix)} subjects to default class...")
-                for s in subjects_to_fix:
-                    s.class_id = default_class.id
                 db.session.commit()
             
             logs_to_fix = AuditLog.query.filter(AuditLog.class_id.is_(None)).all()

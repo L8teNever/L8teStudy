@@ -96,10 +96,23 @@ def get_tasks():
     try:
         # Return tasks for the user's class
         if current_user.is_super_admin:
-            # Super admin sees everything (maybe we add a filter later)
+            # Super admin sees everything
             tasks = Task.query.filter(Task.deleted_at.is_(None)).order_by(Task.due_date).all()
         else:
-            tasks = Task.query.filter(Task.deleted_at.is_(None), Task.class_id == current_user.class_id).order_by(Task.due_date).all()
+            from .models import SchoolClass
+            # Tasks for own class OR shared tasks for subjects linked to own class
+            tasks = Task.query.filter(
+                Task.deleted_at.is_(None),
+                db.or_(
+                    Task.class_id == current_user.class_id,
+                    db.and_(
+                        Task.is_shared == True,
+                        Task.subject_id.in_(
+                            db.session.query(Subject.id).join(Subject.classes).filter(SchoolClass.id == current_user.class_id)
+                        )
+                    )
+                )
+            ).order_by(Task.due_date).all()
         
         from .models import TaskCompletion
         
@@ -276,7 +289,19 @@ def get_events():
         if current_user.is_super_admin:
             events = Event.query.filter(Event.deleted_at.is_(None)).order_by(Event.date).all()
         else:
-            events = Event.query.filter(Event.deleted_at.is_(None), Event.class_id == current_user.class_id).order_by(Event.date).all()
+            from .models import SchoolClass
+            events = Event.query.filter(
+                Event.deleted_at.is_(None),
+                db.or_(
+                    Event.class_id == current_user.class_id,
+                    db.and_(
+                        Event.is_shared == True,
+                        Event.subject_id.in_(
+                            db.session.query(Subject.id).join(Subject.classes).filter(SchoolClass.id == current_user.class_id)
+                        )
+                    )
+                )
+            ).order_by(Event.date).all()
         return jsonify([{
             'id': e.id,
             'title': e.title,
@@ -694,7 +719,8 @@ def get_subjects():
     if current_user.is_super_admin:
         subjects = Subject.query.order_by(Subject.name).all()
     else:
-        subjects = Subject.query.filter_by(class_id=current_user.class_id).order_by(Subject.name).all()
+        from .models import SchoolClass
+        subjects = Subject.query.join(Subject.classes).filter(SchoolClass.id == current_user.class_id).order_by(Subject.name).all()
     # If empty (shouldn't happen due to migration), return defaults
     if not subjects:
        defaults = ['Mathematik', 'Deutsch', 'Englisch', 'Physik', 'Biologie', 'Geschichte', 'Kunst', 'Sport', 'Chemie', 'Religion']
@@ -709,13 +735,20 @@ def add_subject():
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     data = request.json
     name = data.get('name')
+    class_ids = data.get('class_ids', []) # Super admin can specify multiple classes
+    
     if not name:
         return jsonify({'success': False, 'message': 'Name required'}), 400
     
-    if Subject.query.filter_by(name=name, class_id=current_user.class_id).first():
-         return jsonify({'success': False, 'message': 'Subject exists'}), 400
-
-    db.session.add(Subject(name=name, class_id=current_user.class_id))
+    from .models import SchoolClass
+    new_sub = Subject(name=name)
+    
+    if current_user.is_super_admin and class_ids:
+        new_sub.classes = SchoolClass.query.filter(SchoolClass.id.in_(class_ids)).all()
+    elif current_user.class_id:
+        new_sub.classes = [SchoolClass.query.get(current_user.class_id)]
+    
+    db.session.add(new_sub)
     db.session.commit()
     return jsonify({'success': True})
 
@@ -752,6 +785,52 @@ def get_activity_log():
         'action': l.action,
         'timestamp': l.timestamp.strftime('%d.%m.%Y %H:%M')
     } for l in logs])
+
+# --- Super Admin Dashboard & Global Management ---
+
+@api_bp.route('/admin/dashboard/stats', methods=['GET'])
+@login_required
+def get_admin_dashboard_stats():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False}), 403
+    
+    from .models import SchoolClass, Task, Event
+    return jsonify({
+        'class_count': SchoolClass.query.count(),
+        'user_count': User.query.count(),
+        'task_count': Task.query.filter_by(deleted_at=None).count(),
+        'event_count': Event.query.filter_by(deleted_at=None).count(),
+    })
+
+@api_bp.route('/subjects/<int:id>/classes', methods=['POST'])
+@login_required
+def update_subject_classes(id):
+    if not current_user.is_super_admin:
+        return jsonify({'success': False}), 403
+    
+    data = request.json
+    class_ids = data.get('class_ids', [])
+    
+    from .models import SchoolClass
+    subject = Subject.query.get_or_404(id)
+    subject.classes = SchoolClass.query.filter(SchoolClass.id.in_(class_ids)).all()
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/subjects/<int:id>', methods=['GET'])
+@login_required
+def get_subject_detail(id):
+    subject = Subject.query.get_or_404(id)
+    # Check if user has access to this subject
+    if not current_user.is_super_admin:
+        if current_user.school_class not in subject.classes:
+            return jsonify({'success': False}), 403
+            
+    return jsonify({
+        'id': subject.id,
+        'name': subject.name,
+        'class_ids': [c.id for c in subject.classes]
+    })
 
 # --- Super Admin Class Management ---
 
