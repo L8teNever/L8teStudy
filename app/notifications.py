@@ -92,9 +92,10 @@ def send_web_push(subscription_info, message_body):
         )
     except WebPushException as ex:
         logger.error(f"WebPush failed: {ex}")
-        # If 410 Gone, remove subscription
+        # If 410 Gone, remove subscription (expired/uninstalled)
         if ex.response and ex.response.status_code == 410:
             return False
+        # Other errors (401, 403, 500 etc) are logged but we might keep the sub
     except Exception as e:
         logger.error(f"WebPush error: {e}")
     return True
@@ -102,6 +103,10 @@ def send_web_push(subscription_info, message_body):
 def notify_user(user, title, body, url='/'):
     """Sends a notification to a specific user via all their subscriptions"""
     subs = PushSubscription.query.filter_by(user_id=user.id).all()
+    if not subs:
+        logger.info(f"Notification skipped: User {user.username} has no push subscriptions.")
+        return
+
     payload = {
         "title": title,
         "body": body,
@@ -119,6 +124,7 @@ def notify_user(user, title, body, url='/'):
         }
         success = send_web_push(sub_info, payload)
         if success is False:
+            logger.info(f"Removing invalid subscription for user {user.username}")
             db.session.delete(sub)
     
     db.session.commit()
@@ -156,6 +162,8 @@ def check_reminders():
         today = now.date()
         current_time_str = now.strftime("%H:%M")
         
+        logger.debug(f"[Scheduler] Checking reminders at {current_time_str} ({now})")
+        
         # 1. Check all users
         users = User.query.all()
         for user in users:
@@ -164,8 +172,10 @@ def check_reminders():
             
             # Homework Reminder
             if settings.reminder_homework:
+                logger.debug(f"[Scheduler] User {user.username} homework reminder set for {settings.reminder_homework}")
                 # If we are at or past the set time AND haven't sent it today
                 if current_time_str >= settings.reminder_homework and settings.last_homework_reminder_at != today:
+                    logger.info(f"[Scheduler] Triggering homework reminder for {user.username}")
                     # Check ALL non-deleted tasks for this class
                     all_tasks = Task.query.filter(
                         Task.class_id == user.class_id,
@@ -183,11 +193,20 @@ def check_reminders():
                     if count > 0:
                         notify_user(user, "Offene Aufgaben", f"Du hast noch {count} offene Aufgaben zu erledigen!", url='/tasks')
                         settings.last_homework_reminder_at = today
+                        db.session.add(settings)
+                        db.session.commit() # Commit immediately to mark as sent
+                        logger.info(f"[Scheduler] Homework notification sent to {user.username} (Count: {count})")
+                    else:
+                        logger.info(f"[Scheduler] No open tasks for {user.username}, marking as checked.")
+                        settings.last_homework_reminder_at = today
+                        db.session.add(settings)
                         db.session.commit()
 
             # Exam/Event Reminder
             if settings.reminder_exam:
+                logger.debug(f"[Scheduler] User {user.username} event reminder set for {settings.reminder_exam}")
                 if current_time_str >= settings.reminder_exam and settings.last_exam_reminder_at != today:
+                    logger.info(f"[Scheduler] Triggering event reminder for {user.username}")
                     tomorrow = today + timedelta(days=1)
                     events = Event.query.filter(
                         db.func.date(Event.date) == tomorrow,
@@ -198,5 +217,12 @@ def check_reminders():
                     if events:
                         notify_user(user, "Termin/Klausur morgen", f"Morgen: {events[0].title}" + (f" und {len(events)-1} weitere" if len(events)>1 else ""), url='/calendar')
                         settings.last_exam_reminder_at = today
+                        db.session.add(settings)
+                        db.session.commit() # Commit immediately
+                        logger.info(f"[Scheduler] Event notification sent to {user.username}")
+                    else:
+                        logger.info(f"[Scheduler] No events tomorrow for {user.username}, marking as checked.")
+                        settings.last_exam_reminder_at = today
+                        db.session.add(settings)
                         db.session.commit()
 

@@ -9,4 +9,5 @@ services:
       - DATABASE_URL=sqlite:////data/l8testudy.db
       - SECRET_KEY=${SECRET_KEY:-your-default-dev-secret}
       - UPLOAD_FOLDER=/data/uploads
+      - TZ=Europe/Berlin
     restart: always

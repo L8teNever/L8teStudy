@@ -2155,9 +2155,21 @@
                         <p class="item-sub" style="margin-top:10px; font-size:13px;">${t('reminder_hint')}</p>
                    </div>
                    
-                   <div style="margin-top:20px; text-align:center;">
+                    <div class="floating-card" style="padding:15px; background:var(--tab-bg); border:1px solid var(--border);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--text-sec);">
+                            <span>Server Zeit:</span>
+                            <span style="font-weight:700; color:var(--text-main);">${settings.server_time || '--:--'}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--text-sec); margin-top:5px;">
+                            <span>Status:</span>
+                            <span style="font-weight:700; color:${settings.scheduler_running ? 'var(--success)' : 'var(--danger)'};">${settings.scheduler_running ? 'Aktiv' : 'Inaktiv'}</span>
+                        </div>
+                        ${!settings.scheduler_running ? `<p style="color:var(--danger); font-size:11px; margin-top:8px;">⚠️ Scheduler nicht gestartet. Bitte den Administrator kontaktieren.</p>` : ''}
+                    </div>
+                    
+                    <div style="margin-top:20px; text-align:center;">
                         <button class="ios-btn btn-sec" onclick="sendTestNotification()" style="width:auto; padding:10px 20px;">${t('send_test')}</button>
-                   </div>
+                    </div>
                 `;
                 lucide.createIcons();
 
