@@ -2838,36 +2838,42 @@
                 const c = await res.json();
 
                 document.getElementById('app-container').innerHTML = `
-                    <div class="floating-card" style="padding:20px;">
-                        <h4 style="margin:0 0 15px 0;">${t('general')}</h4>
-                        <div style="margin-bottom:15px;">
-                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:5px; display:block;">${t('class_name')}</label>
-                            <input type="text" id="edit-class-name" class="ios-input" value="${c.name}" ${!window.currentUser.is_super_admin ? 'disabled' : ''}>
-                            ${!window.currentUser.is_super_admin ? `<p style="font-size:11px; color:var(--text-sec); margin-top:5px;">${t('super_admin_only_name')}</p>` : ''}
-                        </div>
-                        <div style="margin-bottom:20px;">
-                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:5px; display:block;">${t('login_id')}</label>
-                            <input type="text" id="edit-class-code" class="ios-input" value="${c.code}" placeholder="z.B. WRS1">
-                            <p style="font-size:11px; color:var(--text-sec); margin-top:5px;">${t('login_id_hint')}</p>
-                        </div>
-
-                        <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                             <div>
-                                <div style="font-size:16px; font-weight:600;">Aufgaben-Chat</div>
-                                <div style="font-size:12px; color:var(--text-sec);">Chat für Aufgaben aktivieren</div>
-                             </div>
-                             <div class="toggle-switch ${c.chat_enabled ? 'active' : ''}" id="toggle-chat-enabled" onclick="this.classList.toggle('active')">
-                                <div class="toggle-knob"></div>
-                             </div>
+                document.getElementById('app-container').innerHTML = `
+                    <div style="padding: 10px 0;">
+                        <h4 style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">${t('general')}</h4>
+                        <div class="floating-card" style="padding:0; margin-bottom:25px;">
+                            <div class="account-item" style="cursor:default;">
+                                <div class="account-item-text" style="flex:0 0 100px;">${t('class_name')}</div>
+                                <input type="text" id="edit-class-name" style="border:none; background:transparent; font-size:16px; width:100%; text-align:right; color:var(--text-main); outline:none;" value="${c.name}" ${!window.currentUser.is_super_admin ? 'disabled' : ''}>
+                            </div>
+                            ${!window.currentUser.is_super_admin ? `<div style="padding:0 20px 15px 20px; font-size:11px; color:var(--text-sec); margin-top:-10px;">${t('super_admin_only_name')}</div>` : ''}
+                            
+                            <div class="account-item" style="cursor:default; border-top:1px solid var(--border);">
+                                <div class="account-item-text" style="flex:0 0 100px;">${t('login_id')}</div>
+                                <input type="text" id="edit-class-code" style="border:none; background:transparent; font-size:16px; width:100%; text-align:right; color:var(--text-sec); outline:none;" value="${c.code}" placeholder="CODE">
+                            </div>
                         </div>
 
-                        <div style="padding:15px; background:rgba(0,113,227,0.1); border-radius:12px; margin-bottom:20px;">
-                            <label style="font-size:12px; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:8px; display:block;">${t('direct_login_link')}</label>
-                            <div style="font-size:13px; font-weight:500; word-break:break-all; background:white; padding:10px; border-radius:8px; border:1px solid rgba(0,0,0,0.05);">
+                        <h4 style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">Funktionen</h4>
+                        <div class="floating-card" style="padding:0; margin-bottom:25px;">
+                            <div class="account-item" style="cursor:pointer;" onclick="toggleSwitch('toggle-chat-enabled')">
+                                <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="message-circle"></i></div>
+                                <div class="account-item-text">Aufgaben-Chat</div>
+                                <div class="toggle-switch ${c.chat_enabled ? 'active' : ''}" id="toggle-chat-enabled" style="pointer-events:none;">
+                                    <div class="toggle-knob"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4 style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">Zugang</h4>
+                        <div class="floating-card" style="padding:20px; margin-bottom:25px;">
+                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:8px; display:block;">${t('direct_login_link')}</label>
+                            <div style="font-size:13px; font-weight:500; word-break:break-all; background:var(--tab-bg); padding:10px; border-radius:8px; user-select:all;">
                                 ${window.location.origin}/${c.code}
                             </div>
                             <p style="font-size:11px; color:var(--text-sec); margin-top:8px;">${t('direct_login_hint')}</p>
                         </div>
+
                         <button class="ios-btn" onclick="saveClassSettings(${id})">${t('save_btn')}</button>
                     </div>
                 `;
