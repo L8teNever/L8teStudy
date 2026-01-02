@@ -2413,55 +2413,40 @@
             document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
             document.getElementById('app-container').innerHTML = `
-                <div style="margin: 0 10px 15px 10px; font-size:14px; color:var(--text-sec); line-height:1.4;">
-                    ${t('admin_center_desc')}
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
-                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; cursor:pointer;" onclick="renderUserManagement()">
-                        <div style="width:40px; height:40px; background:var(--accent); color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
-                            <i data-lucide="users" style="width:20px;"></i>
-                        </div>
-                        <div style="font-weight:700; font-size:15px;">${t('manage_users')}</div>
+                <div class="floating-card">
+                    <div class="account-item" onclick="renderUserManagement()">
+                        <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="users"></i></div>
+                        <div class="account-item-text">${t('manage_users')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
-                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; cursor:pointer;" onclick="renderSubjectManagement()">
-                        <div style="width:40px; height:40px; background:#5856D6; color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
-                            <i data-lucide="book-open" style="width:20px;"></i>
-                        </div>
-                        <div style="font-weight:700; font-size:15px;">${t('manage_subjects')}</div>
+                    <div class="account-item" onclick="renderSubjectManagement()">
+                        <div class="account-item-icon" style="background:#5856D6; color:white;"><i data-lucide="book-open"></i></div>
+                        <div class="account-item-text">${t('manage_subjects')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
-                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; cursor:pointer;" onclick="renderActivityLog()">
-                        <div style="width:40px; height:40px; background:#FF9500; color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
-                            <i data-lucide="activity" style="width:20px;"></i>
-                        </div>
-                        <div style="font-weight:700; font-size:15px;">${t('system_activity')}</div>
+                    <div class="account-item" onclick="renderActivityLog()">
+                        <div class="account-item-icon" style="background:#FF9500; color:white;"><i data-lucide="activity"></i></div>
+                        <div class="account-item-text">${t('system_activity')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     ${window.currentUser.class_id ? `
-                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; cursor:pointer;" onclick="renderClassSettings(${window.currentUser.class_id})">
-                        <div style="width:40px; height:40px; background:#8E8E93; color:white; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
-                            <i data-lucide="settings" style="width:20px;"></i>
-                        </div>
-                        <div style="font-weight:700; font-size:15px;">${t('class_settings')}</div>
+                    <div class="account-item" onclick="renderClassSettings(${window.currentUser.class_id})">
+                        <div class="account-item-icon" style="background:#8E8E93; color:white;"><i data-lucide="settings"></i></div>
+                        <div class="account-item-text">${t('class_settings')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
-                    ` : `
-                    <div class="floating-card" style="margin:0; padding:20px; text-align:center; color:var(--text-sec); opacity:0.6; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                        <i data-lucide="settings" style="width:20px; margin-bottom:10px;"></i>
-                        <div style="font-weight:700; font-size:15px;">${t('class_settings')}</div>
-                    </div>
-                    `}
+                    ` : ''}
                 </div>
 
                 ${window.currentUser.is_super_admin ? `
-                <div class="floating-card" style="padding:15px; border:1px solid var(--accent); background:rgba(0,122,255,0.05);">
-                    <div style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="renderSuperAdminDashboard()">
-                        <div style="width:40px; height:40px; background:var(--accent); color:white; border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                            <i data-lucide="shield-check" style="width:20px;"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight:700;">Superadmin Access</div>
+                <div class="floating-card">
+                    <div class="account-item" onclick="renderSuperAdminDashboard()">
+                        <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="shield-check"></i></div>
+                        <div class="account-item-text">
+                            <div>Superadmin Access</div>
                             <div style="font-size:12px; color:var(--text-sec);">${t('superadmin_desc')}</div>
                         </div>
-                        <i data-lucide="chevron-right" style="margin-left:auto; width:18px; color:var(--text-sec)"></i>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                 </div>
                 ` : ''}
