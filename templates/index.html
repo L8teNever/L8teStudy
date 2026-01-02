@@ -236,6 +236,10 @@
             height: 48px;
         }
 
+        .no-interaction {
+            pointer-events: none !important;
+        }
+
         .tab-bar {
             display: flex;
             background: var(--tab-bg);
@@ -1313,20 +1317,10 @@
         function closeSheet() {
             const sheet = document.getElementById('sheet-overlay');
             if (sheet.classList.contains('active')) {
-                sheet.classList.remove('active');
-                // If we have a modal state in history, go back one step to pop it.
-                // But how do we know if the current history state IS the modal state?
-                // If user pressed back button, the state is already popped (handled in popstate).
-                // If user pressed "X" button, we are still in modal state, so we must go back.
+                // Block interaction to prevent ghost clicks on mobile
+                document.body.classList.add('no-interaction');
+                setTimeout(() => document.body.classList.remove('no-interaction'), 400);
 
-                // We can't robustly know if we are "in" the modal state without tracking.
-                // But if we consistently pushState on open, we should history.back() on explicit close.
-                // HOWEVER: if popstate triggered this (via logic above? no, popstate just removes class),
-                // then we don't need to go back.
-
-                // Check if this call came from popstate? 
-                // Easier: In popstate, only remove class.
-                // In explicit close button, call history.back().
                 window.history.back();
             }
         }
@@ -1443,6 +1437,7 @@
         }
 
         async function renderTasks(tab = 'open') {
+            currentView = 'tasks';
             const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
             const locale = lang === 'en' ? 'en-US' : 'de-DE';
             currentTaskTab = tab;
@@ -1743,6 +1738,7 @@
         }
 
         async function renderCalendar(tab = 'termine') {
+            currentView = 'calendar';
             currentCalendarTab = tab;
             const container = document.getElementById('app-container');
             container.innerHTML = `
@@ -1893,6 +1889,7 @@
         }
 
         async function renderGrades() {
+            currentView = 'grades';
             document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
             try {
                 const res = await fetch('/api/grades');
