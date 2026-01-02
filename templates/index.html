@@ -1390,12 +1390,13 @@
                 const res = await fetch('/api/tasks');
                 if (currentView !== 'home') return;
                 const tasks = await res.json();
+                cachedTasks = tasks;
                 const dueTasks = tasks.filter(t => !t.is_done).slice(0, 3);
                 const container = document.getElementById('home-due-tasks');
                 if (!container) return; // Exit if user navigated away
                 if (dueTasks.length > 0) {
                     const listHtml = dueTasks.map(task => `
-                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('task', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
+                        <div class="list-item" style="padding: 18px 0;" onclick="openTaskDetails(${task.id})">
                             <div class="check-circle" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, false, true)"><i data-lucide="circle" style="width:14px; opacity:0"></i></div>
                             <div class="item-content"><div class="item-title">${task.title}</div><div class="item-sub">${t('due')}: ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}</div></div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
@@ -1410,6 +1411,14 @@
                     container.innerHTML = `<p class="item-sub">${t('tasks_empty')}</p>`;
                 }
             } catch (e) { console.error(e); }
+        }
+
+        function openTaskDetails(id) {
+            if (!cachedTasks) return;
+            const task = cachedTasks.find(t => t.id === id);
+            if (task) {
+                openDetails('task', task.title, task.subject || '', task.due_date || '', null, task.description || '', task.id, JSON.stringify(task.images || []));
+            }
         }
 
         async function renderTasks(tab = 'open') {
@@ -1457,7 +1466,7 @@
                     return;
                 }
                 const listHtml = filteredTasks.map(task => `
-                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('task', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
+                    <div class="list-item" style="padding: 18px 0;" onclick="openTaskDetails(${task.id})">
                         <div class="check-circle ${task.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})">
                             <i data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}"></i>
                         </div>
@@ -1695,7 +1704,7 @@
                 }
 
                 const listHtml = filteredTasks.map(task => `
-                    <div class="list-item" style="padding: 18px 0;" onclick="openDetails('Aufgabe', '${task.title}', '${task.subject || ''}', '${task.due_date || ''}', null, '${task.description || ''}', ${task.id}, '${JSON.stringify(task.images || []).replace(/"/g, '&quot;')}')">
+                    <div class="list-item" style="padding: 18px 0;" onclick="openTaskDetails(${task.id})">
                         <div class="check-circle ${task.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})">
                             <i data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}"></i>
                         </div>
