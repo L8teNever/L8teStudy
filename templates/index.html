@@ -1013,7 +1013,8 @@
             is_super_admin: "{{ 'true' if user.is_super_admin else 'false' }}" === 'true',
             needs_password_change: "{{ 'true' if user.needs_password_change else 'false' }}" === 'true',
             has_seen_tutorial: "{{ 'true' if user.has_seen_tutorial else 'false' }}" === 'true',
-            className: "{{ user.school_class.name if user.school_class else '' }}"
+            className: "{{ user.school_class.name if user.school_class else '' }}",
+            class_id: {{ user.class_id if user.class_id else 'null' }}
         };
 
         function updateBrowserTitle(pageTitle) {
