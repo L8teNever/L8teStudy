@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, PushSubscription, Subject, db
+from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, PushSubscription, Subject, db, TaskMessage, TaskChatRead
 from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
 import os
@@ -10,6 +10,20 @@ from . import login_manager, limiter, csrf
 main_bp = Blueprint('main', __name__)
 auth_bp = Blueprint('auth', __name__)
 api_bp = Blueprint('api', __name__)
+
+@api_bp.route('/config', methods=['GET'])
+@login_required
+def get_config():
+    chat_enabled = False
+    if current_user.school_class:
+        chat_enabled = current_user.school_class.chat_enabled
+    elif current_user.is_super_admin:
+        chat_enabled = True # Super admin always has it enabled for testing potentially, or strictly based on context
+    
+    return jsonify({
+        'chat_enabled': chat_enabled,
+        'user_id': current_user.id
+    })
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -148,8 +162,17 @@ def get_tasks():
                 'due_date': t.due_date.strftime('%Y-%m-%d') if t.due_date else None,
                 'description': t.description,
                 'is_done': is_done,
+                'is_done': is_done,
                 # Updated to use secure route /uploads/<filename>
-                'images': [{'id': img.id, 'url': f"/uploads/{img.filename}"} for img in t.images]
+                'images': [{'id': img.id, 'url': f"/uploads/{img.filename}"} for img in t.images],
+                'unread_chat_count': TaskMessage.query.filter(
+                    TaskMessage.task_id == t.id,
+                    TaskMessage.created_at > (
+                        db.session.query(TaskChatRead.last_read_at)
+                        .filter_by(user_id=current_user.id, task_id=t.id)
+                        .scalar() or datetime(1970, 1, 1)
+                    )
+                ).count()
             })
         return jsonify(results)
     except Exception as e:
@@ -308,6 +331,122 @@ def delete_task(id):
 
     db.session.commit()
     return jsonify({'success': True})
+
+@api_bp.route('/tasks/<int:id>/chat', methods=['GET'])
+@login_required
+def get_task_chat(id):
+    try:
+        task = Task.query.get_or_404(id)
+        from .models import SchoolClass
+        sc = SchoolClass.query.get(current_user.class_id)
+        # Only check chat_enabled if not super admin (assuming admin wants to test)
+        # Note: sc might be None for superadmin if class_id is None
+        chat_enabled = sc.chat_enabled if sc else False
+        if not current_user.is_super_admin and not chat_enabled:
+             return jsonify({'error': 'Chat disabled'}), 403
+
+        messages = TaskMessage.query.filter_by(task_id=id).order_by(TaskMessage.created_at).all()
+        results = [{
+            'id': m.id,
+            'user_id': m.user_id,
+            'user_name': m.user.username,
+            'content': m.content,
+            'message_type': m.message_type,
+            'file_url': m.file_url,
+            'file_name': m.file_name,
+            'created_at': m.created_at.isoformat(),
+            'is_own': m.user_id == current_user.id
+        } for m in messages]
+        return jsonify(results)
+    except Exception as e:
+        current_app.logger.error(f"Chat error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/tasks/<int:id>/chat', methods=['POST'])
+@login_required
+def post_task_chat(id):
+    try:
+        task = Task.query.get_or_404(id)
+        sc = SchoolClass.query.get(current_user.class_id) if current_user.class_id else None
+        chat_enabled = sc.chat_enabled if sc else False
+        
+        if not current_user.is_super_admin and not chat_enabled:
+             return jsonify({'error': 'Chat disabled'}), 403
+             
+        from datetime import datetime
+        content = request.form.get('content')
+        files = request.files.getlist('files')
+        
+        posted_msgs = []
+
+        # 1. Text Message
+        if content and content.strip():
+            msg = TaskMessage(task_id=id, user_id=current_user.id, content=content, message_type='text')
+            db.session.add(msg)
+            posted_msgs.append(msg)
+
+        # 2. Files
+        for file in files:
+            if file and file.filename:
+                filename = secure_filename(f"chat_{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}")
+                file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                
+                # Determine type
+                ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                msg_type = 'image' if ext in ['png', 'jpg', 'jpeg', 'gif', 'webp'] else 'file'
+                
+                msg = TaskMessage(
+                    task_id=id, 
+                    user_id=current_user.id, 
+                    message_type=msg_type,
+                    file_url=f"/uploads/{filename}",
+                    file_name=file.filename
+                )
+                db.session.add(msg)
+                posted_msgs.append(msg)
+
+        db.session.commit()
+        
+        # Mark as read for sender
+        read_stat = TaskChatRead.query.filter_by(user_id=current_user.id, task_id=id).first()
+        if not read_stat:
+            read_stat = TaskChatRead(user_id=current_user.id, task_id=id)
+            db.session.add(read_stat)
+        read_stat.last_read_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify([{
+            'id': m.id,
+            'user_id': m.user_id,
+            'user_name': current_user.username,
+            'content': m.content,
+            'message_type': m.message_type,
+            'file_url': m.file_url,
+            'file_name': m.file_name,
+            'created_at': m.created_at.isoformat(),
+            'is_own': True
+        } for m in posted_msgs])
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Post chat error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/tasks/<int:id>/read', methods=['POST'])
+@login_required
+def mark_task_chat_read(id):
+    try:
+        from datetime import datetime
+        read_stat = TaskChatRead.query.filter_by(user_id=current_user.id, task_id=id).first()
+        if not read_stat:
+            read_stat = TaskChatRead(user_id=current_user.id, task_id=id)
+            db.session.add(read_stat)
+        
+        read_stat.last_read_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Events
 @api_bp.route('/events', methods=['GET'])
@@ -972,7 +1111,8 @@ def get_class(id):
     return jsonify({
         'id': school_class.id,
         'name': school_class.name,
-        'code': school_class.code
+        'code': school_class.code,
+        'chat_enabled': school_class.chat_enabled
     })
 
 @api_bp.route('/admin/classes/<int:id>', methods=['PUT'])
@@ -992,10 +1132,12 @@ def update_class(id):
     if 'code' in data:
         new_code = data['code'].upper().strip()
         # Check if code already exists
-        existing = SchoolClass.query.filter_by(code=new_code).first()
         if existing and existing.id != id:
             return jsonify({'success': False, 'message': 'Code bereits vergeben'}), 400
         school_class.code = new_code
+    
+    if 'chat_enabled' in data:
+        school_class.chat_enabled = bool(data['chat_enabled'])
         
     db.session.commit()
     return jsonify({'success': True})

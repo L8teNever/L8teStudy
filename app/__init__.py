@@ -154,6 +154,20 @@ def create_app():
             # Try to continue anyway - tables might already exist
             pass
         
+        # Schema Update: Add chat_enabled if missing
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            if 'school_class' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('school_class')]
+                if 'chat_enabled' not in cols:
+                    app.logger.info("Migrating: Adding chat_enabled to school_class")
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE school_class ADD COLUMN chat_enabled BOOLEAN DEFAULT 0"))
+                        conn.commit()
+        except Exception as e:
+            app.logger.error(f"Schema migration error: {e}")
+
         # Create default admin user if no users exist
         # Use a try-except to handle race conditions when multiple workers start simultaneously
         from .models import User

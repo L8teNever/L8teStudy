@@ -19,6 +19,7 @@ class SchoolClass(db.Model):
     name = db.Column(db.String(64), nullable=False)
     code = db.Column(db.String(6), unique=True, nullable=False, default=generate_class_code)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    chat_enabled = db.Column(db.Boolean, default=False)
 
     users = db.relationship('User', backref='school_class', lazy='dynamic')
     tasks = db.relationship('Task', backref='school_class', lazy='dynamic')
@@ -144,3 +145,21 @@ class Subject(db.Model):
     tasks = db.relationship('Task', backref='subject_rel', lazy='dynamic')
     events = db.relationship('Event', backref='subject_rel', lazy='dynamic')
 
+class TaskMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text)
+    message_type = db.Column(db.String(20), default='text') # text, image, file
+    file_url = db.Column(db.String(512))
+    file_name = db.Column(db.String(256))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User')
+    task = db.relationship('Task', backref='messages')
+
+class TaskChatRead(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    last_read_at = db.Column(db.DateTime, default=datetime.utcnow)
