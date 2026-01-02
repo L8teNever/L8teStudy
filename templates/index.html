@@ -493,6 +493,7 @@
             visibility: hidden;
             opacity: 0;
             transition: all 0.25s ease;
+            cursor: pointer;
         }
 
         .sheet-overlay.active {
@@ -3086,7 +3087,8 @@
                     <button class="ios-btn" style="background:var(--text-main); color:var(--card-bg); font-weight:700;" onclick="closeSheet()">${t('done')}</button>
                 </div>
             `;
-            document.getElementById('sheet-overlay').classList.add('active');
+            openSheetOverlay();
+
             lucide.createIcons();
         }
 
@@ -3441,13 +3443,6 @@
 
 
 
-        function closeSheet() {
-            // If user clicks "X" or "Fertig" (explicit close), we want to go back in history to remove the modal state.
-            // But we first check if it's active.
-            if (document.getElementById('sheet-overlay').classList.contains('active')) {
-                window.history.back();
-            }
-        }
 
         /* --- PICKER HELPERS --- */
         function handleTaskImages(files) {
