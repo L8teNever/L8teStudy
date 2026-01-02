@@ -1197,8 +1197,28 @@
                 container.style.animation = 'none';
                 void container.offsetWidth; // Reflow
                 container.style.animation = `${enterAnim} 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
-
             }, 100);
+        }
+
+        async function refreshCurrentView() {
+            if (currentView === 'home') await renderHome();
+            else if (currentView === 'tasks') await renderTasks(currentTaskTab);
+            else if (currentView === 'calendar') await renderCalendar(currentCalendarTab);
+            else if (currentView === 'grades') await renderGrades();
+            else if (currentView === 'sub_subject_details') {
+                try {
+                    const urlPart = window.location.pathname.split('/').pop();
+                    const sub = decodeURIComponent(urlPart);
+                    const res = await fetch('/api/grades');
+                    const allGrades = await res.json();
+                    const subjectGrades = allGrades.filter(g => g.subject === sub);
+                    let sum = 0, count = 0;
+                    subjectGrades.forEach(g => { sum += g.value * g.weight; count += g.weight; });
+                    const avg = count > 0 ? (sum / count).toFixed(1) : '-';
+                    // Use pushToHistory=false to avoid duplicating history state
+                    renderSubjectDetails(sub, avg, JSON.stringify(subjectGrades), false);
+                } catch (e) { console.error(e); }
+            }
         }
 
         // --- History / Back Button Logic ---
@@ -3096,20 +3116,19 @@
             if (!confirm(t('confirm_delete'))) return;
             await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
             closeSheet();
-            if (currentView === 'tasks') renderTasks();
-            else renderHome();
+            refreshCurrentView();
         }
         async function deleteEvent(id) {
             if (!confirm(t('confirm_delete'))) return;
             await fetch(`/api/events/${id}`, { method: 'DELETE' });
             closeSheet();
-            renderCalendar();
+            refreshCurrentView();
         }
         async function deleteGrade(id) {
             if (!confirm(t('confirm_delete'))) return;
             await fetch(`/api/grades/${id}`, { method: 'DELETE' });
             closeSheet();
-            renderGrades();
+            refreshCurrentView();
         }
 
         async function renderSharedContentManagement() {
@@ -3386,7 +3405,7 @@
                 if (res.ok) {
                     imagesToDelete.clear();
                     closeSheet();
-                    if (currentView === 'tasks') renderTasks(); else renderHome();
+                    refreshCurrentView();
                 } else { alert(t('error')); }
             } catch (err) { alert(t('connection_error')); }
         }
@@ -3409,7 +3428,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title, description: desc, date, subject_id: selectedSubjectId, is_shared: isShared })
                 });
-                closeSheet(); renderCalendar(currentView === 'calendar' ? 'termine' : 'monat');
+                closeSheet();
+                refreshCurrentView();
             } catch (e) { alert(t('error')); }
         }
 
@@ -3431,7 +3451,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'), date })
                 });
-                closeSheet(); renderGrades();
+                closeSheet();
+                refreshCurrentView();
             } catch (e) { alert(t('error')); }
         }
 
