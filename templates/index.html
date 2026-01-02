@@ -2482,6 +2482,13 @@
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     ${window.currentUser.class_id ? `
+                    <div class="account-item" onclick="renderChatSettingsRoot()">
+                        <div class="account-item-icon" style="background:#30B0C7; color:white;"><i data-lucide="message-circle"></i></div>
+                        <div class="account-item-text">Chat Einstellungen</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    ` : ''}
+                    ${window.currentUser.class_id ? `
                     <div class="account-item" onclick="renderClassSettings(${window.currentUser.class_id})">
                         <div class="account-item-icon" style="background:#8E8E93; color:white;"><i data-lucide="settings"></i></div>
                         <div class="account-item-text">${t('class_settings')}</div>
@@ -3043,6 +3050,74 @@
                 const data = await res.json();
                 if (data.success) alert(t('success_pw_change'));
                 else alert(data.message || t('error'));
+            } catch (e) { alert(t('connection_error')); }
+        }
+
+        async function renderChatSettingsRoot() {
+            const classId = window.currentUser.class_id;
+            if (!classId) return alert(t('error'));
+
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_chat_settings';
+            setPageTitle('Chat Einstellungen');
+
+            document.getElementById('header-back-btn').style.display = 'block';
+            if (!window.isPoppingState) window.history.pushState({ view: 'sub_chat_settings' }, '', '/admin/chat');
+            window.isPoppingState = false;
+            document.getElementById('header-back-btn').onclick = () => window.history.back();
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
+
+            try {
+                const res = await fetch(`/api/admin/classes/${classId}`);
+                const c = await res.json();
+
+                document.getElementById('app-container').innerHTML = `
+                    <div style="padding: 10px 0;">
+                        <h4 style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">Aufgaben-Chat</h4>
+                        <div class="floating-card" style="padding:0; margin-bottom:25px;">
+                            <div class="account-item" style="cursor:pointer;" onclick="toggleSwitch('toggle-chat-enabled-root')">
+                                <div class="account-item-text">Chat aktivieren</div>
+                                <div class="toggle-switch ${c.chat_enabled ? 'active' : ''}" id="toggle-chat-enabled-root" style="pointer-events:none;">
+                                    <div class="toggle-knob"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="margin:0 20px; font-size:13px; color:var(--text-sec);">
+                            Wenn aktiviert, können Schüler Fragen zu Aufgaben in einem klassenweiten Chat stellen.
+                        </p>
+                        
+                        <div style="margin-top:20px; padding:0 20px;">
+                             <button class="ios-btn" onclick="saveChatSettingsRoot(${classId})">${t('save_btn')}</button>
+                        </div>
+                    </div>
+                 `;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+            }
+        }
+
+        async function saveChatSettingsRoot(classId) {
+            const enabled = document.getElementById('toggle-chat-enabled-root').classList.contains('active');
+            try {
+                const res = await fetch(`/api/admin/classes/${classId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_enabled: enabled })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(t('save_success'));
+                    // Update global config
+                    const configRes = await fetch('/api/config');
+                    const config = await configRes.json();
+                    chatEnabled = config.chat_enabled;
+                    window.history.back();
+                } else {
+                    alert(data.message || t('error'));
+                }
             } catch (e) { alert(t('connection_error')); }
         }
 
