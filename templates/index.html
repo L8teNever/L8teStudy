@@ -1047,6 +1047,11 @@
         })();
 
 
+        function toggleSwitch(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('active');
+        }
+
         function t(key) {
             try {
                 const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
@@ -2837,7 +2842,6 @@
                 const res = await fetch(`/api/admin/classes/${id}`);
                 const c = await res.json();
 
-                document.getElementById('app-container').innerHTML = `
                 document.getElementById('app-container').innerHTML = `
                     <div style="padding: 10px 0;">
                         <h4 style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">${t('general')}</h4>
