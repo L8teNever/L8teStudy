@@ -2915,6 +2915,12 @@
                 const data = await res.json();
                 if (data.success) {
                     alert(t('save_success'));
+                    // Update global config if this is our class
+                    if (window.currentUser.class_id === id) {
+                        const configRes = await fetch('/api/config');
+                        const config = await configRes.json();
+                        window.chatEnabled = config.chat_enabled;
+                    }
                     renderClassSettings(id);
                 } else {
                     alert(data.message || t('error_save'));
