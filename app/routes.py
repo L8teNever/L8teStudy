@@ -1098,7 +1098,8 @@ def get_classes():
         'id': c.id,
         'name': c.name,
         'code': c.code,
-        'user_count': c.users.count()
+        'user_count': c.users.count(),
+        'chat_enabled': c.chat_enabled
     } for c in classes])
 
 @api_bp.route('/admin/classes/<int:id>', methods=['GET'])
@@ -1133,6 +1134,7 @@ def update_class(id):
     if 'code' in data:
         new_code = data['code'].upper().strip()
         # Check if code already exists
+        existing = SchoolClass.query.filter_by(code=new_code).first()
         if existing and existing.id != id:
             return jsonify({'success': False, 'message': 'Code bereits vergeben'}), 400
         school_class.code = new_code
