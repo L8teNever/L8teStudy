@@ -2871,8 +2871,8 @@
                             <div class="account-item" style="cursor:pointer;" onclick="toggleSwitch('toggle-chat-enabled')">
                                 <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="message-circle"></i></div>
                                 <div class="account-item-text">Aufgaben-Chat</div>
-                                <div class="toggle-switch ${c.chat_enabled ? 'active' : ''}" id="toggle-chat-enabled" style="pointer-events:none;">
-                                    <div class="toggle-knob"></div>
+                                <div class="ios-toggle ${c.chat_enabled ? 'active' : ''}" id="toggle-chat-enabled" style="pointer-events:none;">
+                                    <div class="ios-toggle-knob"></div>
                                 </div>
                             </div>
                         </div>
@@ -3073,13 +3073,13 @@
                     const classes = await res.json();
 
                     const listHtml = classes.map(c => `
-                        <div class="account-item" onclick="toggleChatClass(${c.id})" style="cursor:pointer;">
+                        <div class="account-item" onclick="toggleChatClass(${c.id})" style="cursor:pointer; padding: 15px 20px;">
                              <div class="account-item-text">
                                 <div>${c.name}</div>
                                 <div style="font-size:11px; color:var(--text-sec);">Code: ${c.code}</div>
                              </div>
-                             <div class="toggle-switch ${c.chat_enabled ? 'active' : ''}" id="chat-toggle-${c.id}" style="pointer-events:none;">
-                                 <div class="toggle-knob"></div>
+                             <div class="ios-toggle ${c.chat_enabled ? 'active' : ''}" id="chat-toggle-${c.id}" style="pointer-events:none;">
+                                 <div class="ios-toggle-knob"></div>
                              </div>
                         </div>
                     `).join('');
@@ -3116,8 +3116,8 @@
                         <div class="floating-card" style="padding:0; margin-bottom:25px;">
                             <div class="account-item" style="cursor:pointer;" onclick="toggleSwitch('toggle-chat-enabled-root')">
                                 <div class="account-item-text">Chat aktivieren</div>
-                                <div class="toggle-switch ${c.chat_enabled ? 'active' : ''}" id="toggle-chat-enabled-root" style="pointer-events:none;">
-                                    <div class="toggle-knob"></div>
+                                <div class="ios-toggle ${c.chat_enabled ? 'active' : ''}" id="toggle-chat-enabled-root" style="pointer-events:none;">
+                                    <div class="ios-toggle-knob"></div>
                                 </div>
                             </div>
                         </div>
