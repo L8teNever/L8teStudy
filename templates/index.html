@@ -2919,7 +2919,7 @@
                     if (window.currentUser.class_id === id) {
                         const configRes = await fetch('/api/config');
                         const config = await configRes.json();
-                        window.chatEnabled = config.chat_enabled;
+                        chatEnabled = config.chat_enabled;
                     }
                     renderClassSettings(id);
                 } else {
@@ -3158,7 +3158,14 @@
                     body: JSON.stringify({ chat_enabled: newState })
                 });
                 const data = await res.json();
-                if (!data.success) {
+                if (data.success) {
+                    // Update global config if this is our class
+                    if (window.currentUser.class_id === id) {
+                        const configRes = await fetch('/api/config');
+                        const config = await configRes.json();
+                        chatEnabled = config.chat_enabled;
+                    }
+                } else {
                     alert(data.message || t('error'));
                     // Revert
                     if (isActive) toggle.classList.add('active'); else toggle.classList.remove('active');
