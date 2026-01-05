@@ -1637,10 +1637,7 @@
             }
         }
 
-        // We need to override the old closeSheet behavior which might have been just class removal.
-        // Actually, previous closeSheet was: function closeSheet() {
-        document.getElementById('sheet-overlay').classList.remove('active'); }
-        // We will replace usage of `classList.add('active')` with `openSheetOverlay()` in other parts of the code next.
+
 
         /* --- API LOGIC INTEGRATED --- */
         // --- PWA Installation Logic ---
