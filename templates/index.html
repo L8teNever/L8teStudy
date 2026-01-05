@@ -1792,30 +1792,15 @@
                 if (!container) return; // Exit if user navigated away
 
                 if (dueTasks.length > 0) {
-                    const listHtml = dueTasks.map(task => ` <div class="list-item" style="padding: 18px 0;"
+                    const listHtml = dueTasks.map(task => `<div class="list-item" style="padding: 18px 0;"
         onclick="openTaskDetails(${task.id})">
         <div class="check-circle" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, false, true)"><i
                 data-lucide="circle" style="width:14px; opacity:0"></i></div>
         <div class="item-content">
-            <div class="item-title">$ {
-                task.title
-                }
-
-            </div>
-            <div class="item-sub" style="display:flex; align-items:center;"> $ {
-                t('due')
-                }
-
-                : $ {
-                task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')
-                }
-
-                $ {
-                task.unread_chat_count > 0 ? `< div
-                    style = "background:var(--danger); width:8px; height:8px; border-radius:50%; margin-left:8px;" ></div > `
-                : ''
-                }
-
+            <div class="item-title">${task.title}</div>
+            <div class="item-sub" style="display:flex; align-items:center;">
+                ${t('due')}: ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}
+                ${task.unread_chat_count > 0 ? `<div style="background:var(--danger); width:8px; height:8px; border-radius:50%; margin-left:8px;"></div>` : ''}
             </div>
         </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
     </div>`).join('');
