@@ -1193,12 +1193,8 @@
             needs_password_change: "{{ 'true' if user.needs_password_change else 'false' }}" === 'true',
             has_seen_tutorial: "{{ 'true' if user.has_seen_tutorial else 'false' }}" === 'true',
             className: "{{ user.school_class.name if user.school_class else '' }}",
-            class_id: {
-    {
-            user.class_id if user.class_id else 'null'
-        }
-    }
-    }
+            class_id: {{ user.class_id if user.class_id else 'null' }}
+        };
 
         ;
 
@@ -2207,6 +2203,188 @@
                 document.getElementById('sheet-overlay').classList.add('active');
                 lucide.createIcons();
             }
+        }
+
+
+        function openImageFullscreen(url) {
+            window.open(url, '_blank');
+        }
+
+        function openDetails(type, title, subject, date, value, desc, id, imagesJson) {
+            let content = `<div class="sheet-header">
+                <h2 style="margin:0">${title}</h2>
+                <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+            </div>
+            <div class="floating-card" style="padding: 20px;">`;
+
+            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
+            const locale = lang === 'en' ? 'en-US' : 'de-DE';
+
+            if (type === 'grade') {
+                content += `<p><strong>${t('subject')}:</strong> ${subject}</p>
+                            <p><strong>${t('date')}:</strong> ${new Date(date).toLocaleDateString(locale)}</p>
+                            <p><strong>${t('value')}:</strong> ${value}</p>
+                            ${desc ? `<p><strong>${t('description')}:</strong> ${desc}</p>` : ''}`;
+            } else if (type === 'task') {
+                content += `<p><strong>${t('subject')}:</strong> ${subject || t('general')}</p>
+                            <p><strong>${t('due')}:</strong> ${date ? new Date(date).toLocaleDateString(locale) : t('no_date')}</p>
+                            ${desc ? `<p style="white-space: pre-wrap; margin-top:10px;">${desc}</p>` : ''}`;
+
+                // Images
+                let images = [];
+                try {
+                    if (imagesJson) images = JSON.parse(imagesJson);
+                } catch (e) { console.error('Error parsing images JSON', e); }
+
+                if (images && images.length > 0) {
+                    content += `<div style="margin-top:15px; display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;">`;
+                    images.forEach(img => {
+                        content += `<div onclick="openImageFullscreen('/uploads/${img.filename}')" style="flex-shrink:0; width:100px; height:100px; border-radius:8px; overflow:hidden; background:#eee; cursor:pointer;">
+                                         <img src="/uploads/${img.filename}" style="width:100%; height:100%; object-fit:cover;">
+                                     </div>`;
+                    });
+                    content += `</div>`;
+                }
+
+                // CHAT BUTTON
+                if (chatEnabled) {
+                    content += `
+                     <div style="margin-top: 20px;">
+                        <button class="btn-chat-open" onclick="renderTaskChat(${id}, '${title.replace(/'/g, "\\'")}')">
+                            <i data-lucide="message-circle" style="width:20px; height:20px;"></i>
+                            <span>${t('open_chat')}</span>
+                        </button>
+                     </div>
+                     `;
+                }
+
+            } else {
+                // Event
+                content += `<p><strong>${t('date')}:</strong> ${new Date(date).toLocaleDateString(locale)}</p>
+                             ${desc ? `<p style="white-space: pre-wrap; margin-top:10px;">${desc}</p>` : ''}`;
+            }
+
+            content += `</div>
+            <div style="display:flex; gap:10px;margin-top:10px;">
+                 <button class="ios-btn btn-sec" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date || ''}', '${value || ''}', '${(desc || '').replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${(imagesJson || '[]').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">${t('edit')}</button>
+            </div>`;
+
+            // Delete buttons
+            if (type === 'task') {
+                content += `<div style="margin-top:10px;"><button class="ios-btn btn-danger-light" onclick="deleteTask(${id})">${t('delete')}</button></div>`;
+            } else if (type === 'event') {
+                content += `<div style="margin-top:10px;"><button class="ios-btn btn-danger-light" onclick="deleteEvent(${id})">${t('delete')}</button></div>`;
+            } else if (type === 'grade') {
+                content += `<div style="margin-top:10px;"><button class="ios-btn btn-danger-light" onclick="deleteGrade(${id})">${t('delete')}</button></div>`;
+            }
+
+            document.getElementById('sheet-content').innerHTML = content;
+            openSheetOverlay();
+            lucide.createIcons();
+        }
+
+        async function renderTaskChat(taskId, taskTitle) {
+            const sheetContent = document.getElementById('sheet-content');
+            sheetContent.innerHTML = `<div class="sheet-header">
+                <h2 style="margin:0">${taskTitle} - Chat</h2>
+                <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+            </div>
+            <div class="chat-messages-area" id="chat-messages-area">Lade Chat...</div>
+            <div class="chat-input-bar">
+                 <button class="chat-attach-btn"><i data-lucide="paperclip"></i></button>
+                 <div class="chat-input-field-wrapper">
+                     <textarea class="chat-input" id="chat-input" placeholder="${t('chat_input_placeholder')}" rows="1"></textarea>
+                 </div>
+                 <button class="chat-send-btn" onclick="sendChatMessage(${taskId})"><i data-lucide="send"></i></button>
+            </div>
+            `;
+            openSheetOverlay();
+            lucide.createIcons();
+
+            try {
+                const res = await fetch(`/api/tasks/${taskId}/chat`);
+                const messages = await res.json();
+                const msgHtml = generateChatMessagesHTML(messages);
+                document.getElementById('chat-messages-area').innerHTML = msgHtml;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('chat-messages-area').innerText = 'Fehler beim Laden des Chats.';
+            }
+        }
+
+        function generateChatMessagesHTML(messages) {
+            if (!messages || messages.length === 0) return '<div style="text-align:center; padding:20px; color:var(--text-sec);">Keine Nachrichten.</div>';
+            return messages.map(msg => {
+                const isMe = msg.user_id === window.currentUserId;
+                return `<div class="chat-bubble-row ${isMe ? 'me' : 'other'}">
+                    <div class="chat-bubble">${msg.content}</div>
+                    <div class="chat-meta">${new Date(msg.created_at).toLocaleTimeString().slice(0, 5)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function sendChatMessage(taskId) {
+            const input = document.getElementById('chat-input');
+            const content = input.value.trim();
+            if (!content) return;
+
+            try {
+                await fetch(`/api/tasks/${taskId}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                input.value = '';
+                const res = await fetch(`/api/tasks/${taskId}/chat`);
+                const messages = await res.json();
+                document.getElementById('chat-messages-area').innerHTML = generateChatMessagesHTML(messages);
+            } catch (e) { console.error(e); alert('Senden fehlgeschlagen'); }
+        }
+
+
+        function toggleSearch(e, focus = true) {
+            if (e) e.stopPropagation();
+            isSearchActive = !isSearchActive;
+            renderTasks(currentTaskTab);
+            if (isSearchActive && focus) {
+                setTimeout(() => {
+                    const el = document.querySelector('.search-input');
+                    if (el) el.focus();
+                }, 100);
+            }
+        }
+
+        function filterTasks(e) {
+            const term = e.target.value.toLowerCase();
+            const filtered = cachedTasks.filter(t => {
+                const matchStatus = currentTaskTab === 'open' ? !t.is_done : t.is_done;
+                const matchSearch = t.title.toLowerCase().includes(term) || (t.subject || '').toLowerCase().includes(term);
+                return matchStatus && matchSearch;
+            });
+            const listContainer = document.getElementById('tasks-list-container');
+            const locale = window.currentUser?.language === 'en' ? 'en-US' : 'de-DE';
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_results')}</p></div>`;
+                return;
+            }
+
+            const listHtml = filtered.map(task => ` <div class="list-item" style="padding: 18px 0;"
+                onclick="openTaskDetails(${task.id})">
+                <div class="check-circle ${task.is_done ? 'checked' : ''}"
+                    onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})"> <i data-lucide="check"
+                        style="width:14px; opacity:${task.is_done ? 1 : 0}"></i> </div>
+                <div class="item-content">
+                    <div class="item-title">${task.title}</div>
+                    <div class="item-sub" style="display:flex; align-items:center;"> 
+                        ${task.subject || t('general')} • ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}
+                        ${task.unread_chat_count > 0 ? `<div style="background:var(--danger); width:8px; height:8px; border-radius:50%; margin-left:8px;"></div>` : ''}
+                    </div>
+                </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+            </div>`).join('');
+
+            listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}</div>`;
+            lucide.createIcons();
         }
 
         async function renderGrades() {
@@ -3370,39 +3548,38 @@
         }
 
         async function unsubscribePush() {
-            if (!confirm(t('confirm_push_disable') || 'Benachrichtigungen auf diesem Gerät
-                            deaktivieren ? ')) return;
+            if (!confirm(t('confirm_push_disable') || 'Benachrichtigungen auf diesem Gerät deaktivieren?')) return;
 
-                            try {
-                    const reg = await navigator.serviceWorker.ready;
-                    const sub = await reg.pushManager.getSubscription();
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
 
-                    if (sub) {
-                        const endpoint = sub.endpoint;
-                        await sub.unsubscribe();
+                if (sub) {
+                    const endpoint = sub.endpoint;
+                    await sub.unsubscribe();
 
-                        await fetch('/api/notifications/unsubscribe', {
+                    await fetch('/api/notifications/unsubscribe', {
 
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
 
-                            ,
-                            body: JSON.stringify({
-                                endpoint: endpoint
-                            })
-                        });
-                    }
-
-                    alert(t('notifications_disabled'));
-                    renderNotificationSettings();
+                        ,
+                        body: JSON.stringify({
+                            endpoint: endpoint
+                        })
+                    });
                 }
 
-                catch (e) {
-                    console.error(e);
-                    alert(t('error_disabling') + ': ' + e);
-                }
+                alert(t('notifications_disabled'));
+                renderNotificationSettings();
+            }
+
+            catch (e) {
+                console.error(e);
+                alert(t('error_disabling') + ': ' + e);
+            }
         }
 
         function urlBase64ToUint8Array(base64String) {
@@ -3966,46 +4143,44 @@
                                     </div>
                                     <div style="display:flex;">
                                         <div style="color:var(--accent); padding:10px; cursor:pointer;"
-                                            onclick="renderSingleClassAdmin(${c.id}, '${c.name.replace(/'/g, "
-                \\'")}') "><i data-lucide=" settings" style=" width: 20px;
-                "></i></div>
+                                            onclick="renderSingleClassAdmin(${c.id}, '${c.name.replace(/'/g, "\\'")}')"><i data-lucide="settings" style="width: 20px;"></i></div>
                     < div style = "color:var(--danger); padding:10px; cursor:pointer;"
                 onclick = "deleteClass(${c.id})" > <i data-lucide="trash-2"
                     style="width:20px;"></i></div >
                                     </div >
                                 </div > `).join('');
 
-                                const content=listHtml || `< div
+                const content = listHtml || `< div
                 style = "padding:20px; text-align:center; color:var(--text-sec)" > $ {
                     t('error_loading')
                 }
 
                                 </div > `;
 
-                                document.getElementById('app-container').innerHTML=` < div class="floating-card"
+                document.getElementById('app-container').innerHTML = ` < div class="floating-card"
                 style = "padding:0 24px; margin-bottom:80px;" > $ {
                     content
                 }
 
                                 </div > `;
-                                document.getElementById('main-fab').classList.add('visible');
-                                lucide.createIcons();
-                                }
+                document.getElementById('main-fab').classList.add('visible');
+                lucide.createIcons();
+            }
 
-                                catch (e) {
-                                console.error(e);
+            catch (e) {
+                console.error(e);
 
-                                document.getElementById('app-container').innerHTML=`< div class="floating-card"
+                document.getElementById('app-container').innerHTML = `< div class="floating-card"
                 style = "color:var(--danger)" > $ {
                     t('error')
                 }
 
                                 </div > `;
-                                }
-                                }
+            }
+        }
 
-                                async function openCreateClassMenu() {
-                                document.getElementById('sheet-content').innerHTML=` < div class="sheet-header" >
+        async function openCreateClassMenu() {
+            document.getElementById('sheet-content').innerHTML = ` < div class="sheet-header" >
                                     <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
                                         t('new_class_title')
                                         }
@@ -4020,69 +4195,69 @@
                         }
 
                     </button>`;
-                    document.getElementById('sheet-overlay').classList.add('active');
-                    lucide.createIcons();
-                                }
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
 
-                    async function saveNewClass() {
-                                const name=document.getElementById('new-class-name').value;
-                    if ( !name) return alert(t('name_required'));
+        async function saveNewClass() {
+            const name = document.getElementById('new-class-name').value;
+            if (!name) return alert(t('name_required'));
 
-                    try {
-                                const res=await fetch('/api/admin/classes', {
+            try {
+                const res = await fetch('/api/admin/classes', {
 
-                        method: 'POST',
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                                }
+                    }
 
                     ,
                     body: JSON.stringify({
                         name
                     })
-                                });
-                    const data=await res.json();
+                });
+                const data = await res.json();
 
-                    if (data.success) {
-                        closeSheet();
+                if (data.success) {
+                    closeSheet();
                     renderSchoolClassManagement();
-                                }
+                }
 
-                    else alert(data.message || t('error'));
-                                }
+                else alert(data.message || t('error'));
+            }
 
-                    catch (e) {
-                        alert(t('connection_error'));
-                                }
-                                }
+            catch (e) {
+                alert(t('connection_error'));
+            }
+        }
 
-                    async function deleteClass(id) {
-                                if ( !confirm(t('delete_class_confirm'))) return;
+        async function deleteClass(id) {
+            if (!confirm(t('delete_class_confirm'))) return;
 
-                    try {
-                                const res=await fetch(`/api/admin/classes/$ {
+            try {
+                const res = await fetch(`/api/admin/classes/$ {
                         id
                     }
 
                     `, {
-                        method: 'DELETE'
-                                });
-                    const data=await res.json();
-                    if (data.success) renderSchoolClassManagement();
-                    else alert(data.message || t('error_deleting'));
-                                }
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) renderSchoolClassManagement();
+                else alert(data.message || t('error_deleting'));
+            }
 
-                    catch (e) {
-                        alert(t('connection_error'));
-                                }
-                                }
+            catch (e) {
+                alert(t('connection_error'));
+            }
+        }
 
-                    // Sub-page: User Management
-                    async function renderUserManagement(filterClassId=null, filterClassName=null) {
-                        previousView = 'sub_admin_menu'; // Logically parent is admin menu now
-                    currentView='sub_users';
+        // Sub-page: User Management
+        async function renderUserManagement(filterClassId = null, filterClassName = null) {
+            previousView = 'sub_admin_menu'; // Logically parent is admin menu now
+            currentView = 'sub_users';
 
-                    setPageTitle(filterClassName ? `$ {
+            setPageTitle(filterClassName ? `$ {
                         t('users_label')
                     }
 
@@ -4091,50 +4266,50 @@
                     }
 
                     ` : t('users'));
-                    document.getElementById('header-back-btn').style.display='block';
+            document.getElementById('header-back-btn').style.display = 'block';
 
-                    if ( !window.isPoppingState) {
-                        window.history.pushState({
-                            view: 'sub_users', class_id: filterClassId, class_name: filterClassName
-                        }
+            if (!window.isPoppingState) {
+                window.history.pushState({
+                    view: 'sub_users', class_id: filterClassId, class_name: filterClassName
+                }
 
-                            , '', filterClassId ? `/admin/users/$ {
+                    , '', filterClassId ? `/admin/users/$ {
                                 filterClassId
                                 }
 
                                 ` : '/admin/users');
-                                }
+            }
 
-                    window.isPoppingState=false;
+            window.isPoppingState = false;
 
-                                document.getElementById('header-back-btn').onclick=()=> {
-                        window.history.back();
-                                }
+            document.getElementById('header-back-btn').onclick = () => {
+                window.history.back();
+            }
 
-                    ;
+                ;
 
-                    document.getElementById('app-container').innerHTML=`<div
+            document.getElementById('app-container').innerHTML = `<div
                         style="text-align:center; padding:20px; color:var(--text-sec)">$ {
                             t('loading')
                         }
 
                     </div>`;
 
-                    const apiUrl=filterClassId ? `/api/admin/users?class_id=$ {
+            const apiUrl = filterClassId ? `/api/admin/users?class_id=$ {
                         filterClassId
                     }
 
                     ` : '/api/admin/users';
 
-                    try {
-                                const res=await fetch(apiUrl);
-                    const users=await res.json();
+            try {
+                const res = await fetch(apiUrl);
+                const users = await res.json();
 
-                    // Store current filtering context for the "plus" button (new user)
-                    window.lastAdminFilterClassId=filterClassId;
-                    window.lastAdminFilterClassName=filterClassName;
+                // Store current filtering context for the "plus" button (new user)
+                window.lastAdminFilterClassId = filterClassId;
+                window.lastAdminFilterClassName = filterClassName;
 
-                                const listHtml=users.map(u=> ` <div class="list-item">
+                const listHtml = users.map(u => ` <div class="list-item">
                         <div class="account-item-icon"><i data-lucide="user"></i></div>
                         <div class="item-content">
                             <div class="item-title">$ {
@@ -4142,25 +4317,25 @@
                             }
 
                                 $ {
-                                    u.is_admin ? `<span
-                                                style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">$
+                                    u.is_admin ? `< span
+                                                style = "font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;" > $
                                                 {
-                                                t('admin').toUpperCase()
-                                                }
+                        t('admin').toUpperCase()
+                    }
 
-                                            </span>` : ''
+                                            </span > ` : ''
                                 }
 
                             </div> $ {
-                                window.currentUser.is_super_admin && !filterClassId ? `<div class="item-sub">$ {
-                                            t('class_label')
-                                            }
+                                window.currentUser.is_super_admin && !filterClassId ? `< div class="item-sub" > $ {
+                    t('class_label')
+                }
 
                                             : $ {
-                                            u.class_name || t('global_label')
-                                            }
+                    u.class_name || t('global_label')
+                }
 
-                                        </div>` : ''
+                                        </div > ` : ''
                             }
 
                         </div>
@@ -4168,68 +4343,68 @@
                             <div style="color:var(--accent); padding:10px; cursor:pointer;"
                                 onclick="resetUserPassword(${u.id})"><i data-lucide="key"
                                     style="width:20px;"></i></div> $ {
-                                u.id !== window.currentUserId ? ` <div
-                                            style="color:var(--danger); padding:10px; cursor:pointer;"
-                                            onclick="deleteUser(${u.id})"><i data-lucide="trash-2"
-                                                style="width:20px;"></i></div> ` : ''
+                                u.id !== window.currentUserId ? ` < div
+                style = "color:var(--danger); padding:10px; cursor:pointer;"
+                onclick = "deleteUser(${u.id})" > <i data-lucide="trash-2"
+                    style="width:20px;"></i></div > ` : ''
                             }
 
                         </div>
                     </div> `).join('');
 
-                    document.getElementById('app-container').innerHTML=` <div class="floating-card"
+                document.getElementById('app-container').innerHTML = ` <div class="floating-card"
                         style="padding:0 24px; margin-bottom:80px;">$ {
-                            listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">$ {
-                                        t('no_users')
-                                        }
+                            listHtml || `< div style = "padding:20px; text-align:center; color:var(--text-sec)" > $ {
+                    t('no_users')
+                }
 
-                                    </div>`
+                                    </div > `
                         }
 
                     </div>`;
-                    document.getElementById('main-fab').classList.add('visible');
-                    lucide.createIcons();
-                                }
+                document.getElementById('main-fab').classList.add('visible');
+                lucide.createIcons();
+            }
 
-                    catch (e) {
-                        console.error(e);
+            catch (e) {
+                console.error(e);
 
-                    document.getElementById('app-container').innerHTML=`<div class="floating-card"
+                document.getElementById('app-container').innerHTML = `<div class="floating-card"
                         style="color:var(--danger)">$ {
                             t('error')
                         }
 
                     </div>`;
-                                }
-                                }
+            }
+        }
 
-                    function renderSingleClassAdmin(id, name) {
-                        previousView = 'sub_classes';
-                    currentView='sub_class_detail';
-                    setPageTitle(name);
-                    document.getElementById('header-back-btn').style.display='block';
+        function renderSingleClassAdmin(id, name) {
+            previousView = 'sub_classes';
+            currentView = 'sub_class_detail';
+            setPageTitle(name);
+            document.getElementById('header-back-btn').style.display = 'block';
 
-                    if ( !window.isPoppingState) {
-                        window.history.pushState({
-                            view: 'sub_class_detail', id, name
-                        }
+            if (!window.isPoppingState) {
+                window.history.pushState({
+                    view: 'sub_class_detail', id, name
+                }
 
-                            , '', `/admin/classes/$ {
+                    , '', `/admin/classes/$ {
                                 id
                                 }
 
                                 `);
-                                }
+            }
 
-                    window.isPoppingState=false;
+            window.isPoppingState = false;
 
-                                document.getElementById('header-back-btn').onclick=()=> {
-                        window.history.back();
-                                }
+            document.getElementById('header-back-btn').onclick = () => {
+                window.history.back();
+            }
 
-                    ;
+                ;
 
-                    document.getElementById('app-container').innerHTML=` <div class="floating-card"
+            document.getElementById('app-container').innerHTML = ` <div class="floating-card"
                         style="padding: 10px;">
                         <div class="account-item" onclick="renderUserManagement(${id}, '${name}')">
                             <div class="account-item-icon"><i data-lucide="users"></i></div>
@@ -4274,51 +4449,51 @@
                         }
 
                     </div>`;
-                    lucide.createIcons();
-                                }
+            lucide.createIcons();
+        }
 
-                    async function renderClassSettings(id) {
-                        previousView = window.currentUser.is_super_admin ? 'sub_class_detail' : 'sub_admin_menu';
-                    currentView='sub_class_settings';
-                    setPageTitle(t('class_settings'));
-                    document.getElementById('header-back-btn').style.display='block';
+        async function renderClassSettings(id) {
+            previousView = window.currentUser.is_super_admin ? 'sub_class_detail' : 'sub_admin_menu';
+            currentView = 'sub_class_settings';
+            setPageTitle(t('class_settings'));
+            document.getElementById('header-back-btn').style.display = 'block';
 
-                    if ( !window.isPoppingState) {
-                        window.history.pushState({
-                            view: 'sub_class_settings', id: id
-                        }
+            if (!window.isPoppingState) {
+                window.history.pushState({
+                    view: 'sub_class_settings', id: id
+                }
 
-                            , '', `/admin/classes/$ {
+                    , '', `/admin/classes/$ {
                                 id
                                 }
 
                                 /settings`);
-                                }
+            }
 
-                    window.isPoppingState=false;
+            window.isPoppingState = false;
 
-                                document.getElementById('header-back-btn').onclick=()=> {
-                        window.history.back();
-                                }
+            document.getElementById('header-back-btn').onclick = () => {
+                window.history.back();
+            }
 
-                    ;
+                ;
 
-                    document.getElementById('app-container').innerHTML=`<div
+            document.getElementById('app-container').innerHTML = `<div
                         style="text-align:center; padding:20px; color:var(--text-sec)">$ {
                             t('loading')
                         }
 
                     </div>`;
 
-                    try {
-                                const res=await fetch(`/api/admin/classes/$ {
+            try {
+                const res = await fetch(`/api/admin/classes/$ {
                         id
                     }
 
                     `);
-                    const c=await res.json();
+                const c = await res.json();
 
-                    document.getElementById('app-container').innerHTML=` <div style="padding: 10px 0;">
+                document.getElementById('app-container').innerHTML = ` <div style="padding: 10px 0;">
                         <h4
                             style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">
                             $ {
@@ -4337,13 +4512,13 @@
                                     value="${c.name}" $ { !window.currentUser.is_super_admin ? 'disabled'
                                         : ''}>
                             </div>$ {
-                                !window.currentUser.is_super_admin ? `<div
-                                            style="padding:0 20px 15px 20px; font-size:11px; color:var(--text-sec); margin-top:-10px;">
-                                            $ {
-                                            t('super_admin_only_name')
-                                            }
+                                !window.currentUser.is_super_admin ? `< div
+                style = "padding:0 20px 15px 20px; font-size:11px; color:var(--text-sec); margin-top:-10px;" >
+                    $ {
+                    t('super_admin_only_name')
+                }
 
-                                        </div>` : ''
+                                        </div > ` : ''
                             }
 
                             <div class="account-item"
@@ -4405,92 +4580,92 @@
 
                         </button>
                     </div>`;
-                    lucide.createIcons();
-                                }
+                lucide.createIcons();
+            }
 
-                    catch (e) {
-                        console.error(e);
+            catch (e) {
+                console.error(e);
 
-                    document.getElementById('app-container').innerHTML=`<div class="floating-card"
+                document.getElementById('app-container').innerHTML = `<div class="floating-card"
                         style="color:var(--danger)">$ {
                             t('error')
                         }
 
                     </div>`;
-                                }
-                                }
+            }
+        }
 
-                    async function saveClassSettings(id) {
-                                const name=document.getElementById('edit-class-name').value.trim();
-                    const code=document.getElementById('edit-class-code').value.trim();
-                    const
-                    chatEnabled=document.getElementById('toggle-chat-enabled').classList.contains('active');
+        async function saveClassSettings(id) {
+            const name = document.getElementById('edit-class-name').value.trim();
+            const code = document.getElementById('edit-class-code').value.trim();
+            const
+                chatEnabled = document.getElementById('toggle-chat-enabled').classList.contains('active');
 
-                    if ( !code) {
-                        alert(t('code_required'));
-                    return;
-                                }
+            if (!code) {
+                alert(t('code_required'));
+                return;
+            }
 
-                    const body= {
-                        code,
-                        chat_enabled: chatEnabled
-                                }
+            const body = {
+                code,
+                chat_enabled: chatEnabled
+            }
 
-                    ;
-                    if (window.currentUser.is_super_admin) body.name=name;
+                ;
+            if (window.currentUser.is_super_admin) body.name = name;
 
-                    try {
-                                const res=await fetch(`/api/admin/classes/$ {
+            try {
+                const res = await fetch(`/api/admin/classes/$ {
                         id
                     }
 
                     `, {
 
-                        method: 'PUT',
+                    method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
-                                }
+                    }
 
                     ,
                     body: JSON.stringify(body)
-                                });
-                    const data=await res.json();
+                });
+                const data = await res.json();
 
-                    if (data.success) {
-                        alert(t('save_success'));
+                if (data.success) {
+                    alert(t('save_success'));
 
                     // Update global config if this is our class
-                    if (window.currentUser.class_id===id) {
-                                const configRes=await fetch('/api/config');
-                    const config=await configRes.json();
-                    chatEnabled=config.chat_enabled;
-                                }
+                    if (window.currentUser.class_id === id) {
+                        const configRes = await fetch('/api/config');
+                        const config = await configRes.json();
+                        chatEnabled = config.chat_enabled;
+                    }
 
                     renderClassSettings(id);
-                                }
+                }
 
-                    else {
-                        alert(data.message || t('error_save'));
-                                }
-                                }
+                else {
+                    alert(data.message || t('error_save'));
+                }
+            }
 
-                    catch (e) {
-                        console.error(e);
-                    alert(t('error'));
-                                }
-                                }
+            catch (e) {
+                console.error(e);
+                alert(t('error'));
+            }
+        }
 
-                    async function openCreateUserMenu() {
-                        let classSelectorHtml='';
-                    // If we are currently filtering by a class, use that as default, but allow change
-                    const currentFilterId=window.lastAdminFilterClassId || "";
+        async function openCreateUserMenu() {
+            let classSelectorHtml = '';
+            // If we are currently filtering by a class, use that as default, but allow change
+            const currentFilterId = window.lastAdminFilterClassId || "";
 
-                    if (window.currentUser.is_super_admin) {
-                                try {
-                                const res=await fetch('/api/admin/classes');
-                    const classes=await res.json();
+            if (window.currentUser.is_super_admin) {
+                try {
+                    const res = await fetch('/api/admin/classes');
+                    const classes = await res.json();
 
-                    classSelectorHtml=` <label
+                    classSelectorHtml = ` <label
                         style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 10px 0 5px 5px;">$
                         {
                             t('assigned_class')
@@ -4503,23 +4678,24 @@
                         }
 
                         </option>$ {
-                            classes.map(c => `<option value="${c.id}" $ { currentFilterId==c.id ? 'selected' : ''
-                                        }>$ {
-                                        c.name
-                                        }
+                            classes.map(c => `< option value = "${c.id}" $ {
+                        currentFilterId == c.id ? 'selected' : ''
+                    }> $ {
+                        c.name
+                    }
 
-                                    </option>`).join('')
+                                    </option > `).join('')
                         }
 
                     </select>`;
-                                }
+                }
 
-                    catch (e) {
-                        console.error(e);
-                                }
-                                }
+                catch (e) {
+                    console.error(e);
+                }
+            }
 
-                    document.getElementById('sheet-content').innerHTML=` <div class="sheet-header">
+            document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header">
                         <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
                             t('new_user')
                         }
@@ -4548,42 +4724,42 @@
                             }
 
                             </button>`;
-                            document.getElementById('sheet-overlay').classList.add('active');
-                            lucide.createIcons();
-                                }
+            document.getElementById('sheet-overlay').classList.add('active');
+            lucide.createIcons();
+        }
 
-                            let newIsAdmin=false;
+        let newIsAdmin = false;
 
-                            function toggleAdminCheck() {
-                                newIsAdmin = !newIsAdmin;
-                            const toggle=document.getElementById('admin-check-toggle');
-                            if (newIsAdmin) toggle.classList.add('active');
-                            else toggle.classList.remove('active');
-                                }
+        function toggleAdminCheck() {
+            newIsAdmin = !newIsAdmin;
+            const toggle = document.getElementById('admin-check-toggle');
+            if (newIsAdmin) toggle.classList.add('active');
+            else toggle.classList.remove('active');
+        }
 
-                            async function renderSuperAdminDashboard() {
-                                previousView = 'sub_admin_menu';
-                            currentView='sub_super_admin';
-                            setPageTitle(t('superadmin_dashboard'));
-                            document.getElementById('header-back-btn').style.display='block';
+        async function renderSuperAdminDashboard() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_super_admin';
+            setPageTitle(t('superadmin_dashboard'));
+            document.getElementById('header-back-btn').style.display = 'block';
 
-                            if ( !window.isPoppingState) {
-                                window.history.pushState({
-                                    view: 'sub_super_admin'
-                                }
+            if (!window.isPoppingState) {
+                window.history.pushState({
+                    view: 'sub_super_admin'
+                }
 
-                                    , '', '/superadmin');
-                                }
+                    , '', '/superadmin');
+            }
 
-                            window.isPoppingState=false;
+            window.isPoppingState = false;
 
-                                document.getElementById('header-back-btn').onclick=()=> {
-                                window.history.back();
-                                }
+            document.getElementById('header-back-btn').onclick = () => {
+                window.history.back();
+            }
 
-                            ;
+                ;
 
-                            document.getElementById('app-container').innerHTML=` <div class="floating-card"
+            document.getElementById('app-container').innerHTML = ` <div class="floating-card"
                                 style="padding: 20px;">
                                 <h4 style="margin:0 0 15px 0; font-size:16px; font-weight:700;">$ {
                                     t('global_management')
@@ -4624,127 +4800,127 @@
                                         style="width:18px; color:var(--text-sec)"></i>
                                 </div>
                             </div>`;
-                            lucide.createIcons();
-                                }
+            lucide.createIcons();
+        }
 
-                            async function saveNewUser() {
-                                const username=document.getElementById('new-user-name').value;
-                            const password=document.getElementById('new-user-pw').value;
-                            const classIdEl=document.getElementById('new-user-class');
-                            const class_id=classIdEl ? classIdEl.value: null;
+        async function saveNewUser() {
+            const username = document.getElementById('new-user-name').value;
+            const password = document.getElementById('new-user-pw').value;
+            const classIdEl = document.getElementById('new-user-class');
+            const class_id = classIdEl ? classIdEl.value : null;
 
-                            if ( !username || !password) return alert(t('error'));
+            if (!username || !password) return alert(t('error'));
 
-                            try {
-                                const res=await fetch('/api/admin/users', {
+            try {
+                const res = await fetch('/api/admin/users', {
 
-                                method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                                }
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                            ,
-                            body: JSON.stringify({
-                                username,
-                                password,
-                                is_admin: newIsAdmin,
-                            class_id: class_id==="" ? null : class_id
-                                })
-                                });
-                            const data=await res.json();
+                    ,
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        is_admin: newIsAdmin,
+                        class_id: class_id === "" ? null : class_id
+                    })
+                });
+                const data = await res.json();
 
-                            if (data.success) {
-                                closeSheet();
-                            newIsAdmin=false;
-                            renderUserManagement();
-                                }
+                if (data.success) {
+                    closeSheet();
+                    newIsAdmin = false;
+                    renderUserManagement();
+                }
 
-                            else alert(data.message || t('error'));
-                                }
+                else alert(data.message || t('error'));
+            }
 
-                            catch (e) {
-                                alert(t('connection_error'));
-                                }
-                                }
+            catch (e) {
+                alert(t('connection_error'));
+            }
+        }
 
-                            async function deleteUser(id) {
-                                if ( !confirm(t('confirm_delete'))) return;
+        async function deleteUser(id) {
+            if (!confirm(t('confirm_delete'))) return;
 
-                            try {
-                                await fetch(`/api/admin/users/$ {
+            try {
+                await fetch(`/api/admin/users/$ {
                                 id
                                 }
 
                                 `, {
-                                    method: 'DELETE'
-                                });
-                            renderUserManagement();
-                                }
+                    method: 'DELETE'
+                });
+                renderUserManagement();
+            }
 
-                            catch (e) {
-                                alert(t('error'));
-                                }
-                                }
+            catch (e) {
+                alert(t('error'));
+            }
+        }
 
-                            async function resetUserPassword(id) {
-                                const newPw=prompt(t('password_new') + ':');
-                            if ( !newPw) return;
+        async function resetUserPassword(id) {
+            const newPw = prompt(t('password_new') + ':');
+            if (!newPw) return;
 
-                            try {
-                                const res=await fetch(`/api/admin/users/$ {
+            try {
+                const res = await fetch(`/api/admin/users/$ {
                                 id
                             }
 
                             /reset_password`, {
-                                method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                                }
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                            ,
-                            body: JSON.stringify({
-                                password: newPw
-                                })
-                                });
-                            const data=await res.json();
-                            if (data.success) alert(t('success_pw_change'));
-                            else alert(data.message || t('error'));
-                                }
+                    ,
+                    body: JSON.stringify({
+                        password: newPw
+                    })
+                });
+                const data = await res.json();
+                if (data.success) alert(t('success_pw_change'));
+                else alert(data.message || t('error'));
+            }
 
-                            catch (e) {
-                                alert(t('connection_error'));
-                                }
-                                }
+            catch (e) {
+                alert(t('connection_error'));
+            }
+        }
 
-                            async function renderChatSettingsRoot() {
-                                previousView = 'sub_admin_menu';
-                            currentView='sub_chat_settings';
-                            setPageTitle('Chat Einstellungen');
+        async function renderChatSettingsRoot() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_chat_settings';
+            setPageTitle('Chat Einstellungen');
 
-                            document.getElementById('header-back-btn').style.display='block';
+            document.getElementById('header-back-btn').style.display = 'block';
 
-                            if ( !window.isPoppingState) window.history.pushState({
-                                view: 'sub_chat_settings'
-                                }
+            if (!window.isPoppingState) window.history.pushState({
+                view: 'sub_chat_settings'
+            }
 
-                            , '', '/admin/chat');
-                            window.isPoppingState=false;
-                                document.getElementById('header-back-btn').onclick=()=>window.history.back();
+                , '', '/admin/chat');
+            window.isPoppingState = false;
+            document.getElementById('header-back-btn').onclick = () => window.history.back();
 
-                            document.getElementById('app-container').innerHTML=`<div
+            document.getElementById('app-container').innerHTML = `<div
                                 style="text-align:center; padding:20px; color:var(--text-sec)">$ {
                                     t('loading')
                                 }
 
                             </div>`;
 
-                            // Case 1: Super Admin (Global view of all classes)
-                            if (window.currentUser.is_super_admin && !window.currentUser.class_id) {
-                                try {
-                                const res=await fetch('/api/admin/classes');
-                            const classes=await res.json();
+            // Case 1: Super Admin (Global view of all classes)
+            if (window.currentUser.is_super_admin && !window.currentUser.class_id) {
+                try {
+                    const res = await fetch('/api/admin/classes');
+                    const classes = await res.json();
 
-                                const listHtml=classes.map(c=> ` <div class="account-item"
+                    const listHtml = classes.map(c => ` <div class="account-item"
                                 onclick="toggleChatClass(${c.id})" style="cursor:pointer; padding: 15px 20px;">
                                 <div class="account-item-text">
                                     <div>$ {
@@ -4764,7 +4940,7 @@
                                 </div>
                             </div> `).join('');
 
-                            document.getElementById('app-container').innerHTML=` <div style="padding: 10px 0;">
+                    document.getElementById('app-container').innerHTML = ` <div style="padding: 10px 0;">
                                 <h4
                                     style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">
                                     Alle Klassen</h4>
@@ -4777,34 +4953,34 @@
                                     Klasse,
                                     um den Chat zu aktivieren oder zu deaktivieren. </p>
                             </div>`;
-                            lucide.createIcons();
-                                }
+                    lucide.createIcons();
+                }
 
-                            catch (e) {
-                                document.getElementById('app-container').innerHTML = `<div class="floating-card"
+                catch (e) {
+                    document.getElementById('app-container').innerHTML = `<div class="floating-card"
                                     style="color:var(--danger)">$ {
                                     t('error')
                                     }
 
                                 </div>`;
-                                }
+                }
 
-                            return;
-                                }
+                return;
+            }
 
-                            // Case 2: Class Admin (Single Class)
-                            const classId=window.currentUser.class_id;
-                            if ( !classId) return alert(t('error'));
+            // Case 2: Class Admin (Single Class)
+            const classId = window.currentUser.class_id;
+            if (!classId) return alert(t('error'));
 
-                            try {
-                                const res=await fetch(`/api/admin/classes/$ {
+            try {
+                const res = await fetch(`/api/admin/classes/$ {
                                 classId
                             }
 
                             `);
-                            const c=await res.json();
+                const c = await res.json();
 
-                            document.getElementById('app-container').innerHTML=` <div style="padding: 10px 0;">
+                document.getElementById('app-container').innerHTML = ` <div style="padding: 10px 0;">
                                 <h4
                                     style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">
                                     Aufgaben-Chat</h4>
@@ -4827,243 +5003,239 @@
 
                                 </button></div>
                             </div>`;
-                            lucide.createIcons();
-                                }
+                lucide.createIcons();
+            }
 
-                            catch (e) {
-                                console.error(e);
+            catch (e) {
+                console.error(e);
 
-                            document.getElementById('app-container').innerHTML=`<div class="floating-card"
+                document.getElementById('app-container').innerHTML = `<div class="floating-card"
                                 style="color:var(--danger)">$ {
                                     t('error')
                                 }
 
                             </div>`;
-                                }
-                                }
+            }
+        }
 
-                            async function toggleChatClass(id) {
-                                const toggle=document.getElementById(`chat-toggle-$ {
+        async function toggleChatClass(id) {
+            const toggle = document.getElementById(`chat-toggle-$ {
                                 id
                             }
 
                             `);
-                            const isActive=toggle.classList.contains('active');
-                            const newState= !isActive;
+            const isActive = toggle.classList.contains('active');
+            const newState = !isActive;
 
-                            // Optimistic UI
-                            if (newState) toggle.classList.add('active');
-                            else toggle.classList.remove('active');
+            // Optimistic UI
+            if (newState) toggle.classList.add('active');
+            else toggle.classList.remove('active');
 
-                            try {
-                                const res=await fetch(`/api/admin/classes/$ {
+            try {
+                const res = await fetch(`/api/admin/classes/$ {
                                 id
                             }
 
                             `, {
 
-                                method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                                }
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                            ,
-                            body: JSON.stringify({
-                                chat_enabled: newState
-                                })
-                                });
-                            const data=await res.json();
+                    ,
+                    body: JSON.stringify({
+                        chat_enabled: newState
+                    })
+                });
+                const data = await res.json();
 
-                            if (data.success) {
+                if (data.success) {
 
-                                // Update global config if this is our class
-                                if (window.currentUser.class_id===id) {
-                                const configRes=await fetch('/api/config');
-                            const config=await configRes.json();
-                            chatEnabled=config.chat_enabled;
-                                }
-                                }
+                    // Update global config if this is our class
+                    if (window.currentUser.class_id === id) {
+                        const configRes = await fetch('/api/config');
+                        const config = await configRes.json();
+                        chatEnabled = config.chat_enabled;
+                    }
+                }
 
-                            else {
-                                alert(data.message || t('error'));
-                            // Revert
-                            if (isActive) toggle.classList.add('active');
-                            else toggle.classList.remove('active');
-                                }
-                                }
+                else {
+                    alert(data.message || t('error'));
+                    // Revert
+                    if (isActive) toggle.classList.add('active');
+                    else toggle.classList.remove('active');
+                }
+            }
 
-                            catch (e) {
-                                alert(t('connection_error'));
-                            // Revert
-                            if (isActive) toggle.classList.add('active');
-                            else toggle.classList.remove('active');
-                                }
-                                }
+            catch (e) {
+                alert(t('connection_error'));
+                // Revert
+                if (isActive) toggle.classList.add('active');
+                else toggle.classList.remove('active');
+            }
+        }
 
-                            async function saveChatSettingsRoot(classId) {
-                                const
-                            enabled=document.getElementById('toggle-chat-enabled-root').classList.contains('active');
+        async function saveChatSettingsRoot(classId) {
+            const
+                enabled = document.getElementById('toggle-chat-enabled-root').classList.contains('active');
 
-                            try {
-                                const res=await fetch(`/api/admin/classes/$ {
+            try {
+                const res = await fetch(`/api/admin/classes/$ {
                                 classId
                             }
 
                             `, {
 
-                                method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                                }
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                            ,
-                            body: JSON.stringify({
-                                chat_enabled: enabled
-                                })
-                                });
-                            const data=await res.json();
+                    ,
+                    body: JSON.stringify({
+                        chat_enabled: enabled
+                    })
+                });
+                const data = await res.json();
 
-                            if (data.success) {
-                                alert(t('save_success'));
-                            // Update global config
-                            const configRes=await fetch('/api/config');
-                            const config=await configRes.json();
-                            chatEnabled=config.chat_enabled;
-                            window.history.back();
-                                }
+                if (data.success) {
+                    alert(t('save_success'));
+                    // Update global config
+                    const configRes = await fetch('/api/config');
+                    const config = await configRes.json();
+                    chatEnabled = config.chat_enabled;
+                    window.history.back();
+                }
 
-                            else {
-                                alert(data.message || t('error'));
-                                }
-                                }
+                else {
+                    alert(data.message || t('error'));
+                }
+            }
 
-                            catch (e) {
-                                alert(t('connection_error'));
-                                }
-                                }
+            catch (e) {
+                alert(t('connection_error'));
+            }
+        }
 
-                            async function saveNewPassword() {
-                                const oldPw=document.getElementById('old-pw').value;
-                            const newPw=document.getElementById('new-pw').value;
-                            const confirmPw=document.getElementById('confirm-pw').value;
-                            const errEl=document.getElementById('pw-error');
+        async function saveNewPassword() {
+            const oldPw = document.getElementById('old-pw').value;
+            const newPw = document.getElementById('new-pw').value;
+            const confirmPw = document.getElementById('confirm-pw').value;
+            const errEl = document.getElementById('pw-error');
 
-                            if (newPw !==confirmPw) {
-                                errEl.innerText = t('pw_error');
-                            errEl.style.display='block';
-                            return;
-                                }
+            if (newPw !== confirmPw) {
+                errEl.innerText = t('pw_error');
+                errEl.style.display = 'block';
+                return;
+            }
 
-                            if ( !newPw) {
-                                errEl.innerText = t('pw_empty');
-                            errEl.style.display='block';
-                            return;
-                                }
+            if (!newPw) {
+                errEl.innerText = t('pw_empty');
+                errEl.style.display = 'block';
+                return;
+            }
 
-                            try {
-                                const res=await fetch('/api/change_password', {
+            try {
+                const res = await fetch('/api/change_password', {
 
-                                method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                                }
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                            ,
-                            body: JSON.stringify({
-                                current_password: oldPw, new_password: newPw
-                                })
-                                });
-                            const data=await res.json();
+                    ,
+                    body: JSON.stringify({
+                        current_password: oldPw, new_password: newPw
+                    })
+                });
+                const data = await res.json();
 
-                            if (data.success) {
-                                alert(t('pw_success'));
-                            renderSettingsPage();
-                                }
+                if (data.success) {
+                    alert(t('pw_success'));
+                    renderSettingsPage();
+                }
 
-                            else {
-                                errEl.innerText = data.message || t('pw_change_error');
-                            errEl.style.display='block';
-                                }
-                                }
+                else {
+                    errEl.innerText = data.message || t('pw_change_error');
+                    errEl.style.display = 'block';
+                }
+            }
 
-                            catch (e) {
-                                errEl.innerText = t('connection_error');
-                            errEl.style.display='block';
-                                }
-                                }
+            catch (e) {
+                errEl.innerText = t('connection_error');
+                errEl.style.display = 'block';
+            }
+        }
 
-                            // Placeholder for the old renderSettings to avoid errors if referenced elsewhere
-                            (though we replaced calls)
-                            function renderSettings() {
-                                renderSettingsPage();
-                                }
-
-
+        // Placeholder for the old renderSettings to avoid errors if referenced elsewhere
+        (though we replaced calls)
+        function renderSettings() {
+            renderSettingsPage();
+        }
 
 
 
 
-                            function openDetails(type, title, subject, date, value=null, desc='', id=null,
-                            imagesJson='[]') {
-                                const hasDesc=desc && desc.trim() !=='' && desc !=='null' && desc !=='undefined';
-                            let images=[];
 
-                            try {
-                                images = JSON.parse(imagesJson);
-                                }
 
-                            catch (e) {
-                                console.error(e);
-                                }
+        function openDetails(type, title, subject, date, value = null, desc = '', id = null,
+            imagesJson = '[]') {
+            const hasDesc = desc && desc.trim() !== '' && desc !== 'null' && desc !== 'undefined';
+            let images = [];
 
-                            let actionBtns='';
+            try {
+                images = JSON.parse(imagesJson);
+            }
 
-                            if (id) {
-                                actionBtns = ` <div
+            catch (e) {
+                console.error(e);
+            }
+
+            let actionBtns = '';
+
+            if (id) {
+                actionBtns = ` <div
                                     style="display: flex; flex-direction: column; gap: 10px; margin-top: 30px;">$ {
                                     type==='task' && chatEnabled ? ` < button class="btn-chat-open"
-                            onclick="renderTaskChat(${id}, '${title.replace(/'/g, " \\'")}')">
-                            <i data-lucide="message-circle" style="width:20px; vertical-align:middle;"></i>$
-                            {
-                                t('open_chat')
-                            }
+                onclick = "renderTaskChat(${id}, '${title.replace(/'/g, " \\'")}') ">
+                    < i data - lucide="message-circle" style = "width:20px; vertical-align:middle;" ></i > $
+                {
+                    t('open_chat')
+                }
 
-                        </button>` : ''
+                        </button > ` : ''
                                     }
 
                         <div style="display:flex; gap:10px;"><button class="ios-btn btn-sec"
                             style="flex: 1; margin-bottom: 0;"
-                            onclick="openCreateMenu('${type}', '${title.replace(/'/g, "
-                                            \\'")}', '${subject || ' '}' , '${date}' , '${value || ' '}'
-                            , '${desc.replace(/\r?\n/g, ' \\n').replace(/' /g, "\\'")} ', ${id}, ' $ {
-                                imagesJson.replace(/'/g, "\\' ").replace(/" /g, '&quot;')} ')">${t('
-                                            edit')}</button>
+                            onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ' '}' , '${date}' , '${value || ' '}', '${desc.replace(/\r?\n/g, ' \\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">${t('edit')}</button>
                                             $ {
-                                    type=== 'task' ? `<button class="ios-btn btn-small btn-danger-light"
-                                                style="width: auto; margin-bottom: 0;" onclick="deleteTask(${id})"><i
-                                                    data-lucide="trash-2" style="width:18px"></i></button>`: ''
+                                    type=== 'task' ? `< button class="ios-btn btn-small btn-danger-light"
+                style = "width: auto; margin-bottom: 0;" onclick = "deleteTask(${id})" > <i
+                    data-lucide="trash-2" style="width:18px"></i></button > `: ''
                                             }
 
                             $ {
-                                type === 'event' ? `<button class="ios-btn btn-small btn-danger-light"
-                                                style="width: auto; margin-bottom: 0;" onclick="deleteEvent(${id})"><i
-                                                    data-lucide="trash-2" style="width:18px"></i></button>`: ''
+                                type === 'event' ? `< button class="ios-btn btn-small btn-danger-light"
+                style = "width: auto; margin-bottom: 0;" onclick = "deleteEvent(${id})" > <i
+                    data-lucide="trash-2" style="width:18px"></i></button > `: ''
                             }
 
                             $ {
-                                type === 'grade' ? `<button class="ios-btn btn-small btn-danger-light"
-                                                style="width: auto; margin-bottom: 0;" onclick="deleteGrade(${id})"><i
-                                                    data-lucide="trash-2" style="width:18px"></i></button>`: ''
+                                type === 'grade' ? `< button class="ios-btn btn-small btn-danger-light"
+                style = "width: auto; margin-bottom: 0;" onclick = "deleteGrade(${id})" > <i
+                    data-lucide="trash-2" style="width:18px"></i></button > `: ''
                             }
 
                         </div>
                     </div>`;
-                                }
+            }
 
-                    let imagesHtml='';
+            let imagesHtml = '';
 
-                                if (images && images.length > 0) {
-                        imagesHtml = `<div style="padding:0 5px; margin-top:20px;">
+            if (images && images.length > 0) {
+                imagesHtml = `<div style="padding:0 5px; margin-top:20px;">
                                     <div
                                         style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); margin-bottom:8px;">
                                         $ {
@@ -5072,16 +5244,16 @@
 
                                     </div>
                                     <div style="display:flex; overflow-x:auto; gap:10px; padding-bottom:10px;">$ {
-                                        images.map(img=> `< img src="${img.url}"
-                    onclick="window.open('${img.url}', '_blank')"
-                                            style="height:120px; border-radius:12px; border:1px solid var(--border); object-fit:cover; cursor:pointer;">`).join('')
+                                        images.map(img=> `< img src = "${img.url}"
+                onclick = "window.open('${img.url}', '_blank')"
+                style = "height:120px; border-radius:12px; border:1px solid var(--border); object-fit:cover; cursor:pointer;" > `).join('')
                                         }
 
                 </div>
                                 </div > `;
-                                }
+            }
 
-                                document.getElementById('sheet-content').innerHTML=` < div class="sheet-header" >
+            document.getElementById('sheet-content').innerHTML = ` < div class="sheet-header" >
                                     <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
                                         t(type.toLowerCase()) || type
                                         }
@@ -5106,11 +5278,11 @@
                         <div
                             style="display:flex; align-items:center; gap:8px; margin-top:10px; color:var(--text-sec); font-size:14px; font-weight:500;">
                             $ {
-                                subject ? `<span>$ {
-                                            subject
-                                            }
+                                subject ? `< span > $ {
+                subject
+            }
 
-                                        </span><span style="opacity:0.3">•</span>` : ''
+                                        </span > <span style="opacity:0.3">•</span>` : ''
                             }
 
                             <span>$ {
@@ -5121,16 +5293,16 @@
                             }
 
                             </span>$ {
-                                value ? `<span style="opacity:0.3">•</span><span
-                                            style="color:var(--accent); font-weight:700;">$ {
-                                            t('grade_value')
-                                            }
+                                value ? `< span style = "opacity:0.3" >•</span > <span
+                style="color:var(--accent); font-weight:700;">$ {
+                    t('grade_value')
+                }
 
-                                            : $ {
-                                            value
-                                            }
+                : $ {
+                    value
+                }
 
-                                        </span>` : ''
+            </span>` : ''
                             }
 
                         </div>
@@ -5139,7 +5311,7 @@
                 }
 
                                 $ {
-                    hasDesc ? ` <div style="padding: 0 5px;">
+                    hasDesc ? ` < div style = "padding: 0 5px;" >
                                     <div
                                         style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); margin-bottom:8px;">
                                         $ {
@@ -5154,7 +5326,7 @@
                                         }
 
                                     </div>
-                                </div>` : ''
+                                </div > ` : ''
                 }
 
                                 $ {
@@ -5168,87 +5340,87 @@
                     }
 
                 </button></div>`;
-                                openSheetOverlay();
+            openSheetOverlay();
 
-                                lucide.createIcons();
-                                }
+            lucide.createIcons();
+        }
 
-                                async function deleteTask(id) {
-                                if ( !confirm(t('confirm_delete'))) return;
+        async function deleteTask(id) {
+            if (!confirm(t('confirm_delete'))) return;
 
-                                await fetch(`/ api / tasks / $ {
+            await fetch(`/ api / tasks / $ {
                     id
                 }
 
                 `, {
-                                method: 'DELETE'
-                                });
-                                closeSheet();
-                                refreshCurrentView();
-                                }
+                method: 'DELETE'
+            });
+            closeSheet();
+            refreshCurrentView();
+        }
 
-                                async function deleteEvent(id) {
-                                if ( !confirm(t('confirm_delete'))) return;
+        async function deleteEvent(id) {
+            if (!confirm(t('confirm_delete'))) return;
 
-                                await fetch(`/ api / events / $ {
+            await fetch(`/ api / events / $ {
                     id
                 }
 
                 `, {
-                                method: 'DELETE'
-                                });
-                                closeSheet();
-                                refreshCurrentView();
-                                }
+                method: 'DELETE'
+            });
+            closeSheet();
+            refreshCurrentView();
+        }
 
-                                async function deleteGrade(id) {
-                                if ( !confirm(t('confirm_delete'))) return;
+        async function deleteGrade(id) {
+            if (!confirm(t('confirm_delete'))) return;
 
-                                await fetch(`/ api / grades / $ {
+            await fetch(`/ api / grades / $ {
                     id
                 }
 
                 `, {
-                                method: 'DELETE'
-                                });
-                                closeSheet();
-                                refreshCurrentView();
-                                }
+                method: 'DELETE'
+            });
+            closeSheet();
+            refreshCurrentView();
+        }
 
-                                async function renderSharedContentManagement() {
-                                previousView='sub_super_admin';
-                                currentView='sub_shared_content';
-                                setPageTitle(t('shared_content'));
-                                document.getElementById('header-back-btn').style.display='block';
+        async function renderSharedContentManagement() {
+            previousView = 'sub_super_admin';
+            currentView = 'sub_shared_content';
+            setPageTitle(t('shared_content'));
+            document.getElementById('header-back-btn').style.display = 'block';
 
-                                if ( !window.isPoppingState) {
-                                window.history.pushState({
-                                view: 'sub_shared_content'
-                                }
+            if (!window.isPoppingState) {
+                window.history.pushState({
+                    view: 'sub_shared_content'
+                }
 
-                                , '', '/superadmin/shared');
-                                }
+                    , '', '/superadmin/shared');
+            }
 
-                                window.isPoppingState=false;
+            window.isPoppingState = false;
 
-                                document.getElementById('header-back-btn').onclick=()=> {
-                                window.history.back();
-                                }
+            document.getElementById('header-back-btn').onclick = () => {
+                window.history.back();
+            }
 
-                                ;
+                ;
 
-                                document.getElementById('app-container').innerHTML=`< div
+            document.getElementById('app-container').innerHTML = `< div
                 style = "text-align:center; padding:20px; color:var(--text-sec)" > $ {
                     t('loading')
                 }
 
                                 </div > `;
 
-                                try {
-                                const res=await fetch('/api/admin/shared-content');
-                                const data=await res.json();
+            try {
+                const res = await fetch('/api/admin/shared-content');
+                const data = await res.json();
 
-                                const taskHtml=data.tasks.map(t=> ` < div class="list-item" >
+                const taskHtml = data.tasks.map(t => ` < div class="list-item" >
                                     <div class="account-item-icon"><i data-lucide="check-square"></i></div>
                                     <div class="item-content">
                                         <div class="item-title">$ {
@@ -5271,7 +5443,7 @@
                                             style="width:20px;"></i> </div>
                                 </div > `).join('');
 
-                                const eventHtml=data.events.map(e=> ` < div class="list-item" >
+                const eventHtml = data.events.map(e => ` < div class="list-item" >
                                     <div class="account-item-icon"><i data-lucide="calendar"></i></div>
                                     <div class="item-content">
                                         <div class="item-title">$ {
@@ -5290,7 +5462,7 @@
                                             style="width:20px;"></i> </div>
                                 </div > `).join('');
 
-                                document.getElementById('app-container').innerHTML=` < div
+                document.getElementById('app-container').innerHTML = ` < div
                 style = "margin: 0 10px 15px 10px; font-size:14px; color:var(--text-sec); line-height:1.4;" >
                     $ {
                     t('shared_content_desc')
@@ -5303,13 +5475,13 @@
                                         }
 
                                     </h4>$ {
-                                    taskHtml || `<div
-                                        style="padding:20px; color:var(--text-sec); border-top:1px solid var(--border)">
-                                        $ {
-                                        t('no_shared_tasks')
-                                        }
+                                    taskHtml || `< div
+                style = "padding:20px; color:var(--text-sec); border-top:1px solid var(--border)" >
+                    $ {
+                    t('no_shared_tasks')
+                }
 
-                                    </div>`
+                                    </div > `
                                     }
 
                                 </div>
@@ -5319,36 +5491,36 @@
                                         }
 
                                     </h4>$ {
-                                    eventHtml || `<div
-                                        style="padding:20px; color:var(--text-sec); border-top:1px solid var(--border)">
-                                        $ {
-                                        t('no_shared_events')
-                                        }
+                                    eventHtml || `< div
+                style = "padding:20px; color:var(--text-sec); border-top:1px solid var(--border)" >
+                    $ {
+                    t('no_shared_events')
+                }
 
-                                    </div>`
+                                    </div > `
                                     }
 
                                 </div>`;
-                                lucide.createIcons();
-                                }
+                lucide.createIcons();
+            }
 
-                                catch (e) {
-                                console.error(e);
+            catch (e) {
+                console.error(e);
 
-                                document.getElementById('app-container').innerHTML=`< div class="floating-card"
+                document.getElementById('app-container').innerHTML = `< div class="floating-card"
                 style = "color:var(--danger)" > $ {
                     t('error')
                 }
 
                                 </div > `;
-                                }
-                                }
+            }
+        }
 
-                                async function toggleItemSharing(type, id, status) {
-                                if ( !confirm(status ? t('confirm_share') : t('confirm_unshare'))) return;
+        async function toggleItemSharing(type, id, status) {
+            if (!confirm(status ? t('confirm_share') : t('confirm_unshare'))) return;
 
-                                try {
-                                const res=await fetch(`/ api / $ {
+            try {
+                const res = await fetch(`/ api / $ {
                     type
                 }
 
@@ -5358,92 +5530,92 @@
 
                                 `, {
 
-                                method: 'PUT',
-                                headers: {
-                                'Content-Type': 'application/json'
-                                }
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                                ,
-                                body: JSON.stringify({
-                                is_shared: status
-                                })
-                                });
-                                const data=await res.json();
+                    ,
+                    body: JSON.stringify({
+                        is_shared: status
+                    })
+                });
+                const data = await res.json();
 
-                                if (data.success) {
-                                renderSharedContentManagement();
-                                }
-                                }
+                if (data.success) {
+                    renderSharedContentManagement();
+                }
+            }
 
-                                catch (e) {
-                                console.error(e);
-                                }
-                                }
+            catch (e) {
+                console.error(e);
+            }
+        }
 
-                                function openCreateMenu(editType=null, editTitle='', editSubject=null, editDate=null,
-                                editValue=null, editDesc='', id=null, existingImagesJson='[]') {
-                                taskFiles=[]; // Reset file selection
+        function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null,
+            editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
+            taskFiles = []; // Reset file selection
 
-                                if (currentView==='sub_users') {
-                                openCreateUserMenu();
-                                return;
-                                }
+            if (currentView === 'sub_users') {
+                openCreateUserMenu();
+                return;
+            }
 
-                                if (currentView==='sub_classes') {
-                                openCreateClassMenu();
-                                return;
-                                }
+            if (currentView === 'sub_classes') {
+                openCreateClassMenu();
+                return;
+            }
 
-                                let type=editType || (currentView==='tasks' ? "task" : (currentView==='calendar' ?
-                                "event" : "grade"));
-                                // Normalized types are now "task", "event", "grade"
+            let type = editType || (currentView === 'tasks' ? "task" : (currentView === 'calendar' ?
+                "event" : "grade"));
+            // Normalized types are now "task", "event", "grade"
 
-                                if (editDate && editDate !=='null' && editDate !=='undefined') {
-                                if (editDate.includes('-')) {
-                                const [y,
-                                m,
-                                d]=editDate.split('-').map(Number);
-                                selectedDate=new Date(y, m - 1, d);
-                                }
+            if (editDate && editDate !== 'null' && editDate !== 'undefined') {
+                if (editDate.includes('-')) {
+                    const [y,
+                        m,
+                        d] = editDate.split('-').map(Number);
+                    selectedDate = new Date(y, m - 1, d);
+                }
 
-                                else {
-                                selectedDate=new Date(editDate);
-                                }
+                else {
+                    selectedDate = new Date(editDate);
+                }
 
-                                if (isNaN(selectedDate.getTime())) selectedDate=new Date();
-                                }
+                if (isNaN(selectedDate.getTime())) selectedDate = new Date();
+            }
 
-                                else {
-                                selectedDate=new Date(); // Default today
-                                }
+            else {
+                selectedDate = new Date(); // Default today
+            }
 
-                                pickerViewDate=new Date(selectedDate);
+            pickerViewDate = new Date(selectedDate);
 
-                                // If string "null" or empty passed
-                                if (editSubject && editSubject !=='null' && editSubject !=='undefined')
-                                selectedSubject=editSubject;
-                                else selectedSubject=null;
+            // If string "null" or empty passed
+            if (editSubject && editSubject !== 'null' && editSubject !== 'undefined')
+                selectedSubject = editSubject;
+            else selectedSubject = null;
 
-                                const safeId=id ? id : 'null';
+            const safeId = id ? id : 'null';
 
-                                const saveFunction=(type==='task') ? `saveTask($ {
+            const saveFunction = (type === 'task') ? `saveTask($ {
                 safeId
 
-            })` : (type==='event' ? `saveEvent($ {
+            })` : (type === 'event' ? `saveEvent($ {
                 safeId
 
             })` : `saveGrade($ {
                 safeId
             })`);
 
-                                const titleVal=editTitle==='undefined' ? '' : editTitle;
-                                const descVal=editDesc==='undefined' ? '' : editDesc;
-                                const valVal=editValue==='null' || editValue==='undefined' ? '' : editValue;
+            const titleVal = editTitle === 'undefined' ? '' : editTitle;
+            const descVal = editDesc === 'undefined' ? '' : editDesc;
+            const valVal = editValue === 'null' || editValue === 'undefined' ? '' : editValue;
 
-                                let existingImagesHtml='';
+            let existingImagesHtml = '';
 
-                                // Render existing images if editing
-                                if (id && currentView==='tasks' && editSubject) {
+            // Render existing images if editing
+            if (id && currentView === 'tasks' && editSubject) {
                                 // check if task by param or context. Usually 'editSubject' is passed for tasks.
                                 // We need existing images. Since we don't pass them to openCreateMenu, we need to pass
                                 them or fetch them.
@@ -5452,14 +5624,14 @@
                                 // But openCreateMenu doesn't have an argument for images. I should add it.
                                 }
 
-                                // Wait, I need to update the signature first.
+            // Wait, I need to update the signature first.
 
-                                // Let's assume I update the signature in the next step.
-                                // But I am in multi_replace.
+            // Let's assume I update the signature in the next step.
+            // But I am in multi_replace.
 
-                                // Let's actually update openCreateMenu signature and usage right here.
+            // Let's actually update openCreateMenu signature and usage right here.
 
-                                document.getElementById('sheet-content').innerHTML=` < div class="sheet-header" >
+            document.getElementById('sheet-content').innerHTML = ` < div class="sheet-header" >
                                     <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
                                         id ? (type==='task' ? t('edit_task') : (type==='event' ? t('edit_event') :
                                         t('edit_grade'))): (type==='task' ? t('new_task') : (type==='event' ?
@@ -5470,32 +5642,32 @@
                                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"
                                             style="width:18px"></i></div>
                                 </div > $ {
-                (type === 'task' || type === 'grade') ? ` <div class="custom-picker-trigger"
-                                    onclick="toggleOptionList('subject-list')"><span id="selected-subject-display">$ {
+                (type === 'task' || type === 'grade') ? ` < div class="custom-picker-trigger"
+            onclick = "toggleOptionList('subject-list')" ><span id="selected-subject-display">$ {
                                         selectedSubject || t('choose_subject')
                                         }
 
-                                    </span><i data-lucide="chevron-down" style="width:18px"></i></div>
-                                <div class="picker-options" id="subject-list">
-                                    < !-- Loaded dynamically -->
-                                </div>
-                                </div>` : ''
+                                    </span><i data-lucide="chevron-down" style="width:18px"></i></div >
+                <div class="picker-options" id="subject-list">
+                    < !-- Loaded dynamically -->
+                </div>
+                                </div > ` : ''
             }
 
             <input type="text" id="input-title" class="ios-input"
                 placeholder="${t('title_placeholder')}" value="${titleVal}">$ {
                     type === 'task' ? ` $ {
-                                (id && existingImagesJson !=='[]') ? (()=> {
-                                let imgs=[];
+                (id && existingImagesJson !== '[]') ? (() => {
+                    let imgs = [];
 
-                                try {
-                                imgs=JSON.parse(existingImagesJson.replace(/&quot; /g, '"'));
-                                }
+                    try {
+                        imgs = JSON.parse(existingImagesJson.replace(/&quot; /g, '"'));
+                    }
 
-                                catch (e) {}
+                    catch (e) { }
 
-                                if (imgs.length > 0) {
-                                return `< div style="margin-bottom:10px;"> <label
+                    if (imgs.length > 0) {
+                        return `< div style="margin-bottom:10px;"> <label
                     style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">$
                     {
                         t('existing_images')
@@ -5503,24 +5675,24 @@
 
                 </label>
                 <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;"> $ {
-                    imgs.map(img => ` <div id="img-container-${img.id}"
-                                            onclick="toggleDeleteImage(${img.id})"
-                                            style="position:relative; flex-shrink:0; cursor:pointer;"> <img
-                                                src="${img.url}"
-                                                style="height:80px; width:80px; object-fit:cover; border-radius:10px; border:1px solid var(--border); transition: opacity 0.2s;">
-                                            <div id="del-overlay-${img.id}"
-                                                style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,59,48,0.6); border-radius:10px; display:none; align-items:center; justify-content:center;">
-                                                <i data-lucide="trash-2" style="color:white; width:24px;"></i> </div>
-                                        </div>`).join('')
+                    imgs.map(img => ` < div id = "img-container-${img.id}"
+                        onclick = "toggleDeleteImage(${img.id})"
+                        style = "position:relative; flex-shrink:0; cursor:pointer;" > <img
+                            src="${img.url}"
+                            style="height:80px; width:80px; object-fit:cover; border-radius:10px; border:1px solid var(--border); transition: opacity 0.2s;">
+                            <div id="del-overlay-${img.id}"
+                                style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,59,48,0.6); border-radius:10px; display:none; align-items:center; justify-content:center;">
+                                <i data-lucide="trash-2" style="color:white; width:24px;"></i> </div>
+                        </div>`).join('')
                 }
 
                 </div>
             </div>`
-                                }
+                    }
 
-                                return '';
-                                })() : ''
-                                }
+                    return '';
+                })() : ''
+            }
 
                                 <div id="new-images-preview"
                                     style="display:flex; gap:10px; overflow-x:auto; margin-bottom:10px;"></div><label
@@ -5608,52 +5780,52 @@
                                 subjectList.innerHTML='<div
                                     style="padding:10px; color:var(--text-sec); text-align:center;">Laden fehlgeschlagen
                                 </div>';
-                                });
+        });
                                 }
                                 }
 
-                                let isShared=false;
+        let isShared = false;
 
-                                function toggleSharing() {
-                                isShared= !isShared;
-                                const toggle=document.getElementById('sharing-toggle');
-                                if (isShared) toggle.classList.add('active');
-                                else toggle.classList.remove('active');
-                                }
+        function toggleSharing() {
+            isShared = !isShared;
+            const toggle = document.getElementById('sharing-toggle');
+            if (isShared) toggle.classList.add('active');
+            else toggle.classList.remove('active');
+        }
 
-                                let imagesToDelete=new Set();
+        let imagesToDelete = new Set();
 
-                                function toggleDeleteImage(id) {
-                                if (imagesToDelete.has(id)) {
-                                imagesToDelete.delete(id);
+        function toggleDeleteImage(id) {
+            if (imagesToDelete.has(id)) {
+                imagesToDelete.delete(id);
 
-                                document.getElementById(`del - overlay - $ {
+                document.getElementById(`del - overlay - $ {
             id
         }
 
-        `).style.display='none';
-                                }
+        `).style.display = 'none';
+            }
 
-                                else {
-                                imagesToDelete.add(id);
+            else {
+                imagesToDelete.add(id);
 
-                                document.getElementById(`del - overlay - $ {
+                document.getElementById(`del - overlay - $ {
             id
         }
 
-        `).style.display='flex';
-                                }
-                                }
+        `).style.display = 'flex';
+            }
+        }
 
-                                async function saveTask(updateId=null) {
-                                const title=document.getElementById('input-title').value;
-                                const desc=document.getElementById('input-desc').value;
-                                const subject=selectedSubject;
-                                const year=selectedDate.getFullYear();
-                                const month=String(selectedDate.getMonth() + 1).padStart(2, '0');
-                                const d=String(selectedDate.getDate()).padStart(2, '0');
+        async function saveTask(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const desc = document.getElementById('input-desc').value;
+            const subject = selectedSubject;
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
 
-                                const date=`$ {
+            const date = `$ {
             year
         }
 
@@ -5666,68 +5838,69 @@
         }
 
         `;
-                                if ( !title) return;
+            if (!title) return;
 
-                                const url=updateId ? `/ api / tasks / $ {
+            const url = updateId ? `/ api / tasks / $ {
             updateId
         }
 
         ` : '/api/tasks';
 
-                                try {
-                                let body,
-                                headers;
+            try {
+                let body,
+                    headers;
                                 // Always use FormData if there are images to upload or delete (if updateId is present
-                                but we want to use form data for consistent image handling?
+                                but we want to use form data for consistent image handling ?
                                 // Wait, update_task supports FormData.
                                 // It is simpler to always use FormData for tasks now.
 
-                                const formData=new FormData();
-                                formData.append('title', title);
-                                formData.append('description', desc);
-                                formData.append('subject', subject || '');
-                                formData.append('subject_id', selectedSubjectId || '');
-                                formData.append('is_shared', isShared ? 'true' : 'false');
-                                formData.append('due_date', date);
+                                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('description', desc);
+                formData.append('subject', subject || '');
+                formData.append('subject_id', selectedSubjectId || '');
+                formData.append('is_shared', isShared ? 'true' : 'false');
+                formData.append('due_date', date);
 
-                                if (taskFiles.length > 0) {
-                                for (let i=0; i < taskFiles.length; i++) { formData.append('images', taskFiles[i]); } }
-                                    if (updateId && imagesToDelete.size> 0) {
-                                    formData.append('deleted_images', Array.from(imagesToDelete).join(','));
-                                    }
+                if (taskFiles.length > 0) {
+                    for (let i = 0; i < taskFiles.length; i++) { formData.append('images', taskFiles[i]); }
+                }
+                if (updateId && imagesToDelete.size > 0) {
+                    formData.append('deleted_images', Array.from(imagesToDelete).join(','));
+                }
 
-                                    body=formData;
-                                    // Headers auto
+                body = formData;
+                // Headers auto
 
-                                    const res=await fetch(url, {
-                                    method: updateId ? 'PUT' : 'POST',
-                                    body: body
-                                    });
+                const res = await fetch(url, {
+                    method: updateId ? 'PUT' : 'POST',
+                    body: body
+                });
 
-                                    if (res.ok) {
-                                    imagesToDelete.clear();
-                                    closeSheet();
-                                    refreshCurrentView();
-                                    }
+                if (res.ok) {
+                    imagesToDelete.clear();
+                    closeSheet();
+                    refreshCurrentView();
+                }
 
-                                    else {
-                                    alert(t('error'));
-                                    }
-                                    }
+                else {
+                    alert(t('error'));
+                }
+            }
 
-                                    catch (err) {
-                                    alert(t('connection_error'));
-                                    }
-                                    }
+            catch (err) {
+                alert(t('connection_error'));
+            }
+        }
 
-                                    async function saveEvent(updateId=null) {
-                                    const title=document.getElementById('input-title').value;
-                                    const desc=document.getElementById('input-desc').value;
-                                    const year=selectedDate.getFullYear();
-                                    const month=String(selectedDate.getMonth() + 1).padStart(2, '0');
-                                    const d=String(selectedDate.getDate()).padStart(2, '0');
+        async function saveEvent(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const desc = document.getElementById('input-desc').value;
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
 
-                                    const date=`$ {
+            const date = `$ {
             year
         }
 
@@ -5740,46 +5913,46 @@
         }
 
         `;
-                                    if ( !title) return;
+            if (!title) return;
 
-                                    const method=updateId ? 'PUT' : 'POST';
+            const method = updateId ? 'PUT' : 'POST';
 
-                                    const url=updateId ? `/ api / events / $ {
+            const url = updateId ? `/ api / events / $ {
             updateId
         }
 
         ` : '/api/events';
 
-                                    try {
-                                    await fetch(url, {
+            try {
+                await fetch(url, {
 
-                                    method: method,
-                                    headers: {
-                                    'Content-Type': 'application/json'
-                                    }
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                                    ,
-                                    body: JSON.stringify({
-                                    title, description: desc, date, subject_id: selectedSubjectId, is_shared: isShared
-                                    })
-                                    });
-                                    closeSheet();
-                                    refreshCurrentView();
-                                    }
+                    ,
+                    body: JSON.stringify({
+                        title, description: desc, date, subject_id: selectedSubjectId, is_shared: isShared
+                    })
+                });
+                closeSheet();
+                refreshCurrentView();
+            }
 
-                                    catch (e) {
-                                    alert(t('error'));
-                                    }
-                                    }
+            catch (e) {
+                alert(t('error'));
+            }
+        }
 
-                                    async function saveGrade(updateId=null) {
-                                    const title=document.getElementById('input-title').value;
-                                    const value=document.getElementById('input-value').value;
-                                    const year=selectedDate.getFullYear();
-                                    const month=String(selectedDate.getMonth() + 1).padStart(2, '0');
-                                    const d=String(selectedDate.getDate()).padStart(2, '0');
+        async function saveGrade(updateId = null) {
+            const title = document.getElementById('input-title').value;
+            const value = document.getElementById('input-value').value;
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const d = String(selectedDate.getDate()).padStart(2, '0');
 
-                                    const date=`$ {
+            const date = `$ {
             year
         }
 
@@ -5793,84 +5966,84 @@
 
         `;
 
-                                    if ( !selectedSubject || !value) {
-                                    alert(t('error'));
-                                    return;
-                                    }
+            if (!selectedSubject || !value) {
+                alert(t('error'));
+                return;
+            }
 
-                                    const method=updateId ? 'PUT' : 'POST';
+            const method = updateId ? 'PUT' : 'POST';
 
-                                    const url=updateId ? `/ api / grades / $ {
+            const url = updateId ? `/ api / grades / $ {
             updateId
         }
 
         ` : '/api/grades';
 
-                                    try {
-                                    await fetch(url, {
+            try {
+                await fetch(url, {
 
-                                    method: method,
-                                    headers: {
-                                    'Content-Type': 'application/json'
-                                    }
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                                    ,
-                                    body: JSON.stringify({
-                                    title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'),
-                                    date
-                                    })
-                                    });
-                                    closeSheet();
-                                    refreshCurrentView();
-                                    }
+                    ,
+                    body: JSON.stringify({
+                        title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'),
+                        date
+                    })
+                });
+                closeSheet();
+                refreshCurrentView();
+            }
 
-                                    catch (e) {
-                                    alert(t('error'));
-                                    }
-                                    }
-
-
-                                    /* --- NAVIGATION HELPERS --- */
+            catch (e) {
+                alert(t('error'));
+            }
+        }
 
 
+        /* --- NAVIGATION HELPERS --- */
 
 
 
-                                    // Shared function for generating chat HTML
-                                    function generateChatMessagesHTML(msgs) {
-                                    if ( !msgs || msgs.length===0) return `< div
+
+
+        // Shared function for generating chat HTML
+        function generateChatMessagesHTML(msgs) {
+            if (!msgs || msgs.length === 0) return `< div
         style = "text-align:center; padding:40px; color:var(--text-sec); opacity:0.6;" >
             Keine Nachrichten</div > `;
 
-                                    let lastDate=null;
+            let lastDate = null;
 
-                                    return msgs.map(m=> {
-                                    const isMe=m.is_own;
-                                    const dateObj=new Date(m.created_at);
-                                    const dateStr=dateObj.toLocaleDateString();
+            return msgs.map(m => {
+                const isMe = m.is_own;
+                const dateObj = new Date(m.created_at);
+                const dateStr = dateObj.toLocaleDateString();
 
-                                    const timeStr=dateObj.toLocaleTimeString([], {
-                                    hour: '2-digit', minute: '2-digit'
-                                    });
+                const timeStr = dateObj.toLocaleTimeString([], {
+                    hour: '2-digit', minute: '2-digit'
+                });
 
-                                    let dateSep='';
+                let dateSep = '';
 
-                                    if (dateStr !==lastDate) {
-                                    dateSep=`< div class="chat-date-separator" > $ {
+                if (dateStr !== lastDate) {
+                    dateSep = `< div class="chat-date-separator" > $ {
             dateStr === new Date().toLocaleDateString() ? (t('today') || 'Heute') : dateStr
         }
 
                                     </div > `;
-                                    lastDate=dateStr;
-                                    }
+                    lastDate = dateStr;
+                }
 
-                                    let contentHtml='';
-                                    if (m.message_type==='text') contentHtml=m.content;
-                                    else if (m.message_type==='image') contentHtml=`< img src = "${m.file_url}"
+                let contentHtml = '';
+                if (m.message_type === 'text') contentHtml = m.content;
+                else if (m.message_type === 'image') contentHtml = `< img src = "${m.file_url}"
         onclick = "window.open('${m.file_url}')"
         style = "max-width:100%; border-radius:12px; cursor:pointer;" > `;
 
-                                    else contentHtml=`< a href = "${m.file_url}" target = "_blank"
+                else contentHtml = `< a href = "${m.file_url}" target = "_blank"
         style = "display:flex; align-items:center; gap:8px; color:inherit; text-decoration:none;" >
                                         <div style="background:rgba(0,0,0,0.1); padding:8px; border-radius:8px;"><i
                                                 data-lucide="file" style="width:18px"></i></div> <span>$ {
@@ -5880,7 +6053,7 @@
                                         </span>
                                     </a > `;
 
-                                    return ` $ {
+                return ` $ {
             dateSep
         }
 
@@ -5903,40 +6076,40 @@
 
             </div>
         </div> `;
-                                    }).join('');
-                                    }
+            }).join('');
+        }
 
-                                    async function renderTaskChat(id, title) {
-                                    // Fetch messages
-                                    let messages=[];
+        async function renderTaskChat(id, title) {
+            // Fetch messages
+            let messages = [];
 
-                                    try {
-                                    const res=await fetch(`/ api / tasks / $ {
+            try {
+                const res = await fetch(`/ api / tasks / $ {
             id
         }
 
                                     /chat`);
-        if (res.ok) messages = await res.json();
-                                    }
+                if (res.ok) messages = await res.json();
+            }
 
-                                    catch (e) {
-            console.error(e);
-        }
+            catch (e) {
+                console.error(e);
+            }
 
-        // Mark as read
-        fetch(`/api/tasks/$ {
+            // Mark as read
+            fetch(`/api/tasks/$ {
                                     id
                                     }
 
                                     /read`, {
-            method: 'POST'
-        });
-        refreshTasksSilent();
+                method: 'POST'
+            });
+            refreshTasksSilent();
 
-        // Store for filtering
-        window.currentChatMessages = messages;
+            // Store for filtering
+            window.currentChatMessages = messages;
 
-        const ui = ` <div class="sheet-header"
+            const ui = ` <div class="sheet-header"
                                         style="border-bottom:1px solid var(--border); padding-bottom:15px; margin-bottom:0;">
                                         <div class="sheet-close-btn" onclick="openTaskDetails(${id})"
                                             style="left:0; right:auto;"><i data-lucide="chevron-left"
@@ -5989,21 +6162,21 @@
                                                 style="width:18px; margin-left:2px;"></i></button>
                                     </div>`;
 
-        document.getElementById('sheet-content').innerHTML = ui;
-        document.getElementById('sheet-content').style.padding = "0";
-        document.getElementById('sheet-content').style.height = "85vh";
-        document.getElementById('sheet-content').style.display = "flex";
-        document.getElementById('sheet-content').style.flexDirection = "column";
+            document.getElementById('sheet-content').innerHTML = ui;
+            document.getElementById('sheet-content').style.padding = "0";
+            document.getElementById('sheet-content').style.height = "85vh";
+            document.getElementById('sheet-content').style.display = "flex";
+            document.getElementById('sheet-content').style.flexDirection = "column";
 
-        lucide.createIcons();
+            lucide.createIcons();
 
-        setTimeout(() => {
-            const area = document.getElementById('chat-messages-area');
-            if (area) area.scrollTop = area.scrollHeight;
+            setTimeout(() => {
+                const area = document.getElementById('chat-messages-area');
+                if (area) area.scrollTop = area.scrollHeight;
+            }
+
+                , 100);
         }
-
-            , 100);
-                                    }
 
         function toggleChatFilter(id, title, filter) {
             const allBtn = document.getElementById('chat-filter-all');
@@ -6549,9 +6722,8 @@
             return;
         }
 
-        const current = prompt("Bitte dein aktuelles (temporäres) Passwort zur
-                                            Bestätigung eingeben: ");
-                                            if (!current) return;
+        const current = prompt("Bitte dein aktuelles (temporäres) Passwort zur Bestätigung eingeben: ");
+        if (!current) return;
 
         try {
             const res = await fetch('/api/change_password', {
