@@ -1252,8 +1252,7 @@
         }
 
         function updateAppLanguage() {
-            // Update Bottom Navigation
-            const bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-link span');
+            // Update Bottom Navigation const bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-link span');
 
             if (bottomNavLinks.length >= 4) {
                 bottomNavLinks[0].innerText = t('home');
@@ -1262,8 +1261,7 @@
                 bottomNavLinks[3].innerText = t('grades');
             }
 
-            // Update Side Navigation
-            const sideNavLinks = document.querySelectorAll('.side-nav .nav-link span');
+            // Update Side Navigation const sideNavLinks = document.querySelectorAll('.side-nav .nav-link span');
 
             if (sideNavLinks.length >= 4) {
                 sideNavLinks[0].innerText = t('home');
@@ -1443,14 +1441,9 @@
                 lucide.createIcons();
                 closeSheet();
 
-                // Enter Animation
-                window.scrollTo(0, 0);
+                // Enter Animation window.scrollTo(0, 0);
                 container.style.animation = 'none';
-                void container.offsetWidth; // Reflow
-
-                container.style.animation = `$ {
-    enterAnim
-    }
+                void container.offsetWidth; // Reflow container.style.animation = `${enterAnim}
 
     0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
             }
@@ -1478,8 +1471,7 @@
                         sum += g.value * g.weight; count += g.weight;
                     });
                     const avg = count > 0 ? (sum / count).toFixed(1) : '-';
-                    // Use pushToHistory=false to avoid duplicating history state
-                    renderSubjectDetails(sub, avg, JSON.stringify(subjectGrades), false);
+                    // Use pushToHistory=false to avoid duplicating history state renderSubjectDetails(sub, avg, JSON.stringify(subjectGrades), false);
                 }
 
                 catch (e) {
@@ -1488,23 +1480,19 @@
             }
         }
 
-        // --- History / Back Button Logic ---
-        window.addEventListener('popstate', (event) => {
-            // Check if we are closing a modal
-            const sheet = document.getElementById('sheet-overlay');
+        // --- History / Back Button Logic --- window.addEventListener('popstate', (event) => {
+            // Check if we are closing a modal const sheet = document.getElementById('sheet-overlay');
 
             if (sheet && sheet.classList.contains('active')) {
                 // If the state was popped and it was a modal state, good.
                 // If we just hit back and a modal IS open, we presumably want to close it.
                 // But if the popped state corresponds to the *previous* view, we have a sync issue if we just close the modal.
                 // Strategy: When opening modal, we push state. When back is pressed, we pop state (event fires).
-                // We just need to close the visual element.
-                sheet.classList.remove('active');
+                // We just need to close the visual element. sheet.classList.remove('active');
                 return;
             }
 
-            // Handle View Navigation
-            if (event.state && event.state.view) {
+            // Handle View Navigation if (event.state && event.state.view) {
                 window.isPoppingState = true;
 
                 if (event.state.view === 'sub_subject_details') {
@@ -1567,8 +1555,7 @@
                     return;
                 }
 
-                // Find existing nav link for the view to pass element
-                const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
+                // Find existing nav link for the view to pass element const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
                 // Map view to title
                 let title = t('home');
                 if (event.state.view === 'tasks') title = t('tasks');
@@ -1579,8 +1566,7 @@
             }
 
             else {
-                // identifying 'home' or default
-                window.isPoppingState = true;
+                // identifying 'home' or default window.isPoppingState = true;
                 navigate('home', document.querySelectorAll('.nav-link')[0], t('home'));
             }
         });
@@ -1600,8 +1586,7 @@
             const sheet = document.getElementById('sheet-overlay');
 
             if (sheet.classList.contains('active')) {
-                // Block interaction to prevent ghost clicks on mobile
-                document.body.classList.add('no-interaction');
+                // Block interaction to prevent ghost clicks on mobile document.body.classList.add('no-interaction');
                 setTimeout(() => document.body.classList.remove('no-interaction'), 400);
 
                 window.history.back();
@@ -1720,9 +1705,7 @@
                 cachedTasks = tasks;
                 const dueTasks = tasks.filter(t => !t.is_done).slice(0, 3);
                 const container = document.getElementById('home-due-tasks');
-                if (!container) return; // Exit if user navigated away
-
-                if (dueTasks.length > 0) {
+                if (!container) return; // Exit if user navigated away if (dueTasks.length > 0) {
                     const listHtml = dueTasks.map(task => `<div class="list-item" style="padding: 18px 0;"
         onclick="openTaskDetails(${task.id})">
         <div class="check-circle" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, false, true)"><i
@@ -1740,13 +1723,9 @@
                     container.parentElement.style.boxShadow = "";
                     container.parentElement.style.padding = "24px";
 
-                    container.parentElement.innerHTML = `<h4 style="margin:0 0 15px 0; font-size:17px;">$ {
-        t('due_tasks')
-        }
+                    container.parentElement.innerHTML = `<h4 style="margin:0 0 15px 0; font-size:17px;">${t('due_tasks')}
 
-    </h4>$ {
-    listHtml
-    }
+    </h4>${listHtml}
 
     `;
 
@@ -1758,9 +1737,7 @@
                 }
 
                 else {
-                    container.innerHTML = `<p class="item-sub">$ {
-        t('tasks_empty')
-        }
+                    container.innerHTML = `<p class="item-sub">${t('tasks_empty')}
 
     </p>`;
                 }
@@ -1789,33 +1766,25 @@
 
             document.getElementById('app-container').innerHTML = ` <div
         class="controls-row ${isSearchActive ? 'search-active' : ''}">
-        < !-- Tab Bar -->
+        <!-- Tab Bar -->
             <div class="tab-bar"><button class="tab-btn ${tab === 'open' ? 'active' : ''}"
-                    onclick="renderTasks('open')">$ {
-                    t('open')
-                    }
+                    onclick="renderTasks('open')">${t('open')}
 
-                </button><button class="tab-btn ${tab === 'done' ? 'active' : ''}" onclick="renderTasks('done')">$ {
-                    t('completed')
-                    }
+                </button><button class="tab-btn ${tab === 'done' ? 'active' : ''}" onclick="renderTasks('done')">${t('completed')}
 
                 </button></div>
-            < !-- Search Button/Bar -->
+            <!-- Search Button/Bar -->
                 <div class="search-container ${isSearchActive ? 'active' : ''}"
                     onclick="if(!isSearchActive) toggleSearch(event)">
                     <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div><input type="text"
                         class="search-input" placeholder="${t('search')}">
-                    <div class="search-close-btn" onmousedown="toggleSearch(event, false)">$ {
-                        t('cancel')
-                        }
+                    <div class="search-close-btn" onmousedown="toggleSearch(event, false)">${t('cancel')}
 
                     </div>
                 </div>
     </div>
     <div id="tasks-list-container" style="padding-top: 20px; padding-bottom: 40px;">
-        <div style="text-align:center; padding:20px; color:var(--text-sec)">$ {
-            t('loading_tasks')
-            }
+        <div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading_tasks')}
 
         </div>
     </div>`;
@@ -1824,18 +1793,14 @@
             try {
                 const response = await fetch('/api/tasks');
                 const tasks = await response.json();
-                cachedTasks = tasks; // Cache for search
-
-                const filteredTasks = tasks.filter(t => tab === 'open' ? !t.is_done : t.is_done);
+                cachedTasks = tasks; // Cache for search const filteredTasks = tasks.filter(t => tab === 'open' ? !t.is_done : t.is_done);
                 const listContainer = document.getElementById('tasks-list-container');
 
                 if (filteredTasks.length === 0) {
                     const emptyText = tab === 'open' ? t('no_open_tasks') : t('no_completed_tasks');
 
                     listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;">
-        <p class="item-sub">$ {
-            emptyText
-            }
+        <p class="item-sub">${emptyText}
 
         </p>
     </div>`;
@@ -1867,9 +1832,7 @@
         </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
     </div>`).join('');
 
-                listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">$ {
-        listHtml
-        }
+                listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}
 
     </div>`;
                 lucide.createIcons();
@@ -1888,10 +1851,7 @@
             catch (err) {
                 console.error(err);
 
-                document.getElementById('tasks-list-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">$
-        {
-        t('error')
-        }
+                document.getElementById('tasks-list-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}
 
     </div>`;
             }
@@ -1914,109 +1874,17 @@
             }
         }
 
-        if (res.ok) {
-            if (refreshHome) renderHome();
-            else renderTasks(currentStatus ? 'done' : 'open');
-        }
-            }
 
-            catch (err) {
-            console.error(err);
-        }
-        }
 
-        async function renderCalendar(tab = 'termine') {
-            const container = document.getElementById('app-container');
 
-            container.innerHTML = `<div class="controls-row">
-        <div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}"
-                onclick="renderCalendar('termine')">${t('events')}</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">${t('month')}</button></div>
-    </div>
-    <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}</div>`;
-            lucide.createIcons();
 
-            try {
-                const response = await fetch('/api/events');
-                const events = await response.json();
-
-                if (tab === 'termine') {
-                    const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                    const listHtml = sortedEvents.map(e => `<div class="list-item" style="padding: 18px 0;"
-        onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
-        <div class="account-item-icon"
-            style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
-            <i data-lucide="calendar" style="width:20px; height:20px;"></i> </div>
-        <div class="item-content">
-            <div class="item-title">${e.title}</div>
-            <div class="item-sub">${new Date(e.date).toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long' })}</div>
-        </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-    </div>`).join('');
-
-                    document.getElementById('calendar-content').innerHTML = listHtml ? `<div class="floating-card"
-        style="padding:0 24px">${listHtml}</div>` : `<div class="floating-card" style="padding:40px; text-align:center">
-            <p class="item-sub">Keine anstehenden Termine.</p>
-            </div>`;
-                }
-
-                else {
-                    document.getElementById('calendar-content').innerHTML = `<div class="floating-card">
-                <div class="calendar-header">
-                    <div style="padding:10px" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
-                    <span id="main-calendar-month-year" style="font-weight:700"></span>
-                    <div style="padding:10px" onclick="changeViewMonth(1)"><i data-lucide="chevron-right"></i></div>
-                </div>
-                <div class="calendar-days-grid" id="main-calendar-grid"></div>
-                </div>`;
-                    updateMainCalendarGrid(events);
-                }
-
-                lucide.createIcons();
-            }
-
-            catch (err) {
-                console.error(err);
-            }
-        }
-
-        function updateMainCalendarGrid(events = []) {
-            const grid = document.getElementById('main-calendar-grid');
-            const title = document.getElementById('main-calendar-month-year');
-            if (!grid || !title) return;
-
-            title.innerText = viewDate.toLocaleDateString('de-DE', {
-                month: 'long', year: 'numeric'
-            });
-            grid.innerHTML = '';
-
-            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
-            const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-            const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-            const offset = firstDay === 0 ? 6 : firstDay - 1;
-            for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>'; for (let i = 1; i <= daysInMonth; i++) {
-                const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i); const
-                    year = dayDate.getFullYear(); const month = String(dayDate.getMonth() + 1).padStart(2, '0'); const
-                        d = String(dayDate.getDate()).padStart(2, '0'); const dateStr = `$ { year } -$ { month } -$ { d }
-                        `; const dayEvents = events.filter(e => e.date === dateStr);
-                const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
-                const dotHtml = dayEvents.length > 0 ? `<div class="event-dot"></div>` : '';
-                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''}"
-                            onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/" /g, '&quot;')} ')">${i}${dotHtml}</div>`;
-
-            }
-        }
-
-        function changeViewMonth(delta) {
-            viewDate.setMonth(viewDate.getMonth() + delta);
-            renderCalendar(' monat');
-        } function openDayDetails(day, eventsJson) {
+        function openDayDetails(day, eventsJson) {
             const events = JSON.parse(eventsJson);
             if (events.length === 0) {
                 const targetDate = new Date(viewDate.getFullYear(),
                     viewDate.getMonth(), day); const year = targetDate.getFullYear(); const
                         month = String(targetDate.getMonth() + 1).padStart(2, '0'); const
-                            d = String(targetDate.getDate()).padStart(2, '0'); const dateStr = `$ { year } -$ { month } -$
-                            { d } `; openCreateMenu('Termin', '', null, dateStr);
+                            d = String(targetDate.getDate()).padStart(2, '0'); const dateStr = `${year} -${month} -${d} `; openCreateMenu('Termin', '', null, dateStr);
             } else {
                 let listHtml = events.map(e =>
                     ` <div class="list-item"
@@ -2025,37 +1893,26 @@
                                     style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
                                     <i data-lucide="calendar" style="width:18px; height:18px;"></i> </div>
                                 <div class="item-content">
-                                    <div class="item-title">$ {
-                                        e.title
-                                        }
+                                    <div class="item-title">${e.title}
 
                                     </div>
-                                    <div class="item-sub">$ {
-                                        new Date(e.date).toLocaleDateString('de-DE')
-                                        }
+                                    <div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE')}
 
                                     </div>
                                 </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                             </div>`).join('');
 
                 document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header">
-                                <h2 style="margin:0; font-size:20px;">$ {
-                                    day
-                                    }
+                                <h2 style="margin:0; font-size:20px;">${day}
 
-                                    . $ {
-                                    viewDate.toLocaleDateString('de-DE', {
-                                    month: 'long'
-                                    })
-                                    }
+                                    . ${viewDate.toLocaleDateString('de-DE', { month: 'long'})
+                    }
 
                                 </h2>
                                 <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"
                                         style="width:18px"></i></div>
                             </div>
-                            <div class="floating-card" style="padding:0 24px; margin-bottom:20px;">$ {
-                                listHtml
-                                }
+                            <div class="floating-card" style="padding:0 24px; margin-bottom:20px;">${listHtml}
 
                             </div><button class="ios-btn"
                                 onclick="openCreateMenu('Termin', '', null, '${events[0].date}')">Neuer
@@ -2070,244 +1927,20 @@
             window.open(url, '_blank');
         }
 
-        function openDetails(type, title, subject, date, value, desc, id, imagesJson) {
-            let content = `<div class="sheet-header">
-                <h2 style="margin:0">${title}</h2>
-                <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
-            </div>
-            <div class="floating-card" style="padding: 20px;">`;
-
-            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
-            const locale = lang === 'en' ? 'en-US' : 'de-DE';
-
-            if (type === 'grade') {
-                content += `<p><strong>${t('subject')}:</strong> ${subject}</p>
-                            <p><strong>${t('date')}:</strong> ${new Date(date).toLocaleDateString(locale)}</p>
-                            <p><strong>${t('value')}:</strong> ${value}</p>
-                            ${desc ? `<p><strong>${t('description')}:</strong> ${desc}</p>` : ''}`;
-            } else if (type === 'task') {
-                content += `<p><strong>${t('subject')}:</strong> ${subject || t('general')}</p>
-                            <p><strong>${t('due')}:</strong> ${date ? new Date(date).toLocaleDateString(locale) : t('no_date')}</p>
-                            ${desc ? `<p style="white-space: pre-wrap; margin-top:10px;">${desc}</p>` : ''}`;
-
-                // Images
-                let images = [];
-                try {
-                    if (imagesJson) images = JSON.parse(imagesJson);
-                } catch (e) { console.error('Error parsing images JSON', e); }
-
-                if (images && images.length > 0) {
-                    content += `<div style="margin-top:15px; display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;">`;
-                    images.forEach(img => {
-                        content += `<div onclick="openImageFullscreen('/uploads/${img.filename}')" style="flex-shrink:0; width:100px; height:100px; border-radius:8px; overflow:hidden; background:#eee; cursor:pointer;">
-                                         <img src="/uploads/${img.filename}" style="width:100%; height:100%; object-fit:cover;">
-                                     </div>`;
-                    });
-                    content += `</div>`;
-                }
-
-                // CHAT BUTTON
-                if (chatEnabled) {
-                    content += `
-                     <div style="margin-top: 20px;">
-                        <button class="btn-chat-open" onclick="renderTaskChat(${id}, '${title.replace(/'/g, "\\'")}')">
-                            <i data-lucide="message-circle" style="width:20px; height:20px;"></i>
-                            <span>${t('open_chat')}</span>
-                        </button>
-                     </div>
-                     `;
-                }
-
-            } else {
-                // Event
-                content += `<p><strong>${t('date')}:</strong> ${new Date(date).toLocaleDateString(locale)}</p>
-                             ${desc ? `<p style="white-space: pre-wrap; margin-top:10px;">${desc}</p>` : ''}`;
-            }
-
-            content += `</div>
-            <div style="display:flex; gap:10px;margin-top:10px;">
-                 <button class="ios-btn btn-sec" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date || ''}', '${value || ''}', '${(desc || '').replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${(imagesJson || '[]').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">${t('edit')}</button>
-            </div>`;
-
-            // Delete buttons
-            if (type === 'task') {
-                content += `<div style="margin-top:10px;"><button class="ios-btn btn-danger-light" onclick="deleteTask(${id})">${t('delete')}</button></div>`;
-            } else if (type === 'event') {
-                content += `<div style="margin-top:10px;"><button class="ios-btn btn-danger-light" onclick="deleteEvent(${id})">${t('delete')}</button></div>`;
-            } else if (type === 'grade') {
-                content += `<div style="margin-top:10px;"><button class="ios-btn btn-danger-light" onclick="deleteGrade(${id})">${t('delete')}</button></div>`;
-            }
-
-            document.getElementById('sheet-content').innerHTML = content;
-            openSheetOverlay();
-            lucide.createIcons();
-        }
-
-        async function renderTaskChat(taskId, taskTitle) {
-            const sheetContent = document.getElementById('sheet-content');
-            sheetContent.innerHTML = `<div class="sheet-header">
-                <h2 style="margin:0">${taskTitle} - Chat</h2>
-                <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
-            </div>
-            <div class="chat-messages-area" id="chat-messages-area">Lade Chat...</div>
-            <div class="chat-input-bar">
-                 <button class="chat-attach-btn"><i data-lucide="paperclip"></i></button>
-                 <div class="chat-input-field-wrapper">
-                     <textarea class="chat-input" id="chat-input" placeholder="${t('chat_input_placeholder')}" rows="1"></textarea>
-                 </div>
-                 <button class="chat-send-btn" onclick="sendChatMessage(${taskId})"><i data-lucide="send"></i></button>
-            </div>
-            `;
-            openSheetOverlay();
-            lucide.createIcons();
-
-            try {
-                const res = await fetch(`/api/tasks/${taskId}/chat`);
-                const messages = await res.json();
-                const msgHtml = generateChatMessagesHTML(messages);
-                document.getElementById('chat-messages-area').innerHTML = msgHtml;
-            } catch (e) {
-                console.error(e);
-                document.getElementById('chat-messages-area').innerText = 'Fehler beim Laden des Chats.';
-            }
-        }
-
-        function generateChatMessagesHTML(messages) {
-            if (!messages || messages.length === 0) return '<div style="text-align:center; padding:20px; color:var(--text-sec);">Keine Nachrichten.</div>';
-            return messages.map(msg => {
-                const isMe = msg.user_id === window.currentUserId;
-                return `<div class="chat-bubble-row ${isMe ? 'me' : 'other'}">
-                    <div class="chat-bubble">${msg.content}</div>
-                    <div class="chat-meta">${new Date(msg.created_at).toLocaleTimeString().slice(0, 5)}</div>
-                </div>`;
-            }).join('');
-        }
-
-        async function sendChatMessage(taskId) {
-            const input = document.getElementById('chat-input');
-            const content = input.value.trim();
-            if (!content) return;
-
-            try {
-                await fetch(`/api/tasks/${taskId}/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content })
-                });
-                input.value = '';
-                const res = await fetch(`/api/tasks/${taskId}/chat`);
-                const messages = await res.json();
-                document.getElementById('chat-messages-area').innerHTML = generateChatMessagesHTML(messages);
-            } catch (e) { console.error(e); alert('Senden fehlgeschlagen'); }
-        }
 
 
-        function toggleSearch(e, focus = true) {
-            if (e) e.stopPropagation();
-            isSearchActive = !isSearchActive;
-            renderTasks(currentTaskTab);
-            if (isSearchActive && focus) {
-                setTimeout(() => {
-                    const el = document.querySelector('.search-input');
-                    if (el) el.focus();
-                }, 100);
-            }
-        }
 
-        function filterTasks(e) {
-            const term = e.target.value.toLowerCase();
-            const filtered = cachedTasks.filter(t => {
-                const matchStatus = currentTaskTab === 'open' ? !t.is_done : t.is_done;
-                const matchSearch = t.title.toLowerCase().includes(term) || (t.subject || '').toLowerCase().includes(term);
-                return matchStatus && matchSearch;
-            });
-            const listContainer = document.getElementById('tasks-list-container');
-            const locale = window.currentUser?.language === 'en' ? 'en-US' : 'de-DE';
 
-            if (filtered.length === 0) {
-                listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_results')}</p></div>`;
-                return;
-            }
 
-            const listHtml = filtered.map(task => ` <div class="list-item" style="padding: 18px 0;"
-                onclick="openTaskDetails(${task.id})">
-                <div class="check-circle ${task.is_done ? 'checked' : ''}"
-                    onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})"> <i data-lucide="check"
-                        style="width:14px; opacity:${task.is_done ? 1 : 0}"></i> </div>
-                <div class="item-content">
-                    <div class="item-title">${task.title}</div>
-                    <div class="item-sub" style="display:flex; align-items:center;"> 
-                        ${task.subject || t('general')} • ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}
-                        ${task.unread_chat_count > 0 ? `<div style="background:var(--danger); width:8px; height:8px; border-radius:50%; margin-left:8px;"></div>` : ''}
-                    </div>
-                </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-            </div>`).join('');
 
-            listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}</div>`;
-            lucide.createIcons();
-        }
 
-        async function renderGrades() {
-            document.getElementById('app-container').innerHTML = `<div
-                                style="text-align:center; padding:20px; color:var(--text-sec)">Lade Noten...</div>`;
 
-            try {
-                const res = await fetch('/api/grades');
-                const grades = await res.json();
 
-                const subjects = {}
 
-                    ;
 
-                grades.forEach(g => {
-                    if (!subjects[g.subject]) subjects[g.subject] = {
-                        sum: 0, count: 0, grades: []
-                    }
 
-                        ;
-                    subjects[g.subject].sum += (g.value * g.weight);
-                    subjects[g.subject].count += g.weight;
-                    subjects[g.subject].grades.push(g);
-                });
-                let totalSum = 0,
-                    totalCount = 0,
-                    listHtml = '';
 
-                for (let sub in subjects) {
-                    const avg = subjects[sub].count > 0 ? (subjects[sub].sum / subjects[sub].count).toFixed(1) : '-';
 
-                    if (subjects[sub].count > 0) {
-                        totalSum += (subjects[sub].sum / subjects[sub].count);
-                        totalCount++;
-                    }
-
-                    listHtml += `<div class="floating-card" onclick="renderSubjectDetails('${sub}', '${avg}', '${JSON.stringify(subjects[sub].grades).replace(/"/g, '&quot;')}')">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <h3 style="margin:0">${sub}</h3>
-                                <p class="item-sub">${subjects[sub].grades.length} Note${subjects[sub].grades.length !== 1 ? 'n' : ''}</p>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <div style="font-size: 20px; font-weight: 700; color: var(--accent);">${avg}</div>
-                            </div>
-                        </div>
-                    </div>`;
-                }
-
-                const totalAvg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : null;
-                document.getElementById('app-container').innerHTML = `
-                    ${totalAvg !== null ? `<div class="floating-card" style="text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;">
-                        <p style="opacity:0.8; font-size:14px;">Gesamtdurchschnitt</p>
-                        <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">${totalAvg}</div>
-                    </div>` : ''}
-                    ${listHtml || `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Noch keine Noten eingetragen.</p></div>`}
-                `;
-                lucide.createIcons();
-            } catch (e) {
-                console.error(e);
-                document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Fehler beim Laden der Noten.</div>`;
-            }
-        }
 
 
         let cachedEvents = [];
@@ -2370,38 +2003,30 @@
                 if (!listContainer) return;
 
                 if (filteredTasks.length === 0) {
-                    listContainer.innerHTML = `< div class="floating-card" style = "text-align:center; padding:40px;" >
+                    listContainer.innerHTML = `<div class="floating-card" style = "text-align:center; padding:40px;" >
                         <p class="item-sub">Keine Ergebnisse.</p>
                         </div > `;
                     return;
                 }
 
-                const listHtml = filteredTasks.map(task => ` < div class="list-item" style = "padding: 18px 0;"
+                const listHtml = filteredTasks.map(task => ` <div class="list-item" style = "padding: 18px 0;"
                     onclick = "openTaskDetails(${task.id})" >
                             <div class="check-circle ${task.is_done ? 'checked' : ''}"
                                 onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})"> <i
                                     data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}"></i> </div>
                             <div class="item-content">
-                                <div class="item-title">$ {
-                                    task.title
-                                    }
+                                <div class="item-title">${task.title}
 
                                 </div>
-                                <div class="item-sub">$ {
-                                    task.subject || 'Allgemein'
-                                    }
+                                <div class="item-sub">${task.subject || 'Allgemein'}
 
-                                    • $ {
-                                    task.due_date ? new Date(task.due_date).toLocaleDateString('de-DE') : 'Kein Datum'
-                                    }
+                                    • ${task.due_date ? new Date(task.due_date).toLocaleDateString('de-DE') : 'Kein Datum'}
 
                                 </div>
                             </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div > `).join('');
 
-                listContainer.innerHTML = `< div class="floating-card" style = "padding:0 24px" > $ {
-                        listHtml
-                    }
+                listContainer.innerHTML = `<div class="floating-card" style = "padding:0 24px" > ${listHtml}
 
                         </div > `;
                 lucide.createIcons();
@@ -2415,37 +2040,31 @@
         async function renderCalendar(tab = 'termine') {
             currentView = 'calendar';
             currentCalendarTab = tab;
+            const lang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
+            const locale = lang === 'en' ? 'en-US' : 'de-DE';
             const container = document.getElementById('app-container');
 
-            container.innerHTML = ` < div class="controls-row ${isSearchActive ? 'search-active' : ''}" >
-                            < !--Tab Bar-- >
+            container.innerHTML = ` <div class="controls-row ${isSearchActive ? 'search-active' : ''}" >
+                            <!--Tab Bar-->
                                 <div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}"
-                                        onclick="renderCalendar('termine')">$ {
-                                        t('events')
-                                        }
+                                        onclick="renderCalendar('termine')">${t('events')}
 
                                     </button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}"
-                                        onclick="renderCalendar('monat')">$ {
-                                        t('month')
-                                        }
+                                        onclick="renderCalendar('monat')">${t('month')}
 
                                     </button></div>
-                                < !--Search Button / Bar-- >
+                                <!--Search Button / Bar-->
                         <div class="search-container ${isSearchActive ? 'active' : ''}"
                             onclick="if(!isSearchActive) toggleSearch(event)">
                             <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i>
                             </div><input type="text" class="search-input" placeholder="${t('search')}">
-                                <div class="search-close-btn" onmousedown="toggleSearch(event, false)">$ {
-                                    t('cancel')
-                                }
+                                <div class="search-close-btn" onmousedown="toggleSearch(event, false)">${t('cancel')}
 
                                 </div>
                         </div>
                         </div >
                         <div id="calendar-content"
-                            style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">$ {
-                                t('loading')
-                            }
+                            style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}
 
                         </div>`;
             lucide.createIcons();
@@ -2476,7 +2095,7 @@
                 }
 
                 else {
-                    document.getElementById('calendar-content').innerHTML = ` < div class="floating-card" >
+                    document.getElementById('calendar-content').innerHTML = ` <div class="floating-card" >
                             <div class="calendar-header">
                                 <div style="padding:10px" onclick="changeViewMonth(-1)"><i
                                         data-lucide="chevron-left"></i></div><span id="main-calendar-month-year"
@@ -2500,37 +2119,27 @@
         function renderEventList(events) {
             const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            const listHtml = sortedEvents.map(e => ` < div class="list-item" style = "padding: 18px 0;"
+            const listHtml = sortedEvents.map(e => ` <div class="list-item" style = "padding: 18px 0;"
                     onclick = "openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})" >
                             <div class="account-item-icon"
                                 style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
                                 <i data-lucide="calendar" style="width:20px; height:20px;"></i> </div>
                             <div class="item-content">
-                                <div class="item-title">$ {
-                                    e.title
-                                    }
+                                <div class="item-title">${e.title}
 
                                 </div>
-                                <div class="item-sub">$ {
-                                    new Date(e.date).toLocaleDateString(window.currentUser?.language==='en' ? 'en-US' :
-                                    'de-DE', {
-                                    weekday: 'long', day: '2-digit', month: 'long'
-                                    })
-                                    }
+                                <div class="item-sub">${new Date(e.date).toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { weekday: 'long', day: '2-digit', month: 'long'})
+                }
 
                                 </div>
                             </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                         </div > `).join('');
 
-            document.getElementById('calendar-content').innerHTML = listHtml ? `< div class="floating-card"
-                    style = "padding:0 24px" > $ {
-                        listHtml
-                    }
+            document.getElementById('calendar-content').innerHTML = listHtml ? `<div class="floating-card"
+                    style = "padding:0 24px" > ${listHtml}
 
-                        </div > ` : ` < div class="floating-card" style = "padding:40px; text-align:center" >
-                        <p class="item-sub">$ {
-                            t('no_events_list')
-                        }
+                        </div > ` : ` <div class="floating-card" style = "padding:40px; text-align:center" >
+                        <p class="item-sub">${t('no_events_list')}
 
                         </p>
                         </div > `;
@@ -2560,9 +2169,7 @@
             });
             grid.innerHTML = '';
 
-            t('day_initials').split(',').forEach(d => grid.innerHTML += `< div class="day-label" > $ {
-                        d
-                    }
+            t('day_initials').split(',').forEach(d => grid.innerHTML += `<div class="day-label" > ${d}
 
                         </div > `);
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
@@ -2572,15 +2179,14 @@
                 i++) {
                 const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i); const
                     year = dayDate.getFullYear(); const month = String(dayDate.getMonth() + 1).padStart(2, '0');
-                const d = String(dayDate.getDate()).padStart(2, '0'); const dateStr = `$ { year } -$ { month }
-                    -$ { d } `; const dayEvents = events.filter(e => e.date === dateStr);
+                const d = String(dayDate.getDate()).padStart(2, '0'); const dateStr = `${year} -${month}
+                    -${d} `; const dayEvents = events.filter(e => e.date === dateStr);
                 const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
                 const hasEvent = dayEvents.length > 0;
-                const dotHtml = hasEvent ? `< div class="event-dot" ></div > ` : '';
-                grid.innerHTML += `< div
+                const dotHtml = hasEvent ? `<div class="event-dot" ></div > ` : '';
+                grid.innerHTML += `<div
                     class="calendar-day ${isToday ? 'today' : ''} ${hasEvent ? 'has-event' : ''}"
-                    onclick = "openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/" / g, '&quot;')
-                    } ')">${i}${dotHtml}</div>`;
+                    onclick = "openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/" / g, '&quot;')} ')">${i}${dotHtml}</div>`;
 
             }
         }
@@ -2602,47 +2208,31 @@
                                         style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
                                         <i data-lucide="calendar" style="width:18px; height:18px;"></i> </div>
                                     <div class="item-content">
-                                        <div class="item-title">$ {
-                                            e.title
-                                            }
+                                        <div class="item-title">${e.title}
 
                                         </div>
-                                        <div class="item-sub">$ {
-                                            new Date(e.date).toLocaleDateString(locale)
-                                            }
+                                        <div class="item-sub">${new Date(e.date).toLocaleDateString(locale)}
 
                                         </div>
                                     </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                                 </div>`).join('');
 
                 document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header">
-                                    <h2 style="margin:0; font-size:20px;">$ {
-                                        day
-                                        }
+                                    <h2 style="margin:0; font-size:20px;">${day}
 
-                                        . $ {
-                                        viewDate.toLocaleDateString(window.currentUser?.language==='en' ? 'en-US' :
-                                        'de-DE', {
-                                        month: 'long'
-                                        })
-                                        }
+                                        . ${viewDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { month: 'long'})
+                    }
 
                                     </h2>
                                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"
                                             style="width:18px"></i></div>
                                 </div>
-                                <div class="floating-card" style="padding:0 24px; margin-bottom:20px;">$ {
-                                    listHtml
-                                    }
+                                <div class="floating-card" style="padding:0 24px; margin-bottom:20px;">${listHtml}
 
                                 </div><button class="ios-btn"
-                                    onclick="openCreateMenu('Termin', '', null, '${events[0].date}')">$ {
-                                    t('new_event')
-                                    }
+                                    onclick="openCreateMenu('Termin', '', null, '${events[0].date}')">${t('new_event')}
 
-                                </button><button class="ios-btn btn-sec" onclick="closeSheet()">$ {
-                                    t('done')
-                                    }
+                                </button><button class="ios-btn btn-sec" onclick="closeSheet()">${t('done')}
 
                                 </button>`;
                 document.getElementById('sheet-overlay').classList.add('active');
@@ -2654,9 +2244,7 @@
             currentView = 'grades';
 
             document.getElementById('app-container').innerHTML = `<div
-                                    style="text-align:center; padding:20px; color:var(--text-sec)">$ {
-                                    t('loading')
-                                    }
+                                    style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}
 
                                 </div>`;
 
@@ -2692,22 +2280,14 @@
                     }
 
                     listHtml += `<div class="floating-card"
-                                    onclick="renderSubjectDetails('${sub}', '${avg}', '${JSON.stringify(subjects[sub].grades).replace(/"
-                        / g, '&quot;')} ')">
- <div style="display:flex; justify-content:space-between; align-items:center;"><div><h3 style="margin:0">$ {
-                    sub
-                }
+                                    onclick="renderSubjectDetails('${sub}', '${avg}', '${JSON.stringify(subjects[sub].grades).replace(/" / g, '&quot;')} ')">
+ <div style="display:flex; justify-content:space-between; align-items:center;"><div><h3 style="margin:0">${sub}
 
-                </h3><p class="item-sub">$ {
-                    subjects[sub].grades.length
-                }
+                </h3><p class="item-sub">${subjects[sub].grades.length}
 
-                Note$ {
-                    subjects[sub].grades.length !==1 ? ' n': '' } </p></div>
+                Note${subjects[sub].grades.length !== 1 ? ' n' : ''} </p></div>
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <div style="font-size: 20px; font-weight: 700; color: var(--accent);">$ {
-                                        avg
-                                        }
+                                    <div style="font-size: 20px; font-weight: 700; color: var(--accent);">${avg}
 
                                     </div><i data-lucide="chevron-right" style="width:18px"></i>
                                 </div>
@@ -2717,31 +2297,20 @@
 
                 const totalAvg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : null;
 
-                document.getElementById('app-container').innerHTML = ` $ {
-                            totalAvg !==null ? ` < div class="floating-card"
-                style = "text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;" >
-                                <p style="opacity:0.8; font-size:14px;">$ {
-                                    t('total_average')
-                                    }
+                document.getElementById('app-container').innerHTML = ` ${totalAvg !== null ? ` <div class="floating-card"         style = "text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;" >                 <p style="opacity:0.8; font-size:14px;">${t('total_average')}
 
                                 </p>
-                                <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">$ {
-                                    totalAvg
-                                    }
+                                <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">${totalAvg}
 
                                 </div>
                             </div > ` : ''
-                            }
-
-                            $ {
-                            listHtml || `< div class="floating-card" style = "text-align:center; padding:40px;" >
-                    <p class="item-sub">$ {
-                        t('no_grades_yet')
                     }
+
+                            ${listHtml || `<div class="floating-card" style = "text-align:center; padding:40px;" >           <p class="item-sub">${t('no_grades_yet')}
 
                     </p>
                             </div > `
-                            }
+                    }
 
                             `;
                 lucide.createIcons();
@@ -2756,13 +2325,7 @@
             if (pushToHistory) {
                 window.history.pushState({
                     view: 'sub_subject_details', subject, avg, gradesJson
-                }
-
-                    , '', `/subject/$ {
-                            encodeURIComponent(subject)
-                            }
-
-                            `);
+                }, '', `/subject/${encodeURIComponent(subject)}`);
             }
 
             previousView = currentView;
@@ -2772,36 +2335,8 @@
             const locale = lang === 'en' ? 'en-US' : 'de-DE';
             const grades = JSON.parse(gradesJson);
 
-            const listHtml = grades.map(g => ` <div class="list-item"
-                                onclick="openDetails('grade', '${g.title || t('grade')}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id})">
-                                <div class="item-content">
-                                    <div class="item-title">$ {
-                                        g.title || t('grade')
-                                        }
-
-                                    </div>
-                                    <div class="item-sub">$ {
-                                        new Date(g.date).toLocaleDateString(locale)
-                                        }
-
-                                        • $ {
-                                        t('weight')
-                                        }
-
-                                        : $ {
-                                        g.weight
-                                        }
-
-                                        x</div>
-                                </div>
-                                <div style="font-weight:700; font-size:18px; color:var(--text-main);">$ {
-                                    g.value
-                                    }
-        function renderSubjectDetails(subject, avg, gradesJson) {
-            const grades = JSON.parse(gradesJson);
-            const locale = window.currentUser?.language === 'en' ? 'en-US' : 'de-DE';
             const listHtml = grades.map(g => `
-                <div class="list-item" style="padding: 12px 0; border-bottom: 0.5px solid var(--border);">
+                <div class="list-item" style="padding: 18px 0;" onclick="openDetails('grade', '${(g.title || t('grade')).replace(/'/g, "\\'")}', '${g.subject}', '${g.date}', '${g.value}', '${(g.description || '').replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${g.id})">
                     <div class="item-content">
                         <div class="item-title">${g.title || t('grade')}</div>
                         <div class="item-sub">${new Date(g.date).toLocaleDateString(locale)} • ${t('weight')}: ${g.weight}x</div>
@@ -2811,16 +2346,15 @@
             `).join('');
 
             document.getElementById('app-container').innerHTML = `
-                <div class="floating-card" style="text-align:center;">
+                <div class="floating-card" style="text-align:center; padding: 24px;">
                     <h2 style="margin:0">${subject}</h2>
                     <div style="color:var(--accent); font-size:32px; font-weight:700; margin:10px 0;">${avg}</div>
                 </div>
-                <h3 style="margin:30px 0 10px 5px; font-size:18px;">${t('single_grades')}</h3>
-                <div class="floating-card" style="padding:10px; margin-bottom: 40px;">${listHtml}</div>
+                <h3 style="margin:20px 0 10px 5px; font-size:18px;">${t('single_grades')}</h3>
+                <div class="floating-card" style="padding:0 24px; margin-bottom: 40px;">${listHtml}</div>
             `;
             document.getElementById('header-back-btn').style.display = 'block';
-            document.getElementById('header-back-btn').onclick = () => window.history.back();
-        }
+            lucide.createIcons();
         }
 
         // --- Account & Settings Logic ---
@@ -2859,9 +2393,7 @@
                         <div class="account-item-text">${t('settings')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
-                    ${isAdmin ? `<div class="account-item" onclick="renderAdminMenu()">
-                        <div class="account-item-icon" style="background:#FF9500; color:white;"><i data-lucide="shield"></i></div>
-                        <div class="account-item-text">${t('admin')}</div>
+                    ${isAdmin ? `<div class="account-item" onclick="renderAdminMenu()">             <div class="account-item-icon" style="background:#FF9500; color:white;"><i data-lucide="shield"></i></div>             <div class="account-item-text">${t('admin')}</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>` : ''}
                     <div class="account-item" onclick="window.location.href='https://github.com/L8te/L8teStudy/issues'">
@@ -2918,19 +2450,13 @@
             const savedLang = localStorage.getItem('l8te_lang') || 'de';
 
             document.getElementById('app-container').innerHTML = ` <div class="floating-card">
-                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">$ {
-                                    t('appearance')
-                                    }
+                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('appearance')}
 
-                                    & $ {
-                                    t('notifications')
-                                    }
+                                    & ${t('notifications')}
 
                                 </h4>
                                 <div class="account-item" onclick="toggleTheme()">
-                                    <div class="account-item-text">$ {
-                                        t('darkmode')
-                                        }
+                                    <div class="account-item-text">${t('darkmode')}
 
                                     </div>
                                     <div class="ios-toggle ${isDark ? 'active' : ''}">
@@ -2938,45 +2464,33 @@
                                     </div>
                                 </div>
                                 <div class="account-item" onclick="renderNotificationSettings()">
-                                    <div class="account-item-text">$ {
-                                        t('notifications')
-                                        }
+                                    <div class="account-item-text">${t('notifications')}
 
                                     </div><i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                                 </div>
                             </div>
                             <div class="floating-card">
-                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">$ {
-                                    t('general')
-                                    }
+                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('general')}
 
                                 </h4>
                                 <div class="account-item" onclick="renderLanguageSelection()">
-                                    <div class="account-item-text">$ {
-                                        t('language')
-                                        }
+                                    <div class="account-item-text">${t('language')}
 
                                     </div>
                                     <div style="display:flex; align-items:center;"><span
                                             style="color:var(--text-sec); margin-right:10px; font-size:15px;"
-                                            id="current-lang-display">$ {
-                                            savedLang==='en' ? t('en'): t('de')
-                                            }
+                                            id="current-lang-display">${savedLang === 'en' ? t('en') : t('de')}
 
                                         </span><i data-lucide="chevron-right"
                                             style="width:18px; color:var(--text-sec)"></i></div>
                                 </div>
                             </div>
                             <div class="floating-card">
-                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">$ {
-                                    t('security')
-                                    }
+                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('security')}
 
                                 </h4>
                                 <div class="account-item" onclick="renderChangePassword()">
-                                    <div class="account-item-text">$ {
-                                        t('changepw')
-                                        }
+                                    <div class="account-item-text">${t('changepw')}
 
                                     </div><i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                                 </div>
@@ -2991,33 +2505,21 @@
             const savedLang = window.currentUser?.language || localStorage.getItem('l8te_lang') || 'de';
 
             document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header">
-                                <h3 style="margin:0">$ {
-                                    t('choose_lang')
-                                    }
+                                <h3 style="margin:0">${t('choose_lang')}
 
                                 </h3>
                                 <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
                             </div>
                             <div class="account-item" onclick="setLanguage('de')" style="cursor:pointer;">
-                                <div class="account-item-text">$ {
-                                    t('de')
-                                    }
+                                <div class="account-item-text">${t('de')}
 
-                                </div>$ {
-                                savedLang==='de' ? '<i data-lucide="check"
-                                    style="color:var(--accent); width:20px;"></i>': ''
-                                }
+                                </div>${savedLang === 'de' ? '<i data-lucide="check"                   style="color:var(--accent); width:20px;"></i>' : ''}
 
                             </div>
                             <div class="account-item" onclick="setLanguage('en')" style="cursor:pointer;">
-                                <div class="account-item-text">$ {
-                                    t('en')
-                                    }
+                                <div class="account-item-text">${t('en')}
 
-                                </div>$ {
-                                savedLang==='en' ? '<i data-lucide="check"
-                                    style="color:var(--accent); width:20px;"></i>': ''
-                                }
+                                </div>${savedLang === 'en' ? '<i data-lucide="check"                   style="color:var(--accent); width:20px;"></i>' : ''}
 
                             </div>`;
             openSheetOverlay();
@@ -3074,9 +2576,7 @@
             document.getElementById('header-back-btn').onclick = () => window.history.back();
 
             document.getElementById('app-container').innerHTML = `<div
-                                style="text-align:center; padding:20px;">$ {
-                                t('loading')
-                                }
+                                style="text-align:center; padding:20px;">${t('loading')}
 
                             </div>`;
 
@@ -3086,40 +2586,29 @@
                 if (currentView !== 'sub_notifications') return;
                 const settings = await res.json();
 
-                // Render UI immediately
-                document.getElementById('app-container').innerHTML = ` <div class="floating-card">
-                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">$ {
-                                    t('browser_push')
-                                    }
+                // Render UI immediately document.getElementById('app-container').innerHTML = ` <div class="floating-card">
+                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('browser_push')}
 
                                 </h4>
                                 <div class="account-item" id="push-row" onclick="subscribePush()">
-                                    <div class="account-item-text">$ {
-                                        t('allow_push')
-                                        }
+                                    <div class="account-item-text">${t('allow_push')}
 
                                     </div>
                                     <div class="ios-toggle" id="push-toggle">
                                         <div class="ios-toggle-knob"></div>
                                     </div>
                                 </div>
-                                <p class="item-sub" id="push-status-text" style="margin-top:10px; font-size:13px;">$ {
-                                    t('push_inactive_msg')
-                                    }
+                                <p class="item-sub" id="push-status-text" style="margin-top:10px; font-size:13px;">${t('push_inactive_msg')}
 
                                 </p>
                             </div>
                             <div class="floating-card">
-                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">$ {
-                                    t('news')
-                                    }
+                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('news')}
 
                                 </h4>
                                 <div class="account-item"
                                     onclick="toggleNotifySetting('notify_new_task', ${!settings.notify_new_task})">
-                                    <div class="account-item-text">$ {
-                                        t('new_tasks_others')
-                                        }
+                                    <div class="account-item-text">${t('new_tasks_others')}
 
                                     </div>
                                     <div class="ios-toggle ${settings.notify_new_task ? 'active' : ''}">
@@ -3128,9 +2617,7 @@
                                 </div>
                                 <div class="account-item"
                                     onclick="toggleNotifySetting('notify_new_event', ${!settings.notify_new_event})">
-                                    <div class="account-item-text">$ {
-                                        t('new_events_others')
-                                        }
+                                    <div class="account-item-text">${t('new_events_others')}
 
                                     </div>
                                     <div class="ios-toggle ${settings.notify_new_event ? 'active' : ''}">
@@ -3139,16 +2626,12 @@
                                 </div>
                             </div>
                             <div class="floating-card">
-                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">$ {
-                                    t('daily_reminder')
-                                    }
+                                <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('daily_reminder')}
 
                                 </h4>
                                 <div class="list-item" style="border-bottom: 1px solid var(--border);">
                                     <div class="item-content">
-                                        <div class="item-title">$ {
-                                            t('homework_tmrw')
-                                            }
+                                        <div class="item-title">${t('homework_tmrw')}
 
                                         </div>
                                     </div><input type="time" value="${settings.reminder_homework || ''}"
@@ -3157,18 +2640,14 @@
                                 </div>
                                 <div class="list-item">
                                     <div class="item-content">
-                                        <div class="item-title">$ {
-                                            t('exams_tmrw')
-                                            }
+                                        <div class="item-title">${t('exams_tmrw')}
 
                                         </div>
                                     </div><input type="time" value="${settings.reminder_exam || ''}"
                                         onchange="saveNotifyTime('reminder_exam', this.value)"
                                         style="background:var(--tab-bg); border:none; color:var(--text-main); padding:8px; border-radius:8px;">
                                 </div>
-                                <p class="item-sub" style="margin-top:10px; font-size:13px;">$ {
-                                    t('reminder_hint')
-                                    }
+                                <p class="item-sub" style="margin-top:10px; font-size:13px;">${t('reminder_hint')}
 
                                 </p>
                             </div>
@@ -3176,30 +2655,19 @@
                                 style="padding:15px; background:var(--tab-bg); border:1px solid var(--border);">
                                 <div
                                     style="display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--text-sec);">
-                                    <span>Server Zeit:</span><span style="font-weight:700; color:var(--text-main);">$ {
-                                        settings.server_time || '--:--'
-                                        }
+                                    <span>Server Zeit:</span><span style="font-weight:700; color:var(--text-main);">${settings.server_time || '--:--'}
 
                                     </span></div>
                                 <div
                                     style="display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--text-sec); margin-top:5px;">
                                     <span>Status:</span><span
-                                        style="font-weight:700; color:${settings.scheduler_running ? 'var(--success)' : 'var(--danger)'};">$
-                                        {
-                                        settings.scheduler_running ? 'Aktiv': 'Inaktiv'
-                                        }
+                                        style="font-weight:700; color:${settings.scheduler_running ? 'var(--success)' : 'var(--danger)'};">${settings.scheduler_running ? 'Aktiv' : 'Inaktiv'}
 
-                                    </span></div>$ {
-                                !settings.scheduler_running ? `< p
-                style = "color:var(--danger); font-size:11px; margin-top:8px;" >⚠️ Scheduler nicht
-                gestartet.Bitte den Administrator kontaktieren.</p > `: ''
-                                }
+                                    </span></div>${!settings.scheduler_running ? `< p style = "color:var(--danger); font-size:11px; margin-top:8px;" >⚠️ Scheduler nicht gestartet.Bitte den Administrator kontaktieren.</p > ` : ''}
 
                             </div>
                             <div style="margin-top:20px; text-align:center;"><button class="ios-btn btn-sec"
-                                    onclick="sendTestNotification()" style="width:auto; padding:10px 20px;">$ {
-                                    t('send_test')
-                                    }
+                                    onclick="sendTestNotification()" style="width:auto; padding:10px 20px;">${t('send_test')}
 
                                 </button></div>`;
                 lucide.createIcons();
@@ -3400,8 +2868,7 @@
                         const serverPubKey = keyData.publicKey;
 
                         if (sub) {
-                            // Check if keys match
-                            const subKey = sub.options.applicationServerKey;
+                            // Check if keys match const subKey = sub.options.applicationServerKey;
                             const currentSubKeyB64 = arrayBufferToBase64(subKey);
 
                             if (currentSubKeyB64 !== serverPubKey) {
@@ -3445,8 +2912,7 @@
                         }
 
                         else if (Notification.permission === 'granted') {
-                            // Permission is there but no sub? Auto-resubscribe
-                            console.log('Permission granted but no sub found, auto-resubscribing...');
+                            // Permission is there but no sub? Auto-resubscribe console.log('Permission granted but no sub found, auto-resubscribing...');
                             const convertedVapidKey = urlBase64ToUint8Array(serverPubKey);
 
                             const newSub = await reg.pushManager.subscribe({
@@ -3494,20 +2960,14 @@
                 window.history.back();
             }
 
-                ; // Back to Settings
-
-            document.getElementById('app-container').innerHTML = ` <div class="floating-card">
-                                    <h4 style="margin:0 0 15px 0; font-size:17px;">$ {
-                                        t('new_pw')
-                                        }
+                ; // Back to Settings document.getElementById('app-container').innerHTML = ` <div class="floating-card">
+                                    <h4 style="margin:0 0 15px 0; font-size:17px;">${t('new_pw')}
 
                                     </h4><input type="password" id="old-pw" class="ios-input"
                                         placeholder="${t('current_pw')}"><input type="password" id="new-pw"
                                         class="ios-input" placeholder="${t('new_pw')}"><input type="password"
                                         id="confirm-pw" class="ios-input" placeholder="${t('pw_repeat')}"><button
-                                        class="ios-btn" onclick="saveNewPassword()">$ {
-                                        t('save')
-                                        }
+                                        class="ios-btn" onclick="saveNewPassword()">${t('save')}
 
                                     </button>
                                     <p id="pw-error"
@@ -3542,9 +3002,7 @@
                                     <div class="account-item" onclick="renderUserManagement()">
                                         <div class="account-item-icon" style="background:var(--accent); color:white;"><i
                                                 data-lucide="users"></i></div>
-                                        <div class="account-item-text">$ {
-                                            t('manage_users')
-                                            }
+                                        <div class="account-item-text">${t('manage_users')}
 
                                         </div><i data-lucide="chevron-right"
                                             style="width:18px; color:var(--text-sec)"></i>
@@ -3552,9 +3010,7 @@
                                     <div class="account-item" onclick="renderSubjectManagement()">
                                         <div class="account-item-icon" style="background:#5856D6; color:white;"><i
                                                 data-lucide="book-open"></i></div>
-                                        <div class="account-item-text">$ {
-                                            t('manage_subjects')
-                                            }
+                                        <div class="account-item-text">${t('manage_subjects')}
 
                                         </div><i data-lucide="chevron-right"
                                             style="width:18px; color:var(--text-sec)"></i>
@@ -3562,53 +3018,30 @@
                                     <div class="account-item" onclick="renderActivityLog()">
                                         <div class="account-item-icon" style="background:#FF9500; color:white;"><i
                                                 data-lucide="activity"></i></div>
-                                        <div class="account-item-text">$ {
-                                            t('system_activity')
-                                            }
+                                        <div class="account-item-text">${t('system_activity')}
 
                                         </div><i data-lucide="chevron-right"
                                             style="width:18px; color:var(--text-sec)"></i>
-                                    </div>$ {
-                                    (window.currentUser.class_id || window.currentUser.is_super_admin) ? ` < div
-            class="account-item" onclick = "renderChatSettingsRoot()" >
-                                        <div class="account-item-icon" style="background:#30B0C7; color:white;"><i
-                                                data-lucide="message-circle"></i></div>
-                                        <div class="account-item-text">Chat Einstellungen</div><i
-                                            data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                                    </div > `: ''
-                                    }
+                                    </div>${(window.currentUser.class_id || window.currentUser.is_super_admin) ? ` <div class="account-item" onclick = "renderChatSettingsRoot()" >                     <div class="account-item-icon" style="background:#30B0C7; color:white;"><i                         data-lucide="message-circle"></i></div>                     <div class="account-item-text">Chat Einstellungen</div><i                       data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i> </div > ` : ''}
 
-                                    $ {
-                                    window.currentUser.class_id ? ` < div class="account-item"
-            onclick = "renderClassSettings(${window.currentUser.class_id})" >
+                                    ${window.currentUser.class_id ? ` <div class="account-item"       onclick = "renderClassSettings(${window.currentUser.class_id})" >
                                         <div class="account-item-icon" style="background:#8E8E93; color:white;"><i
                                                 data-lucide="settings"></i></div>
-                                        <div class="account-item-text">$ {
-                                            t('class_settings')
-                                            }
+                                        <div class="account-item-text">${t('class_settings')}
 
                                         </div><i data-lucide="chevron-right"
                                             style="width:18px; color:var(--text-sec)"></i>
                                     </div > ` : ''
-                                    }
+                }
 
-                                </div>$ {
-                                window.currentUser.is_super_admin ? ` < div class="floating-card" >
-                <div class="account-item" onclick="renderSuperAdminDashboard()">
-                    <div class="account-item-icon" style="background:var(--accent); color:white;"><i
-                        data-lucide="shield-check"></i></div>
-                    <div class="account-item-text">
-                        <div>Superadmin Access</div>
-                        <div style="font-size:12px; color:var(--text-sec);">$ {
-                            t('superadmin_desc')
-                        }
+                                </div>${window.currentUser.is_super_admin ? ` <div class="floating-card" >         <div class="account-item" onclick="renderSuperAdminDashboard()">           <div class="account-item-icon" style="background:var(--accent); color:white;"><i             data-lucide="shield-check"></i></div>           <div class="account-item-text">             <div>Superadmin Access</div>             <div style="font-size:12px; color:var(--text-sec);">${t('superadmin_desc')}
 
                         </div>
                     </div><i data-lucide="chevron-right"
                         style="width:18px; color:var(--text-sec)"></i>
                 </div>
                                 </div > ` : ''
-                                }
+                }
 
                                 `;
             lucide.createIcons();
@@ -3618,13 +3051,9 @@
             previousView = 'sub_admin_menu';
             currentView = 'sub_activity';
 
-            setPageTitle(filterClassName ? `$ {
-                                t('log_label')
-                                }
+            setPageTitle(filterClassName ? `${t('log_label')}
 
-                                : $ {
-                                filterClassName
-                                }
+                                : ${filterClassName}
 
                                 ` : t('activity'));
             document.getElementById('header-back-btn').style.display = 'block';
@@ -3634,9 +3063,7 @@
                     view: 'sub_activity', class_id: filterClassId, class_name: filterClassName
                 }
 
-                    , '', filterClassId ? `/admin/activity/$ {
-                                filterClassId
-                                }
+                    , '', filterClassId ? `/admin/activity/${filterClassId}
 
                                 ` : '/admin/activity');
             }
@@ -3649,9 +3076,7 @@
 
                 ;
 
-            const apiUrl = filterClassId ? `/api/admin/activity?class_id=$ {
-                                filterClassId
-                                }
+            const apiUrl = filterClassId ? `/api/admin/activity?class_id=${filterClassId}
 
                                 ` : '/api/admin/activity';
 
@@ -3669,9 +3094,7 @@
                                 <div id="filter-status"
                                     style="display:none; padding: 0 5px 15px 5px; gap:10px; flex-wrap:wrap;"></div>
                                 <div id="activity-list-container">
-                                    <div style="text-align:center; padding:20px; color:var(--text-sec)">$ {
-                                        t('loading')
-                                        }
+                                    <div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}
 
                                     </div>
                                 </div>`;
@@ -3691,9 +3114,7 @@
 
             catch (e) {
                 document.getElementById('activity-list-container').innerHTML = `<div
-                                    style="padding:20px; text-align:center; color:var(--danger)">$ {
-                                    t('error_loading')
-                                    }
+                                    style="padding:20px; text-align:center; color:var(--danger)">${t('error_loading')}
 
                                 </div>`;
             }
@@ -3708,66 +3129,47 @@
 
 
         function openActivityFilterMenu() {
-            // Extract unique users and basic actions
-            const users = [...new Set(cachedActivityLogs.map(l => l.user))];
+            // Extract unique users and basic actions const users = [...new Set(cachedActivityLogs.map(l => l.user))];
             const actions = ['Created',
                 'Updated',
                 'Deleted'];
 
             document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header">
-                                    <h3 style="margin:0">$ {
-                                        t('filter')
-                                        }
+                                    <h3 style="margin:0">${t('filter')}
 
                                     </h3>
                                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
                                 </div>
-                                <h4 style="margin:10px 0;">$ {
-                                    t('by_user')
-                                    }
+                                <h4 style="margin:10px 0;">${t('by_user')}
 
                                 </h4>
                                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;"><button
                                         class="ios-btn ${currentActivityFilter.user === null ? 'btn-primary' : 'btn-sec'}"
                                         style="width:auto; padding:8px 16px; height:auto; font-size:14px;"
-                                        onclick="setActivityFilter('user', null)">$ {
-                                        t('all')
-                                        }
+                                        onclick="setActivityFilter('user', null)">${t('all')}
 
-                                    </button>$ {
-                                    users.map(u=> `< button
-            class="ios-btn ${currentActivityFilter.user === u ? 'btn-primary' : 'btn-sec'}"
+                                    </button>${users.map(u => `< button class="ios-btn ${currentActivityFilter.user === u ? 'btn-primary' : 'btn-sec'}"
             style = "width:auto; padding:8px 16px; height:auto; font-size:14px;"
-            onclick = "setActivityFilter('user', '${u}')" > $ {
-                u
-            }
+            onclick = "setActivityFilter('user', '${u}')" > ${u}
 
                                     </button > `).join('')
-                                    }
+                }
 
                                 </div>
-                                <h4 style="margin:10px 0;">$ {
-                                    t('by_action')
-                                    }
+                                <h4 style="margin:10px 0;">${t('by_action')}
 
                                 </h4>
                                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;"><button
                                         class="ios-btn ${currentActivityFilter.action === null ? 'btn-primary' : 'btn-sec'}"
                                         style="width:auto; padding:8px 16px; height:auto; font-size:14px;"
-                                        onclick="setActivityFilter('action', null)">$ {
-                                        t('all')
-                                        }
+                                        onclick="setActivityFilter('action', null)">${t('all')}
 
-                                    </button>$ {
-                                    actions.map(a=> `< button
-            class="ios-btn ${currentActivityFilter.action === a ? 'btn-primary' : 'btn-sec'}"
+                                    </button>${actions.map(a => `< button class="ios-btn ${currentActivityFilter.action === a ? 'btn-primary' : 'btn-sec'}"
             style = "width:auto; padding:8px 16px; height:auto; font-size:14px;"
-            onclick = "setActivityFilter('action', '${a}')" > $ {
-                a
-            }
+            onclick = "setActivityFilter('action', '${a}')" > ${a}
 
                                     </button > `).join('')
-                                    }
+                }
 
                                 </div>`;
             openSheetOverlay();
@@ -3783,32 +3185,23 @@
         function renderActivityLogList(logs) {
             const listHtml = logs.map(l => ` <div class="list-item" style="align-items:flex-start;">
                                     <div class="item-content">
-                                        <div class="item-title" style="font-size:14px; font-weight:600;">$ {
-                                            l.user
-                                            }
+                                        <div class="item-title" style="font-size:14px; font-weight:600;">${l.user}
 
                                         </div>
-                                        <div class="item-sub" style="margin-top:2px;">$ {
-                                            l.action
-                                            }
+                                        <div class="item-sub" style="margin-top:2px;">${l.action}
 
                                         </div>
                                     </div>
-                                    <div style="font-size:11px; color:var(--text-sec); white-space:nowrap;">$ {
-                                        l.timestamp
-                                        }
+                                    <div style="font-size:11px; color:var(--text-sec); white-space:nowrap;">${l.timestamp}
 
                                     </div>
                                 </div> `).join('');
 
             document.getElementById('activity-list-container').innerHTML = ` <div
-                                    class="floating-card" style="padding:0 15px; margin-bottom:40px;">$ {
-                                    listHtml || `< div style = "padding:20px; text-align:center; color:var(--text-sec)" > $ {
-                t('no_results')
-            }
+                                    class="floating-card" style="padding:0 15px; margin-bottom:40px;">${listHtml || `<div style = "padding:20px; text-align:center; color:var(--text-sec)" > ${t('no_results')}
 
                                     </div > `
-                                    }
+                }
 
                                 </div>`;
         }
@@ -3816,14 +3209,11 @@
         function filterActivityLog() {
             const term = document.querySelector('.sub-search-input').value.toLowerCase();
 
-            // Check filters
-            const filtered = cachedActivityLogs.filter(l => {
-                // Text Search
-                const matchesSearch = l.user.toLowerCase().includes(term) ||
+            // Check filters const filtered = cachedActivityLogs.filter(l => {
+                // Text Search const matchesSearch = l.user.toLowerCase().includes(term) ||
                     l.action.toLowerCase().includes(term) || l.timestamp.includes(term);
 
-                // Structured Filters
-                const matchesUser = currentActivityFilter.user ? l.user === currentActivityFilter.user :
+                // Structured Filters const matchesUser = currentActivityFilter.user ? l.user === currentActivityFilter.user :
                     true;
                 const matchesAction = currentActivityFilter.action ? l.action.startsWith
                     (currentActivityFilter.action) : true;
@@ -3831,8 +3221,7 @@
                 return matchesSearch && matchesUser && matchesAction;
             });
 
-            // Update Filter Status UI (Chips)
-            const statusContainer = document.getElementById('filter-status');
+            // Update Filter Status UI (Chips) const statusContainer = document.getElementById('filter-status');
 
             if (currentActivityFilter.user || currentActivityFilter.action) {
                 statusContainer.style.display = 'flex';
@@ -3840,9 +3229,7 @@
 
                 if (currentActivityFilter.user) html += `<div
                                     style="background:var(--accent); color:white; padding:4px 12px; border-radius:15px; font-size:12px; display:flex; align-items:center;">
-                                    user: $ {
-                                    currentActivityFilter.user
-                                    }
+                                    user: ${currentActivityFilter.user}
 
                                     <i data-lucide="x" style="width:12px; margin-left:5px; cursor:pointer;"
                                         onclick="setActivityFilter('user', null)"></i>
@@ -3850,9 +3237,7 @@
 
                 if (currentActivityFilter.action) html += `<div
                                     style="background:var(--accent); color:white; padding:4px 12px; border-radius:15px; font-size:12px; display:flex; align-items:center;">
-                                    action: $ {
-                                    currentActivityFilter.action
-                                    }
+                                    action: ${currentActivityFilter.action}
 
                                     <i data-lucide="x" style="width:12px; margin-left:5px; cursor:pointer;"
                                         onclick="setActivityFilter('action', null)"></i>
@@ -3892,9 +3277,7 @@
                 ;
 
             document.getElementById('app-container').innerHTML = `<div
-                                    style="text-align:center; padding:20px; color:var(--text-sec)">$ {
-                                    t('loading')
-                                    }
+                                    style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}
 
                                 </div>`;
 
@@ -3909,45 +3292,33 @@
                                         style=" cursor: pointer;
 
             ">
-                                        <div class="item-title">$ {
-                                            c.name
-                                            }
+                                        <div class="item-title">${c.name}
 
                                         </div>
-                                        <div class="item-sub">Code: <strong>$ {
-                                                c.code
-                                                }
+                                        <div class="item-sub">Code: <strong>${c.code}
 
-                                            </strong>• $ {
-                                            c.user_count
-                                            }
+                                            </strong>• ${c.user_count}
 
-                                            $ {
-                                            t('users_label')
-                                            }
+                                            ${t('users_label')}
 
                                         </div>
                                     </div>
                                     <div style="display:flex;">
                                         <div style="color:var(--accent); padding:10px; cursor:pointer;"
                                             onclick="renderSingleClassAdmin(${c.id}, '${c.name.replace(/'/g, "\\'")}')"><i data-lucide="settings" style="width: 20px;"></i></div>
-                    < div style = "color:var(--danger); padding:10px; cursor:pointer;"
+                    <div style = "color:var(--danger); padding:10px; cursor:pointer;"
                 onclick = "deleteClass(${c.id})" > <i data-lucide="trash-2"
                     style="width:20px;"></i></div >
                                     </div >
                                 </div > `).join('');
 
-                const content = listHtml || `< div
-                style = "padding:20px; text-align:center; color:var(--text-sec)" > $ {
-                    t('error_loading')
-                }
+                const content = listHtml || `<div
+                style = "padding:20px; text-align:center; color:var(--text-sec)" > ${t('error_loading')}
 
                                 </div > `;
 
-                document.getElementById('app-container').innerHTML = ` < div class="floating-card"
-                style = "padding:0 24px; margin-bottom:80px;" > $ {
-                    content
-                }
+                document.getElementById('app-container').innerHTML = ` <div class="floating-card"
+                style = "padding:0 24px; margin-bottom:80px;" > ${content}
 
                                 </div > `;
                 document.getElementById('main-fab').classList.add('visible');
@@ -3957,29 +3328,23 @@
             catch (e) {
                 console.error(e);
 
-                document.getElementById('app-container').innerHTML = `< div class="floating-card"
-                style = "color:var(--danger)" > $ {
-                    t('error')
-                }
+                document.getElementById('app-container').innerHTML = `<div class="floating-card"
+                style = "color:var(--danger)" > ${t('error')}
 
                                 </div > `;
             }
         }
 
         async function openCreateClassMenu() {
-            document.getElementById('sheet-content').innerHTML = ` < div class="sheet-header" >
-                                    <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
-                                        t('new_class_title')
-                                        }
+            document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header" >
+                                    <h2 style="margin:0; font-size:20px; font-weight:700;">${t('new_class_title')}
 
                                     </h2>
                                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"
                                             style="width:18px"></i></div>
                                 </div > <input type="text" id="new-class-name" class="ios-input"
                     placeholder="${t('class_name_placeholder')}"><button class="ios-btn"
-                        onclick="saveNewClass()">$ {
-                            t('create')
-                        }
+                        onclick="saveNewClass()">${t('create')}
 
                     </button>`;
             document.getElementById('sheet-overlay').classList.add('active');
@@ -4022,9 +3387,7 @@
             if (!confirm(t('delete_class_confirm'))) return;
 
             try {
-                const res = await fetch(`/api/admin/classes/$ {
-                        id
-                    }
+                const res = await fetch(`/api/admin/classes/${id}
 
                     `, {
                     method: 'DELETE'
@@ -4044,13 +3407,9 @@
             previousView = 'sub_admin_menu'; // Logically parent is admin menu now
             currentView = 'sub_users';
 
-            setPageTitle(filterClassName ? `$ {
-                        t('users_label')
-                    }
+            setPageTitle(filterClassName ? `${t('users_label')}
 
-                    : $ {
-                        filterClassName
-                    }
+                    : ${filterClassName}
 
                     ` : t('users'));
             document.getElementById('header-back-btn').style.display = 'block';
@@ -4060,9 +3419,7 @@
                     view: 'sub_users', class_id: filterClassId, class_name: filterClassName
                 }
 
-                    , '', filterClassId ? `/admin/users/$ {
-                                filterClassId
-                                }
+                    , '', filterClassId ? `/admin/users/${filterClassId}
 
                                 ` : '/admin/users');
             }
@@ -4076,15 +3433,11 @@
                 ;
 
             document.getElementById('app-container').innerHTML = `<div
-                        style="text-align:center; padding:20px; color:var(--text-sec)">$ {
-                            t('loading')
-                        }
+                        style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}
 
                     </div>`;
 
-            const apiUrl = filterClassId ? `/api/admin/users?class_id=$ {
-                        filterClassId
-                    }
+            const apiUrl = filterClassId ? `/api/admin/users?class_id=${filterClassId}
 
                     ` : '/api/admin/users';
 
@@ -4092,61 +3445,42 @@
                 const res = await fetch(apiUrl);
                 const users = await res.json();
 
-                // Store current filtering context for the "plus" button (new user)
-                window.lastAdminFilterClassId = filterClassId;
+                // Store current filtering context for the "plus" button (new user) window.lastAdminFilterClassId = filterClassId;
                 window.lastAdminFilterClassName = filterClassName;
 
                 const listHtml = users.map(u => ` <div class="list-item">
                         <div class="account-item-icon"><i data-lucide="user"></i></div>
                         <div class="item-content">
-                            <div class="item-title">$ {
-                                u.username
-                            }
+                            <div class="item-title">${u.username}
 
-                                $ {
-                                    u.is_admin ? `< span
-                                                style = "font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;" > $
-                                                {
-                        t('admin').toUpperCase()
-                    }
+                                ${u.is_admin ? `< span style = "font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;" > ${t('admin').toUpperCase()}
 
                                             </span > ` : ''
-                                }
+                    }
 
-                            </div> $ {
-                                window.currentUser.is_super_admin && !filterClassId ? `< div class="item-sub" > $ {
-                    t('class_label')
-                }
+                            </div> ${window.currentUser.is_super_admin && !filterClassId ? `<div class="item-sub" > ${t('class_label')}
 
-                                            : $ {
-                    u.class_name || t('global_label')
-                }
+                                            : ${u.class_name || t('global_label')}
 
                                         </div > ` : ''
-                            }
+                    }
 
                         </div>
                         <div style="display:flex;">
                             <div style="color:var(--accent); padding:10px; cursor:pointer;"
                                 onclick="resetUserPassword(${u.id})"><i data-lucide="key"
-                                    style="width:20px;"></i></div> $ {
-                                u.id !== window.currentUserId ? ` < div
-                style = "color:var(--danger); padding:10px; cursor:pointer;"
-                onclick = "deleteUser(${u.id})" > <i data-lucide="trash-2"
+                                    style="width:20px;"></i></div> ${u.id !== window.currentUserId ? ` <div style = "color:var(--danger); padding:10px; cursor:pointer;"         onclick = "deleteUser(${u.id})" > <i data-lucide="trash-2"
                     style="width:20px;"></i></div > ` : ''
-                            }
+                    }
 
                         </div>
                     </div> `).join('');
 
                 document.getElementById('app-container').innerHTML = ` <div class="floating-card"
-                        style="padding:0 24px; margin-bottom:80px;">$ {
-                            listHtml || `< div style = "padding:20px; text-align:center; color:var(--text-sec)" > $ {
-                    t('no_users')
-                }
+                        style="padding:0 24px; margin-bottom:80px;">${listHtml || `<div style = "padding:20px; text-align:center; color:var(--text-sec)" > ${t('no_users')}
 
                                     </div > `
-                        }
+                    }
 
                     </div>`;
                 document.getElementById('main-fab').classList.add('visible');
@@ -4157,9 +3491,7 @@
                 console.error(e);
 
                 document.getElementById('app-container').innerHTML = `<div class="floating-card"
-                        style="color:var(--danger)">$ {
-                            t('error')
-                        }
+                        style="color:var(--danger)">${t('error')}
 
                     </div>`;
             }
@@ -4176,9 +3508,7 @@
                     view: 'sub_class_detail', id, name
                 }
 
-                    , '', `/admin/classes/$ {
-                                id
-                                }
+                    , '', `/admin/classes/${id}
 
                                 `);
             }
@@ -4195,45 +3525,35 @@
                         style="padding: 10px;">
                         <div class="account-item" onclick="renderUserManagement(${id}, '${name}')">
                             <div class="account-item-icon"><i data-lucide="users"></i></div>
-                            <div class="account-item-text">$ {
-                                t('manage_users')
-                            }
+                            <div class="account-item-text">${t('manage_users')}
 
                             </div><i data-lucide="chevron-right"
                                 style="width:18px; color:var(--text-sec)"></i>
                         </div>
                         <div class="account-item" onclick="renderActivityLog(${id}, '${name}')">
                             <div class="account-item-icon"><i data-lucide="activity"></i></div>
-                            <div class="account-item-text">$ {
-                                t('activity_log')
-                            }
+                            <div class="account-item-text">${t('activity_log')}
 
                             </div><i data-lucide="chevron-right"
                                 style="width:18px; color:var(--text-sec)"></i>
                         </div>
                         <div class="account-item" onclick="renderClassSettings(${id})">
                             <div class="account-item-icon"><i data-lucide="settings"></i></div>
-                            <div class="account-item-text">$ {
-                                t('class_settings')
-                            }
+                            <div class="account-item-text">${t('class_settings')}
 
                             </div><i data-lucide="chevron-right"
                                 style="width:18px; color:var(--text-sec)"></i>
                         </div>
                         <div class="account-item" onclick="renderSubjectManagement(${id}, '${name}')">
                             <div class="account-item-icon"><i data-lucide="book"></i></div>
-                            <div class="account-item-text">$ {
-                                t('manage_subjects')
-                            }
+                            <div class="account-item-text">${t('manage_subjects')}
 
                             </div><i data-lucide="chevron-right"
                                 style="width:18px; color:var(--text-sec)"></i>
                         </div>
                     </div>
                     <div style="margin:20px 10px; font-size:13px; color:var(--text-sec);">
-                        <strong>Tipp:</strong>$ {
-                            t('global_subject_tip')
-                        }
+                        <strong>Tipp:</strong>${t('global_subject_tip')}
 
                     </div>`;
             lucide.createIcons();
@@ -4250,9 +3570,7 @@
                     view: 'sub_class_settings', id: id
                 }
 
-                    , '', `/admin/classes/$ {
-                                id
-                                }
+                    , '', `/admin/classes/${id}
 
                                 /settings`);
             }
@@ -4266,16 +3584,12 @@
                 ;
 
             document.getElementById('app-container').innerHTML = `<div
-                        style="text-align:center; padding:20px; color:var(--text-sec)">$ {
-                            t('loading')
-                        }
+                        style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}
 
                     </div>`;
 
             try {
-                const res = await fetch(`/api/admin/classes/$ {
-                        id
-                    }
+                const res = await fetch(`/api/admin/classes/${id}
 
                     `);
                 const c = await res.json();
@@ -4283,36 +3597,24 @@
                 document.getElementById('app-container').innerHTML = ` <div style="padding: 10px 0;">
                         <h4
                             style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">
-                            $ {
-                                t('general')
-                            }
+                            ${t('general')}
 
                         </h4>
                         <div class="floating-card" style="padding:0; margin-bottom:25px;">
                             <div class="account-item" style="cursor:default;">
-                                <div class="account-item-text" style="flex:0 0 100px;">$ {
-                                    t('class_name')
-                                }
+                                <div class="account-item-text" style="flex:0 0 100px;">${t('class_name')}
 
                                 </div><input type="text" id="edit-class-name"
                                     style="border:none; background:transparent; font-size:16px; width:100%; text-align:right; color:var(--text-main); outline:none;"
-                                    value="${c.name}" $ { !window.currentUser.is_super_admin ? 'disabled'
-                                        : ''}>
-                            </div>$ {
-                                !window.currentUser.is_super_admin ? `< div
-                style = "padding:0 20px 15px 20px; font-size:11px; color:var(--text-sec); margin-top:-10px;" >
-                    $ {
-                    t('super_admin_only_name')
-                }
+                                    value="${c.name}" ${!window.currentUser.is_super_admin ? 'disabled' : ''}>
+                            </div>${!window.currentUser.is_super_admin ? `<div style = "padding:0 20px 15px 20px; font-size:11px; color:var(--text-sec); margin-top:-10px;" > ${t('super_admin_only_name')}
 
                                         </div > ` : ''
-                            }
+                    }
 
                             <div class="account-item"
                                 style="cursor:default; border-top:1px solid var(--border);">
-                                <div class="account-item-text" style="flex:0 0 100px;">$ {
-                                    t('login_id')
-                                }
+                                <div class="account-item-text" style="flex:0 0 100px;">${t('login_id')}
 
                                 </div><input type="text" id="edit-class-code"
                                     style="border:none; background:transparent; font-size:16px; width:100%; text-align:right; color:var(--text-sec); outline:none;"
@@ -4339,31 +3641,20 @@
                             style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">
                             Zugang</h4>
                         <div class="floating-card" style="padding:20px; margin-bottom:25px;"><label
-                            style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:8px; display:block;">$
-                            {
-                                t('direct_login_link')
-                            }
+                            style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:8px; display:block;">${t('direct_login_link')}
 
                         </label>
                             <div
                                 style="font-size:13px; font-weight:500; word-break:break-all; background:var(--tab-bg); padding:10px; border-radius:8px; user-select:all;">
-                                $ {
-                                    window.location.origin
-                                }
+                                ${window.location.origin}
 
-                                /$ {
-                                    c.code
-                                }
+                                /${c.code}
 
                             </div>
-                            <p style="font-size:11px; color:var(--text-sec); margin-top:8px;">$ {
-                                t('direct_login_hint')
-                            }
+                            <p style="font-size:11px; color:var(--text-sec); margin-top:8px;">${t('direct_login_hint')}
 
                             </p>
-                        </div><button class="ios-btn" onclick="saveClassSettings(${id})">$ {
-                            t('save_btn')
-                        }
+                        </div><button class="ios-btn" onclick="saveClassSettings(${id})">${t('save_btn')}
 
                         </button>
                     </div>`;
@@ -4374,9 +3665,7 @@
                 console.error(e);
 
                 document.getElementById('app-container').innerHTML = `<div class="floating-card"
-                        style="color:var(--danger)">$ {
-                            t('error')
-                        }
+                        style="color:var(--danger)">${t('error')}
 
                     </div>`;
             }
@@ -4402,9 +3691,7 @@
             if (window.currentUser.is_super_admin) body.name = name;
 
             try {
-                const res = await fetch(`/api/admin/classes/$ {
-                        id
-                    }
+                const res = await fetch(`/api/admin/classes/${id}
 
                     `, {
 
@@ -4421,8 +3708,7 @@
                 if (data.success) {
                     alert(t('save_success'));
 
-                    // Update global config if this is our class
-                    if (window.currentUser.class_id === id) {
+                    // Update global config if this is our class if (window.currentUser.class_id === id) {
                         const configRes = await fetch('/api/config');
                         const config = await configRes.json();
                         chatEnabled = config.chat_enabled;
@@ -4444,8 +3730,7 @@
 
         async function openCreateUserMenu() {
             let classSelectorHtml = '';
-            // If we are currently filtering by a class, use that as default, but allow change
-            const currentFilterId = window.lastAdminFilterClassId || "";
+            // If we are currently filtering by a class, use that as default, but allow change const currentFilterId = window.lastAdminFilterClassId || "";
 
             if (window.currentUser.is_super_admin) {
                 try {
@@ -4453,23 +3738,13 @@
                     const classes = await res.json();
 
                     classSelectorHtml = ` <label
-                        style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 10px 0 5px 5px;">$
-                        {
-                            t('assigned_class')
-                        }
+                        style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 10px 0 5px 5px;">${t('assigned_class')}
 
                     </label><select id="new-user-class" class="ios-input"
                         style="appearance:none; background:var(--tab-bg);">
-                        <option value="" $ { currentFilterId === "" ? 'selected' : ''}>$ {
-                            t('global_superadmin')
-                        }
+                        <option value="" ${currentFilterId === "" ? 'selected' : ''}>${t('global_superadmin')}
 
-                        </option>$ {
-                            classes.map(c => `< option value = "${c.id}" $ {
-                        currentFilterId == c.id ? 'selected' : ''
-                    }> $ {
-                        c.name
-                    }
+                        </option>${classes.map(c => `< option value = "${c.id}" ${currentFilterId == c.id ? 'selected' : ''}> ${c.name}
 
                                     </option > `).join('')
                         }
@@ -4483,32 +3758,24 @@
             }
 
             document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header">
-                        <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
-                            t('new_user')
-                        }
+                        <h2 style="margin:0; font-size:20px; font-weight:700;">${t('new_user')}
 
                         </h2>
                         <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"
                             style="width:18px"></i></div>
                     </div><input type="text" id="new-user-name" class="ios-input"
                         placeholder="${t('msg_username')}"><input type="password" id="new-user-pw"
-                            class="ios-input" placeholder="${t('msg_password')}">$ {
-                                classSelectorHtml
-                            }
+                            class="ios-input" placeholder="${t('msg_password')}">${classSelectorHtml}
 
                             <div class="account-item" onclick="toggleAdminCheck()"
                                 style="border:none; margin-bottom:15px; background:var(--tab-bg); border-radius:12px; padding:15px;">
-                                <div class="account-item-text">$ {
-                                    t('admin_rights')
-                                }
+                                <div class="account-item-text">${t('admin_rights')}
 
                                 </div>
                                 <div id="admin-check-toggle" class="ios-toggle">
                                     <div class="ios-toggle-knob"></div>
                                 </div>
-                            </div><button class="ios-btn" onclick="saveNewUser()">$ {
-                                t('create')
-                            }
+                            </div><button class="ios-btn" onclick="saveNewUser()">${t('create')}
 
                             </button>`;
             document.getElementById('sheet-overlay').classList.add('active');
@@ -4548,18 +3815,14 @@
 
             document.getElementById('app-container').innerHTML = ` <div class="floating-card"
                                 style="padding: 20px;">
-                                <h4 style="margin:0 0 15px 0; font-size:16px; font-weight:700;">$ {
-                                    t('global_management')
-                                }
+                                <h4 style="margin:0 0 15px 0; font-size:16px; font-weight:700;">${t('global_management')}
 
                                 </h4>
                                 <div class="account-item" onclick="renderSchoolClassManagement()"
                                     style="padding:12px 0;">
                                     <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i
                                         data-lucide="school"></i></div>
-                                    <div class="account-item-text">$ {
-                                        t('manage_classes')
-                                    }
+                                    <div class="account-item-text">${t('manage_classes')}
 
                                     </div><i data-lucide="chevron-right"
                                         style="width:18px; color:var(--text-sec)"></i>
@@ -4568,9 +3831,7 @@
                                     style="padding:12px 0;">
                                     <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i
                                         data-lucide="book"></i></div>
-                                    <div class="account-item-text">$ {
-                                        t('global_subjects_sharing')
-                                    }
+                                    <div class="account-item-text">${t('global_subjects_sharing')}
 
                                     </div><i data-lucide="chevron-right"
                                         style="width:18px; color:var(--text-sec)"></i>
@@ -4579,9 +3840,7 @@
                                     style="padding:12px 0;">
                                     <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i
                                         data-lucide="share-2"></i></div>
-                                    <div class="account-item-text">$ {
-                                        t('shared_content')
-                                    }
+                                    <div class="account-item-text">${t('shared_content')}
 
                                     </div><i data-lucide="chevron-right"
                                         style="width:18px; color:var(--text-sec)"></i>
@@ -4634,9 +3893,7 @@
             if (!confirm(t('confirm_delete'))) return;
 
             try {
-                await fetch(`/api/admin/users/$ {
-                                id
-                                }
+                await fetch(`/api/admin/users/${id}
 
                                 `, {
                     method: 'DELETE'
@@ -4654,9 +3911,7 @@
             if (!newPw) return;
 
             try {
-                const res = await fetch(`/api/admin/users/$ {
-                                id
-                            }
+                const res = await fetch(`/api/admin/users/${id}
 
                             /reset_password`, {
                     method: 'POST',
@@ -4695,14 +3950,11 @@
             document.getElementById('header-back-btn').onclick = () => window.history.back();
 
             document.getElementById('app-container').innerHTML = `<div
-                                style="text-align:center; padding:20px; color:var(--text-sec)">$ {
-                                    t('loading')
-                                }
+                                style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}
 
                             </div>`;
 
-            // Case 1: Super Admin (Global view of all classes)
-            if (window.currentUser.is_super_admin && !window.currentUser.class_id) {
+            // Case 1: Super Admin (Global view of all classes) if (window.currentUser.is_super_admin && !window.currentUser.class_id) {
                 try {
                     const res = await fetch('/api/admin/classes');
                     const classes = await res.json();
@@ -4710,14 +3962,10 @@
                     const listHtml = classes.map(c => ` <div class="account-item"
                                 onclick="toggleChatClass(${c.id})" style="cursor:pointer; padding: 15px 20px;">
                                 <div class="account-item-text">
-                                    <div>$ {
-                                        c.name
-                                    }
+                                    <div>${c.name}
 
                                     </div>
-                                    <div style="font-size:11px; color:var(--text-sec);">Code: $ {
-                                        c.code
-                                    }
+                                    <div style="font-size:11px; color:var(--text-sec);">Code: ${c.code}
 
                                     </div>
                                 </div>
@@ -4731,9 +3979,7 @@
                                 <h4
                                     style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">
                                     Alle Klassen</h4>
-                                <div class="floating-card" style="padding:0; margin-bottom:25px;">$ {
-                                    listHtml
-                                }
+                                <div class="floating-card" style="padding:0; margin-bottom:25px;">${listHtml}
 
                                 </div>
                                 <p style="margin:0 20px; font-size:13px; color:var(--text-sec);">Tippe auf eine
@@ -4745,9 +3991,7 @@
 
                 catch (e) {
                     document.getElementById('app-container').innerHTML = `<div class="floating-card"
-                                    style="color:var(--danger)">$ {
-                                    t('error')
-                                    }
+                                    style="color:var(--danger)">${t('error')}
 
                                 </div>`;
                 }
@@ -4755,14 +3999,11 @@
                 return;
             }
 
-            // Case 2: Class Admin (Single Class)
-            const classId = window.currentUser.class_id;
+            // Case 2: Class Admin (Single Class) const classId = window.currentUser.class_id;
             if (!classId) return alert(t('error'));
 
             try {
-                const res = await fetch(`/api/admin/classes/$ {
-                                classId
-                            }
+                const res = await fetch(`/api/admin/classes/${classId}
 
                             `);
                 const c = await res.json();
@@ -4784,9 +4025,7 @@
                                 <p style="margin:0 20px; font-size:13px; color:var(--text-sec);">Wenn aktiviert,
                                     können Schüler Fragen zu Aufgaben in einem klassenweiten Chat stellen. </p>
                                 <div style="margin-top:20px; padding:0 20px;"><button class="ios-btn"
-                                    onclick="saveChatSettingsRoot(${classId})">$ {
-                                        t('save_btn')
-                                    }
+                                    onclick="saveChatSettingsRoot(${classId})">${t('save_btn')}
 
                                 </button></div>
                             </div>`;
@@ -4797,31 +4036,24 @@
                 console.error(e);
 
                 document.getElementById('app-container').innerHTML = `<div class="floating-card"
-                                style="color:var(--danger)">$ {
-                                    t('error')
-                                }
+                                style="color:var(--danger)">${t('error')}
 
                             </div>`;
             }
         }
 
         async function toggleChatClass(id) {
-            const toggle = document.getElementById(`chat-toggle-$ {
-                                id
-                            }
+            const toggle = document.getElementById(`chat-toggle-${id}
 
                             `);
             const isActive = toggle.classList.contains('active');
             const newState = !isActive;
 
-            // Optimistic UI
-            if (newState) toggle.classList.add('active');
+            // Optimistic UI if (newState) toggle.classList.add('active');
             else toggle.classList.remove('active');
 
             try {
-                const res = await fetch(`/api/admin/classes/$ {
-                                id
-                            }
+                const res = await fetch(`/api/admin/classes/${id}
 
                             `, {
 
@@ -4839,8 +4071,7 @@
 
                 if (data.success) {
 
-                    // Update global config if this is our class
-                    if (window.currentUser.class_id === id) {
+                    // Update global config if this is our class if (window.currentUser.class_id === id) {
                         const configRes = await fetch('/api/config');
                         const config = await configRes.json();
                         chatEnabled = config.chat_enabled;
@@ -4849,16 +4080,14 @@
 
                 else {
                     alert(data.message || t('error'));
-                    // Revert
-                    if (isActive) toggle.classList.add('active');
+                    // Revert if (isActive) toggle.classList.add('active');
                     else toggle.classList.remove('active');
                 }
             }
 
             catch (e) {
                 alert(t('connection_error'));
-                // Revert
-                if (isActive) toggle.classList.add('active');
+                // Revert if (isActive) toggle.classList.add('active');
                 else toggle.classList.remove('active');
             }
         }
@@ -4868,9 +4097,7 @@
                 enabled = document.getElementById('toggle-chat-enabled-root').classList.contains('active');
 
             try {
-                const res = await fetch(`/api/admin/classes/$ {
-                                classId
-                            }
+                const res = await fetch(`/api/admin/classes/${classId}
 
                             `, {
 
@@ -4996,29 +4223,22 @@
                 imagesHtml = `<div style="padding:0 5px; margin-top:20px;">
                                     <div
                                         style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); margin-bottom:8px;">
-                                        $ {
-                                        t('images')
-                                        }
+                                        ${t('images')}
 
                                     </div>
-                                    <div style="display:flex; overflow-x:auto; gap:10px; padding-bottom:10px;">$ {
-                                        images.map(img=> `< img src = "${img.url}"
+                                    <div style="display:flex; overflow-x:auto; gap:10px; padding-bottom:10px;">${images.map(img => `< img src = "${img.url}"
                 onclick = "window.open('${img.url}', '_blank')"
                 style = "height:120px; border-radius:12px; border:1px solid var(--border); object-fit:cover; cursor:pointer;" > `).join('')
-                                        }
+                    }
 
                 </div>
                                 </div > `;
             }
 
-            document.getElementById('sheet-content').innerHTML = ` < div class="sheet-header" >
-                                    <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
-                                        t(type.toLowerCase()) || type
-                                        }
+            document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header" >
+                                    <h2 style="margin:0; font-size:20px; font-weight:700;">${t(type.toLowerCase()) || type}
 
-                                        $ {
-                                        t('details')
-                                        }
+                                        ${t('details')}
 
                                     </h2>
                                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"
@@ -5028,74 +4248,45 @@
                         style="background:var(--tab-bg); border:none; padding:20px; margin-bottom: 20px;">
                         <div
                             style="font-size:22px; font-weight:800; line-height:1.2; color:var(--text-main);">
-                            $ {
-                                title
-                            }
+                            ${title}
 
                         </div>
                         <div
                             style="display:flex; align-items:center; gap:8px; margin-top:10px; color:var(--text-sec); font-size:14px; font-weight:500;">
-                            $ {
-                                subject ? `< span > $ {
-                subject
-            }
+                            ${subject ? `< span > ${subject}
 
                                         </span > <span style="opacity:0.3">•</span>` : ''
-                            }
-
-                            <span>$ {
-                                new Date(date).toLocaleDateString(window.currentUser?.language === 'en' ?
-                                    'en-US' : 'de-DE', {
-                                    day: '2-digit', month: 'long', year: 'numeric'
-                                })
-                            }
-
-                            </span>$ {
-                                value ? `< span style = "opacity:0.3" >•</span > <span
-                style="color:var(--accent); font-weight:700;">$ {
-                    t('grade_value')
                 }
 
-                : $ {
-                    value
+                            <span>${new Date(date).toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: 'long', year: 'numeric'})
                 }
+
+                            </span>${value ? `< span style = "opacity:0.3" >•</span > <span         style="color:var(--accent); font-weight:700;">${t('grade_value')}
+
+                : ${value}
 
             </span>` : ''
-                            }
-
-                        </div>
-                    </div>$ {
-                    imagesHtml
                 }
 
-                                $ {
-                    hasDesc ? ` < div style = "padding: 0 5px;" >
-                                    <div
-                                        style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); margin-bottom:8px;">
-                                        $ {
-                                        t('description')
-                                        }
+                        </div>
+                    </div>${imagesHtml}
+
+                                ${hasDesc ? ` <div style = "padding: 0 5px;" >                   <div                     style="font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--accent); margin-bottom:8px;"> ${t('description')}
 
                                     </div>
                                     <div
                                         style="font-size:16px; line-height:1.6; color:var(--text-main); white-space:pre-wrap;">
-                                        $ {
-                                        desc
-                                        }
+                                        ${desc}
 
                                     </div>
                                 </div > ` : ''
                 }
 
-                                $ {
-                    actionBtns
-                }
+                                ${actionBtns}
 
                 <div style="margin-top: 15px;"><button class="ios-btn"
                     style="background:var(--text-main); color:var(--card-bg); font-weight:700;"
-                    onclick="closeSheet()">$ {
-                        t('done')
-                    }
+                    onclick="closeSheet()">${t('done')}
 
                 </button></div>`;
             openSheetOverlay();
@@ -5106,9 +4297,7 @@
         async function deleteTask(id) {
             if (!confirm(t('confirm_delete'))) return;
 
-            await fetch(`/ api / tasks / $ {
-                    id
-                }
+            await fetch(`/api/tasks/ ${id}
 
                 `, {
                 method: 'DELETE'
@@ -5120,9 +4309,7 @@
         async function deleteEvent(id) {
             if (!confirm(t('confirm_delete'))) return;
 
-            await fetch(`/ api / events / $ {
-                    id
-                }
+            await fetch(`/api/events/ ${id}
 
                 `, {
                 method: 'DELETE'
@@ -5134,9 +4321,7 @@
         async function deleteGrade(id) {
             if (!confirm(t('confirm_delete'))) return;
 
-            await fetch(`/ api / grades / $ {
-                    id
-                }
+            await fetch(`/api/grades/ ${id}
 
                 `, {
                 method: 'DELETE'
@@ -5167,10 +4352,8 @@
 
                 ;
 
-            document.getElementById('app-container').innerHTML = `< div
-                style = "text-align:center; padding:20px; color:var(--text-sec)" > $ {
-                    t('loading')
-                }
+            document.getElementById('app-container').innerHTML = `<div
+                style = "text-align:center; padding:20px; color:var(--text-sec)" > ${t('loading')}
 
                                 </div > `;
 
@@ -5178,21 +4361,15 @@
                 const res = await fetch('/api/admin/shared-content');
                 const data = await res.json();
 
-                const taskHtml = data.tasks.map(t => ` < div class="list-item" >
+                const taskHtml = data.tasks.map(t => ` <div class="list-item" >
                                     <div class="account-item-icon"><i data-lucide="check-square"></i></div>
                                     <div class="item-content">
-                                        <div class="item-title">$ {
-                                            t.title
-                                            }
+                                        <div class="item-title">${t.title}
 
                                         </div>
-                                        <div class="item-sub">$ {
-                                            t.subject
-                                            }
+                                        <div class="item-sub">${t.subject}
 
-                                            • Bis $ {
-                                            t.due_date || 'Kein Datum'
-                                            }
+                                            • Bis ${t.due_date || 'Kein Datum'}
 
                                         </div>
                                     </div>
@@ -5201,17 +4378,13 @@
                                             style="width:20px;"></i> </div>
                                 </div > `).join('');
 
-                const eventHtml = data.events.map(e => ` < div class="list-item" >
+                const eventHtml = data.events.map(e => ` <div class="list-item" >
                                     <div class="account-item-icon"><i data-lucide="calendar"></i></div>
                                     <div class="item-content">
-                                        <div class="item-title">$ {
-                                            e.title
-                                            }
+                                        <div class="item-title">${e.title}
 
                                         </div>
-                                        <div class="item-sub">$ {
-                                            e.date
-                                            }
+                                        <div class="item-sub">${e.date}
 
                                         </div>
                                     </div>
@@ -5220,43 +4393,27 @@
                                             style="width:20px;"></i> </div>
                                 </div > `).join('');
 
-                document.getElementById('app-container').innerHTML = ` < div
+                document.getElementById('app-container').innerHTML = ` <div
                 style = "margin: 0 10px 15px 10px; font-size:14px; color:var(--text-sec); line-height:1.4;" >
-                    $ {
-                    t('shared_content_desc')
-                }
+                    ${t('shared_content_desc')}
 
                                 </div >
                                 <div class="floating-card" style="padding:0 24px; margin-bottom:30px;">
-                                    <h4 style="margin:20px 0 10px 0;">$ {
-                                        t('shared_tasks')
-                                        }
+                                    <h4 style="margin:20px 0 10px 0;">${t('shared_tasks')}
 
-                                    </h4>$ {
-                                    taskHtml || `< div
-                style = "padding:20px; color:var(--text-sec); border-top:1px solid var(--border)" >
-                    $ {
-                    t('no_shared_tasks')
-                }
+                                    </h4>${taskHtml || `<div style = "padding:20px; color:var(--text-sec); border-top:1px solid var(--border)" > ${t('no_shared_tasks')}
 
                                     </div > `
-                                    }
+                    }
 
                                 </div>
                                 <div class="floating-card" style="padding:0 24px; margin-bottom:80px;">
-                                    <h4 style="margin:20px 0 10px 0;">$ {
-                                        t('shared_events')
-                                        }
+                                    <h4 style="margin:20px 0 10px 0;">${t('shared_events')}
 
-                                    </h4>$ {
-                                    eventHtml || `< div
-                style = "padding:20px; color:var(--text-sec); border-top:1px solid var(--border)" >
-                    $ {
-                    t('no_shared_events')
-                }
+                                    </h4>${eventHtml || `<div style = "padding:20px; color:var(--text-sec); border-top:1px solid var(--border)" > ${t('no_shared_events')}
 
                                     </div > `
-                                    }
+                    }
 
                                 </div>`;
                 lucide.createIcons();
@@ -5265,10 +4422,8 @@
             catch (e) {
                 console.error(e);
 
-                document.getElementById('app-container').innerHTML = `< div class="floating-card"
-                style = "color:var(--danger)" > $ {
-                    t('error')
-                }
+                document.getElementById('app-container').innerHTML = `<div class="floating-card"
+                style = "color:var(--danger)" > ${t('error')}
 
                                 </div > `;
             }
@@ -5278,13 +4433,9 @@
             if (!confirm(status ? t('confirm_share') : t('confirm_unshare'))) return;
 
             try {
-                const res = await fetch(`/ api / $ {
-                    type
-                }
+                const res = await fetch(`/api/ ${type}
 
-                                /$ {
-                id
-            }
+                                /${id}
 
                                 `, {
 
@@ -5356,15 +4507,7 @@
 
             const safeId = id ? id : 'null';
 
-            const saveFunction = (type === 'task') ? `saveTask($ {
-                safeId
-
-            })` : (type === 'event' ? `saveEvent($ {
-                safeId
-
-            })` : `saveGrade($ {
-                safeId
-            })`);
+            const saveFunction = (type === 'task') ? `saveTask(${safeId})` : (type === 'event' ? `saveEvent(${safeId})` : `saveGrade(${safeId})`);
 
             const titleVal = editTitle === 'undefined' ? '' : editTitle;
             const descVal = editDesc === 'undefined' ? '' : editDesc;
@@ -5375,10 +4518,8 @@
             // Render existing images if editing
             if (id && currentView === 'tasks' && editSubject) {
                                 // check if task by param or context. Usually 'editSubject' is passed for tasks.
-                                // We need existing images. Since we don't pass them to openCreateMenu, we need to pass
-                                them or fetch them.
-                                // Correction: openCreateMenu is called from openDetails. I should update openDetails to
-                                pass images to openCreateMenu.
+                                // We need existing images. Since we don't pass them to openCreateMenu, we need to pass them or fetch them.
+                                // Correction: openCreateMenu is called from openDetails. I should update openDetails to pass images to openCreateMenu.
                                 // But openCreateMenu doesn't have an argument for images. I should add it.
                                 }
 
@@ -5387,53 +4528,32 @@
             // Let's assume I update the signature in the next step.
             // But I am in multi_replace.
 
-            // Let's actually update openCreateMenu signature and usage right here.
-
-            document.getElementById('sheet-content').innerHTML = ` < div class="sheet-header" >
-                                    <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
-                                        id ? (type==='task' ? t('edit_task') : (type==='event' ? t('edit_event') :
-                                        t('edit_grade'))): (type==='task' ? t('new_task') : (type==='event' ?
-                                        t('new_event') : t('new_grade')))
-                                        }
+            // Let's actually update openCreateMenu signature and usage right here. document.getElementById('sheet-content').innerHTML = ` <div class="sheet-header" >
+                                    <h2 style="margin:0; font-size:20px; font-weight:700;">${id ? (type === 'task' ? t('edit_task') : (type === 'event' ? t('edit_event') : t('edit_grade'))) : (type === 'task' ? t('new_task') : (type === 'event' ? t('new_event') : t('new_grade')))}
 
                                     </h2>
                                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"
                                             style="width:18px"></i></div>
-                                </div > $ {
-                (type === 'task' || type === 'grade') ? ` < div class="custom-picker-trigger"
-            onclick = "toggleOptionList('subject-list')" ><span id="selected-subject-display">$ {
-                                        selectedSubject || t('choose_subject')
-                                        }
+                                </div > ${(type === 'task' || type === 'grade') ? ` <div class="custom-picker-trigger"       onclick = "toggleOptionList('subject-list')" ><span id="selected-subject-display">${selectedSubject || t('choose_subject')}
 
                                     </span><i data-lucide="chevron-down" style="width:18px"></i></div >
                 <div class="picker-options" id="subject-list">
-                    < !-- Loaded dynamically -->
+                    <!-- Loaded dynamically -->
                 </div>
                                 </div > ` : ''
-            }
+                }
 
             <input type="text" id="input-title" class="ios-input"
-                placeholder="${t('title_placeholder')}" value="${titleVal}">$ {
-                    type === 'task' ? ` $ {
-                (id && existingImagesJson !== '[]') ? (() => {
-                    let imgs = [];
-
-                    try {
-                        imgs = JSON.parse(existingImagesJson.replace(/&quot; /g, '"'));
-                    }
+                placeholder="${t('title_placeholder')}" value="${titleVal}">${type === 'task' ? ` ${(id && existingImagesJson !== '[]') ? (() => {           let imgs = []; try { imgs = JSON.parse(existingImagesJson.replace(/&quot; /g, '"'));}
 
                     catch (e) { }
 
                     if (imgs.length > 0) {
-                        return `< div style="margin-bottom:10px;"> <label
-                    style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">$
-                    {
-                        t('existing_images')
-                    }
+                        return `<div style="margin-bottom:10px;"> <label
+                    style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">${t('existing_images')}
 
                 </label>
-                <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;"> $ {
-                    imgs.map(img => ` < div id = "img-container-${img.id}"
+                <div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:5px;"> ${imgs.map(img => ` <div id = "img-container-${img.id}"
                         onclick = "toggleDeleteImage(${img.id})"
                         style = "position:relative; flex-shrink:0; cursor:pointer;" > <img
                             src="${img.url}"
@@ -5442,7 +4562,7 @@
                                 style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,59,48,0.6); border-radius:10px; display:none; align-items:center; justify-content:center;">
                                 <i data-lucide="trash-2" style="color:white; width:24px;"></i> </div>
                         </div>`).join('')
-                }
+                            }
 
                 </div>
             </div>`
@@ -5450,14 +4570,11 @@
 
                     return '';
                 })() : ''
-            }
+                    }
 
                                 <div id="new-images-preview"
                                     style="display:flex; gap:10px; overflow-x:auto; margin-bottom:10px;"></div><label
-                                    style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">$
-                                    {
-                                    t('add_images')
-                                    }
+                                    style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 0 0 5px 5px;">${t('add_images')}
 
                                 </label>
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
@@ -5473,26 +4590,18 @@
                                     <div class="ios-btn btn-sec"
                                         onclick="document.getElementById('input-images-camera').click()"
                                         style="display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; margin:0;">
-                                        <i data-lucide="camera" style="width:18px;"></i><span style="font-size:14px;">$
-                                            {
-                                            t('take_photo')
-                                            }
+                                        <i data-lucide="camera" style="width:18px;"></i><span style="font-size:14px;">${t('take_photo')}
 
                                         </span></div>
                                 </div>` : ''
-        }
+                }
 
-                                $ {
-            type === 'grade' ? `<input type="number" id="input-value" step="0.1" class="ios-input"
-                                    placeholder="${t('grade_value')}" value="${valVal}">` : ''
-        }
+                                ${type === 'grade' ? `<input type="number" id="input-value" step="0.1" class="ios-input"                   placeholder="${t('grade_value')}" value="${valVal}">` : ''
+                }
 
                                 <div class="custom-picker-trigger"
                                     onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span
-                                        id="selected-date-display">$ {
-                                        selectedDate.toLocaleDateString(window.currentUser?.language==='en' ? 'en-US' :
-                                        'de-DE')
-                                        }
+                                        id="selected-date-display">${selectedDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE')}
 
                                     </span><i data-lucide="calendar" style="width:18px"></i></div>
                                 <div class="picker-options" id="calendar-picker-view" style="padding:15px">
@@ -5505,42 +4614,33 @@
                                     </div>
                                     <div class="calendar-days-grid" id="calendar-grid"></div>
                                 </div><textarea id="input-desc" class="ios-input"
-                                    placeholder="${t('desc_placeholder')}">$ {
-                descVal
-            }
+                                    placeholder="${t('desc_placeholder')}">${descVal}
 
-            </textarea><button class="ios-btn" onclick="${saveFunction}">$ {
-                                    t('save')
-                                    }
+            </textarea><button class="ios-btn" onclick="${saveFunction}">${t('save')}
 
-                                </button><button class="ios-btn btn-sec" onclick="closeSheet()">$ {
-                                    t('cancel')
-                                    }
+                                </button><button class="ios-btn btn-sec" onclick="closeSheet()">${t('cancel')}
 
                                 </button>`;
-                                openSheetOverlay();
-                                lucide.createIcons();
+            openSheetOverlay();
+            lucide.createIcons();
 
-                                // Load subjects if subject list exists
-                                const subjectList=document.getElementById('subject-list');
+            // Load subjects if subject list exists const subjectList = document.getElementById('subject-list');
 
-                                if (subjectList) {
-                                fetch('/api/subjects') .then(res=> res.json()) .then(data=> {
-                                subjectList.innerHTML=data.map(s=> `< div class="picker-option" data - id="${s.id}"
-        onclick = "selectSubject('${s.name}')" > $ {
-            s.name
-        }
+            if (subjectList) {
+                fetch('/api/subjects').then(res => res.json()).then(data => {
+                    subjectList.innerHTML = data.map(s => `<div class="picker-option" data - id="${s.id}"
+        onclick = "selectSubject('${s.name}')" > ${s.name}
 
                                 </div > `).join('');
 
-                                }) .catch(e=> {
-                                console.error("Subject load error", e);
-                                subjectList.innerHTML='<div
-                                    style="padding:10px; color:var(--text-sec); text-align:center;">Laden fehlgeschlagen
-                                </div>';
-        });
-                                }
-                                }
+                }).catch(e => {
+                    console.error("Subject load error", e);
+                    subjectList.innerHTML = '<div
+                    style = "padding:10px; color:var(--text-sec); text-align:center;" > Laden fehlgeschlagen
+                                </div > ';
+                });
+            }
+        }
 
         let isShared = false;
 
@@ -5557,9 +4657,7 @@
             if (imagesToDelete.has(id)) {
                 imagesToDelete.delete(id);
 
-                document.getElementById(`del - overlay - $ {
-            id
-        }
+                document.getElementById(`del - overlay - ${id}
 
         `).style.display = 'none';
             }
@@ -5567,9 +4665,7 @@
             else {
                 imagesToDelete.add(id);
 
-                document.getElementById(`del - overlay - $ {
-            id
-        }
+                document.getElementById(`del - overlay - ${id}
 
         `).style.display = 'flex';
             }
@@ -5583,32 +4679,15 @@
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const d = String(selectedDate.getDate()).padStart(2, '0');
 
-            const date = `$ {
-            year
-        }
-
-        -$ {
-            month
-        }
-
-        -$ {
-            d
-        }
-
-        `;
+            const date = `${year}-${month}-${d}`;
             if (!title) return;
 
-            const url = updateId ? `/ api / tasks / $ {
-            updateId
-        }
-
-        ` : '/api/tasks';
+            const url = updateId ? `/api/tasks/${updateId}` : '/api/tasks';
 
             try {
                 let body,
                     headers;
-                                // Always use FormData if there are images to upload or delete (if updateId is present
-                                but we want to use form data for consistent image handling ?
+                                // Always use FormData if there are images to upload or delete (if updateId is present // but we want to use form data for consistent image handling ?
                                 // Wait, update_task supports FormData.
                                 // It is simpler to always use FormData for tasks now.
 
@@ -5658,26 +4737,18 @@
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const d = String(selectedDate.getDate()).padStart(2, '0');
 
-            const date = `$ {
-            year
-        }
+            const date = `${year}
 
-        -$ {
-            month
-        }
+        -${month}
 
-        -$ {
-            d
-        }
+        -${d}
 
         `;
             if (!title) return;
 
             const method = updateId ? 'PUT' : 'POST';
 
-            const url = updateId ? `/ api / events / $ {
-            updateId
-        }
+            const url = updateId ? `/api/events/ ${updateId}
 
         ` : '/api/events';
 
@@ -5710,17 +4781,11 @@
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const d = String(selectedDate.getDate()).padStart(2, '0');
 
-            const date = `$ {
-            year
-        }
+            const date = `${year}
 
-        -$ {
-            month
-        }
+        -${month}
 
-        -$ {
-            d
-        }
+        -${d}
 
         `;
 
@@ -5731,9 +4796,7 @@
 
             const method = updateId ? 'PUT' : 'POST';
 
-            const url = updateId ? `/ api / grades / $ {
-            updateId
-        }
+            const url = updateId ? `/api/grades/ ${updateId}
 
         ` : '/api/grades';
 
@@ -5769,7 +4832,7 @@
 
         // Shared function for generating chat HTML
         function generateChatMessagesHTML(msgs) {
-            if (!msgs || msgs.length === 0) return `< div
+            if (!msgs || msgs.length === 0) return `<div
         style = "text-align:center; padding:40px; color:var(--text-sec); opacity:0.6;" >
             Keine Nachrichten</div > `;
 
@@ -5787,9 +4850,7 @@
                 let dateSep = '';
 
                 if (dateStr !== lastDate) {
-                    dateSep = `< div class="chat-date-separator" > $ {
-            dateStr === new Date().toLocaleDateString() ? (t('today') || 'Heute') : dateStr
-        }
+                    dateSep = `<div class="chat-date-separator" > ${dateStr === new Date().toLocaleDateString() ? (t('today') || 'Heute') : dateStr}
 
                                     </div > `;
                     lastDate = dateStr;
@@ -5804,33 +4865,23 @@
                 else contentHtml = `< a href = "${m.file_url}" target = "_blank"
         style = "display:flex; align-items:center; gap:8px; color:inherit; text-decoration:none;" >
                                         <div style="background:rgba(0,0,0,0.1); padding:8px; border-radius:8px;"><i
-                                                data-lucide="file" style="width:18px"></i></div> <span>$ {
-                                            m.file_name
-                                            }
+                                                data-lucide="file" style="width:18px"></i></div> <span>${m.file_name}
 
                                         </span>
                                     </a > `;
 
-                return ` $ {
-            dateSep
-        }
+                return ` ${dateSep}
 
         <div class="chat-bubble-row ${isMe ? 'me' : 'other'}">
             <div class="chat-meta"
                 style="margin-left:8px; margin-bottom:2px; display:${isMe ? 'none' : 'block'}">
-                $ {
-                    m.user_name
-                }
+                ${m.user_name}
 
             </div>
-            <div class="chat-bubble"> $ {
-                contentHtml
-            }
+            <div class="chat-bubble"> ${contentHtml}
 
             </div>
-            <div class="chat-meta">$ {
-                timeStr
-            }
+            <div class="chat-meta">${timeStr}
 
             </div>
         </div> `;
@@ -5842,9 +4893,7 @@
             let messages = [];
 
             try {
-                const res = await fetch(`/ api / tasks / $ {
-            id
-        }
+                const res = await fetch(`/api/tasks/ ${id}
 
                                     /chat`);
                 if (res.ok) messages = await res.json();
@@ -5855,17 +4904,14 @@
             }
 
             // Mark as read
-            fetch(`/api/tasks/$ {
-                                    id
-                                    }
+            fetch(`/api/tasks/${id}
 
                                     /read`, {
                 method: 'POST'
             });
             refreshTasksSilent();
 
-            // Store for filtering
-            window.currentChatMessages = messages;
+            // Store for filtering window.currentChatMessages = messages;
 
             const ui = ` <div class="sheet-header"
                                         style="border-bottom:1px solid var(--border); padding-bottom:15px; margin-bottom:0;">
@@ -5873,9 +4919,7 @@
                                             style="left:0; right:auto;"><i data-lucide="chevron-left"
                                                 style="width:18px"></i></div>
                                         <div style="flex:1; text-align:center;">
-                                            <h2 style="margin:0; font-size:16px; font-weight:700;">$ {
-                                                title
-                                                }
+                                            <h2 style="margin:0; font-size:16px; font-weight:700;">${title}
 
                                             </h2>
                                             <div style="font-size:11px; color:var(--text-sec); margin-top:2px;">Chat
@@ -5888,21 +4932,15 @@
                                         <div style="display:flex; justify-content:center; gap:8px;"><button
                                                 id="chat-filter-all" class="ios-btn btn-small active"
                                                 style="width:auto; padding:6px 16px; height:auto; font-size:13px; margin:0;"
-                                                onclick="toggleChatFilter(${id}, '${title}', 'all')">$ {
-                                                t('chat_filter_all')
-                                                }
+                                                onclick="toggleChatFilter(${id}, '${title}', 'all')">${t('chat_filter_all')}
 
                                             </button><button id="chat-filter-media" class="ios-btn btn-small btn-sec"
                                                 style="width:auto; padding:6px 16px; height:auto; font-size:13px; margin:0;"
-                                                onclick="toggleChatFilter(${id}, '${title}', 'media')">$ {
-                                                t('chat_filter_media')
-                                                }
+                                                onclick="toggleChatFilter(${id}, '${title}', 'media')">${t('chat_filter_media')}
 
                                             </button></div>
                                     </div>
-                                    <div id="chat-messages-area" class="chat-messages-area">$ {
-                                        generateChatMessagesHTML(messages)
-                                        }
+                                    <div id="chat-messages-area" class="chat-messages-area">${generateChatMessagesHTML(messages)}
 
                                     </div>
                                     <div class="chat-input-bar"><label for="chat-file-input" class="chat-attach-btn"><i
@@ -5941,9 +4979,7 @@
             const medBtn = document.getElementById('chat-filter-media');
             const area = document.getElementById('chat-messages-area');
 
-            if (!allBtn || !medBtn || !area) return; // safety
-
-            let msgs = window.currentChatMessages || [];
+            if (!allBtn || !medBtn || !area) return; // safety let msgs = window.currentChatMessages || [];
 
             if (filter === 'all') {
                 allBtn.classList.remove('btn-sec');
@@ -5975,9 +5011,7 @@
 
             // Optimistic UI update could go here, but for now we wait for server
             try {
-                const res = await fetch(`/api/tasks/$ {
-                                    id
-                                    }
+                const res = await fetch(`/api/tasks/${id}
 
                                     /chat`, {
                     method: 'POST', body: fd
@@ -6103,9 +5137,7 @@
 
             const weekdays = t('day_initials').split(',');
 
-            weekdays.forEach(d => grid.innerHTML += `<div class="day-label">$ {
-                                            d
-                                            }
+            weekdays.forEach(d => grid.innerHTML += `<div class="day-label">${d}
 
                                         </div>`);
 
@@ -6114,8 +5146,7 @@
             const daysInMonth = new Date(pickerViewDate.getFullYear(),
                 pickerViewDate.getMonth() + 1, 0).getDate();
 
-            // Adjust for Monday start (JS 0=Sun, 1=Mon...6=Sat)
-            const offset = firstDay === 0 ? 6 : firstDay - 1;
+            // Adjust for Monday start (JS 0=Sun, 1=Mon...6=Sat) const offset = firstDay === 0 ? 6 : firstDay - 1;
 
             for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>'; for (let i = 1; i
                 <= daysInMonth; i++) {
@@ -6126,9 +5157,7 @@
                             Date().getMonth() && pickerViewDate.getFullYear() === new
                                 Date().getFullYear(); grid.innerHTML += `<div
                                             class="calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}"
-                                            onclick="event.stopPropagation(); selectPickerDate(${i})">$ {
-                                            i
-                                            }
+                                            onclick="event.stopPropagation(); selectPickerDate(${i})">${i}
 
                                             </div>`;
             }
@@ -6140,13 +5169,9 @@
             previousView = filterClassId ? 'sub_class_detail' : 'sub_super_admin';
             currentView = 'sub_subjects';
 
-            setPageTitle(filterClassName ? `$ {
-                                            t('subjects_label')
-                                            }
+            setPageTitle(filterClassName ? `${t('subjects_label')}
 
-                                            : $ {
-                                            filterClassName
-                                            }
+                                            : ${filterClassName}
 
                                             ` : t('subjects'));
             document.getElementById('header-back-btn').style.display = 'block';
@@ -6156,9 +5181,7 @@
                     view: 'sub_subjects', class_id: filterClassId, class_name: filterClassName
                 }
 
-                    , '', filterClassId ? `/admin/subjects/$ {
-                                            filterClassId
-                                            }
+                    , '', filterClassId ? `/admin/subjects/${filterClassId}
 
                                             ` : '/admin/subjects');
             }
@@ -6172,15 +5195,11 @@
                 ;
 
             document.getElementById('app-container').innerHTML = `<div
-                                                style="text-align:center; padding:20px; color:var(--text-sec)">$ {
-                                                t('load_subjects')
-                                                }
+                                                style="text-align:center; padding:20px; color:var(--text-sec)">${t('load_subjects')}
 
                                             </div>`;
 
-            const apiUrl = filterClassId ? `/api/subjects?class_id=$ {
-                                            filterClassId
-                                            }
+            const apiUrl = filterClassId ? `/api/subjects?class_id=${filterClassId}
 
                                             ` : '/api/subjects';
 
@@ -6193,27 +5212,17 @@
                 const listHtml = subjects.map(s => ` <div class="list-item"
                                                 style="flex-wrap:wrap;">
                                                 <div class="item-content" style="flex:1;">
-                                                    <div class="item-title">$ {
-                                                        s.name
-                                                        }
+                                                    <div class="item-title">${s.name}
 
-                                                    </div> $ {
-                                                    window.currentUser.is_super_admin && !filterClassId ? `< div
-                                                        class= "item-sub" style = "font-size:11px;" > Klasse(n): $ {
-                    s.class_names && s.class_names.length > 0 ?
-                        s.class_names.join(', ') : 'Keine / Global'
-                }
+                                                    </div> ${window.currentUser.is_super_admin && !filterClassId ? `<div class= "item-sub" style = "font-size:11px;" > Klasse(n): ${s.class_names && s.class_names.length > 0 ? s.class_names.join(', ') : 'Keine / Global'}
 
                                                     </div > ` : ''
-                                                    }
+                    }
 
                                                 </div>
-                                                <div style="display:flex;"> $ {
-                                                    window.currentUser.is_super_admin ? `< div
-                style = "color:var(--accent); cursor:pointer; padding:8px;"
-                onclick = "openSubjectClassLinker(${s.id}, '${s.name}')" > <i
+                                                <div style="display:flex;"> ${window.currentUser.is_super_admin ? `<div style = "color:var(--accent); cursor:pointer; padding:8px;"         onclick = "openSubjectClassLinker(${s.id}, '${s.name}')" > <i
                     data-lucide="edit-3" style="width:18px;"></i></div > ` : ''
-                                                    }
+                    }
 
                                                     <div style="color:var(--danger); cursor:pointer; padding:8px;"
                                                         onclick="deleteSubject(${s.id}, '${s.name}')"> <i
@@ -6223,53 +5232,37 @@
 
                 const superAdminAdd = window.currentUser.is_super_admin ? ` <div
                                                 class="floating-card" style="padding: 20px;">
-                                                <h3 style="margin-top:0">$ {
-                                                    t('new_subject')
-                                                    }
+                                                <h3 style="margin-top:0">${t('new_subject')}
 
                                                     (Superadmin)</h3><input type="text" id="new-subject-name"
                                                     class="ios-input" placeholder="${t('subject_placeholder')}">
                                                 <p style="font-size:12px; color:var(--text-sec); margin-bottom:10px;">
                                                     Bitte die Klassen nach der Erstellung über das Stift-Icon zuweisen.
-                                                </p><button class="ios-btn" onclick="addSubject()">$ {
-                                                    t('add_btn')
-                                                    }
+                                                </p><button class="ios-btn" onclick="addSubject()">${t('add_btn')}
 
                                                 </button>
                                             </div>` : ` <div class="floating-card" style="padding: 20px;">
-                                                <h3 style="margin-top:0">$ {
-                                                    t('new_subject')
-                                                    }
+                                                <h3 style="margin-top:0">${t('new_subject')}
 
                                                 </h3>
                                                 <div style="display:flex; gap:10px;"><input type="text"
                                                         id="new-subject-name" class="ios-input"
                                                         placeholder="${t('subject_placeholder')}"
                                                         style="margin:0;"><button class="ios-btn"
-                                                        style="width:auto; padding:0 20px;" onclick="addSubject()">$ {
-                                                        t('add_btn')
-                                                        }
+                                                        style="width:auto; padding:0 20px;" onclick="addSubject()">${t('add_btn')}
 
                                                     </button></div>
                                             </div>`;
 
-                document.getElementById('app-container').innerHTML = ` $ {
-                                            superAdminAdd
-                                            }
+                document.getElementById('app-container').innerHTML = ` ${superAdminAdd}
 
-                                            <h3 style="margin:20px 0 10px 5px; font-size:18px;">$ {
-                                                t('existing_subjects')
-                                                }
+                                            <h3 style="margin:20px 0 10px 5px; font-size:18px;">${t('existing_subjects')}
 
                                             </h3>
-                                            <div class="floating-card" style="padding:0 24px;">$ {
-                                                listHtml || `< div
-                style = "padding:20px; text-align:center; color:var(--text-sec)" > $ {
-                    t('no_subjects_found')
-                }
+                                            <div class="floating-card" style="padding:0 24px;">${listHtml || `<div style = "padding:20px; text-align:center; color:var(--text-sec)" > ${t('no_subjects_found')}
 
                                                 </div > `
-                                                }
+                    }
 
                                             </div>`;
                 lucide.createIcons();
@@ -6286,9 +5279,7 @@
                 const res = await fetch('/api/admin/classes');
                 const classes = await res.json();
 
-                const subRes = await fetch(`/api/subjects/$ {
-                                            subId
-                                            }
+                const subRes = await fetch(`/api/subjects/${subId}
 
                                             `);
                 const subData = await subRes.json();
@@ -6296,22 +5287,15 @@
 
                 document.getElementById('sheet-content').innerHTML = ` <div
                                                 class="sheet-header">
-                                                <h2 style="margin:0; font-size:20px; font-weight:700;">Fach zuweisen: $
-                                                    {
-                                                    subName
-                                                    }
+                                                <h2 style="margin:0; font-size:20px; font-weight:700;">Fach zuweisen: ${subName}
 
                                                 </h2>
                                                 <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"
                                                         style="width:18px"></i></div>
                                             </div>
-                                            <div style="margin-bottom:20px;">$ {
-                                                classes.map(c=> ` < div class="account-item"
-                onclick = "toggleSubjectClass(${c.id})"
+                                            <div style="margin-bottom:20px;">${classes.map(c => ` <div class="account-item"         onclick = "toggleSubjectClass(${c.id})"
                 style = "border:none; background:var(--tab-bg); border-radius:12px; margin-bottom:10px;" >
-                                                    <div class="account-item-text">$ {
-                                                        c.name
-                                                        }
+                                                    <div class="account-item-text">${c.name}
 
                                                     </div>
                                                     <div id="class-toggle-${c.id}"
@@ -6319,7 +5303,7 @@
                                                         <div class="ios-toggle-knob"></div>
                                                     </div>
                                                 </div > `).join('')
-                                                }
+                    }
 
                                             </div><button class="ios-btn"
                                                 onclick="saveSubjectClasses(${subId})">Speichern</button>`;
@@ -6337,9 +5321,7 @@
         let overlaySelectedClasses = new Set();
 
         function toggleSubjectClass(id) {
-            const toggle = document.getElementById(`class-toggle-$ {
-                                            id
-                                            }
+            const toggle = document.getElementById(`class-toggle-${id}
 
                                             `);
 
@@ -6356,9 +5338,7 @@
 
         async function saveSubjectClasses(subId) {
             try {
-                const res = await fetch(`/api/subjects/$ {
-                                            subId
-                                            }
+                const res = await fetch(`/api/subjects/${subId}
 
                                             /classes`, {
                     method: 'POST',
@@ -6425,17 +5405,13 @@
         async function renderForcePasswordChange() {
             document.getElementById('sheet-content').innerHTML = ` <div
                                                 class="sheet-header">
-                                                <h2 style="margin:0; font-size:20px; font-weight:700;">$ {
-                                                    t('force_pw_title')
-                                                    }
+                                                <h2 style="margin:0; font-size:20px; font-weight:700;">${t('force_pw_title')}
 
                                                 </h2>
                                             </div>
                                             <div
                                                 style="padding:10px; color:var(--text-sec); font-size:14px; line-height:1.4; margin-bottom:15px;">
-                                                $ {
-                                                t('force_pw_msg')
-                                                }
+                                                ${t('force_pw_msg')}
 
                                             </div><input type="password" id="force-new-pw" class="ios-input"
                                                 placeholder="${t('msg_password')}"><input type="password"
@@ -6443,15 +5419,11 @@
                                                 placeholder="${t('msg_password')} (Wiederholen)">
                                             <div id="force-pw-error"
                                                 style="color:var(--danger); font-size:12px; margin: 5px 0 15px 5px; display:none;">
-                                            </div><button class="ios-btn" onclick="saveForcedPassword()">$ {
-                                                t('save_btn')
-                                                }
+                                            </div><button class="ios-btn" onclick="saveForcedPassword()">${t('save_btn')}
 
                                             </button>`;
-            // Lock UI
-            const overlay = document.getElementById('sheet-overlay');
-            overlay.onclick = null; // Disable background click close
-            overlay.classList.add('active');
+            // Lock UI const overlay = document.getElementById('sheet-overlay');
+            overlay.onclick = null; // Disable background click close overlay.classList.add('active');
             overlay.querySelector('.sheet-close-btn')?.remove(); // Ensure no close
             button
             lucide.createIcons();
@@ -6468,52 +5440,48 @@
                 return;
             }
 
-            const regex =/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d). {
-            7,
-                                            }
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{7,}$/;
 
-        $ /;
+            if (!regex.test(pw)) {
+                errDiv.innerText = t('pw_complexity_error');
+                errDiv.style.display = 'block';
+                return;
+            }
 
-        if (!regex.test(pw)) {
-            errDiv.innerText = t('pw_complexity_error');
-            errDiv.style.display = 'block';
-            return;
-        }
+            const current = prompt("Bitte dein aktuelles (temporäres) Passwort zur Bestätigung eingeben: ");
+            if (!current) return;
 
-        const current = prompt("Bitte dein aktuelles (temporäres) Passwort zur Bestätigung eingeben: ");
-        if (!current) return;
+            try {
+                const res = await fetch('/api/change_password', {
 
-        try {
-            const res = await fetch('/api/change_password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
 
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
+                    ,
+                    body: JSON.stringify({
+                        current_password: current, new_password: pw
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    window.currentUser.needs_password_change = false;
+                    closeSheet();
+                    location.reload();
                 }
 
-                ,
-                body: JSON.stringify({
-                    current_password: current, new_password: pw
-                })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                window.currentUser.needs_password_change = false;
-                closeSheet();
-                location.reload();
+                else {
+                    errDiv.innerText = data.message || t('error');
+                    errDiv.style.display = 'block';
+                }
             }
 
-            else {
-                errDiv.innerText = data.message || t('error');
-                errDiv.style.display = 'block';
+            catch (e) {
+                console.error(e);
             }
         }
-
-        catch (e) {
-            console.error(e);
-        }
-                                            }
 
         // Tutorial removed as per user request
 
@@ -6521,9 +5489,7 @@
             if (!confirm(t('confirm_delete_subject').replace('{name}', name))) return;
 
             try {
-                const res = await fetch(`/api/subjects/$ {
-                                            id
-                                            }
+                const res = await fetch(`/api/subjects/${id}
 
                                             `, {
                     method: 'DELETE'
@@ -6552,8 +5518,7 @@
         let touchStartX = 0;
         let touchStartY = 0;
 
-        // Touch
-        document.addEventListener('touchstart', (e) => {
+        // Touch document.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
         }
@@ -6578,9 +5543,7 @@
 
         document.addEventListener('mousedown', (e) => {
             isMouseDown = true;
-            mouseStartX = e.clientX; // Mouse uses clientX, Touch uses screenX usually but
-                                            consistency matters.Let's use clientX for mouse.
-            mouseStartY = e.clientY;
+            mouseStartX = e.clientX; // Mouse uses clientX, Touch uses screenX usually but consistency matters. Let's use clientX for mouse. mouseStartY = e.clientY;
         });
 
         document.addEventListener('mouseup', (e) => {
@@ -6590,8 +5553,7 @@
         });
 
         function handleSwipe(startX, startY, endX, endY, target) {
-            // Prevent if sheet is open
-            if (document.getElementById('sheet-overlay').classList.contains('active'))
+            // Prevent if sheet is open if (document.getElementById('sheet-overlay').classList.contains('active'))
                 return;
 
             // Check scrollable
@@ -6610,8 +5572,7 @@
             const diffY = endY - startY;
             const threshold = 50; // Lower threshold
 
-            // Check horizontal dominance and threshold
-            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
+            // Check horizontal dominance and threshold if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
                 const views = ['home',
                     'tasks',
                     'calendar',
@@ -6626,8 +5587,7 @@
 
                 let nextIdx = -1;
 
-                if (diffX < 0) { // Swipe Left -> Next
-                    if (idx < views.length - 1) nextIdx = idx + 1;
+                if (diffX < 0) { // Swipe Left -> Next if (idx < views.length - 1) nextIdx = idx + 1;
                 } else { // Swipe Right ->
                     Previous
                     if (idx > 0) nextIdx = idx - 1;
@@ -6647,9 +5607,7 @@
                 localStorage.setItem('l8te_lang', window.currentUser.language);
             }
 
-            updateAppLanguage(); // Initialize translations
-
-            if (window.currentUser.needs_password_change) {
+            updateAppLanguage(); // Initialize translations if (window.currentUser.needs_password_change) {
                 renderForcePasswordChange();
                 return;
             }
@@ -6692,8 +5650,7 @@
 
             else if (path.startsWith('/subject/')) {
                 const sub = decodeURIComponent(path.split('/').pop());
-                                                    // Note: This won't have the avg/gradesJson pre-cached, so subject
-                                                    detail might need adjustment to fetch if missing.
+                                                    // Note: This won't have the avg/gradesJson pre-cached, so subject detail might need adjustment to fetch if missing.
                     renderSubjectDetails(sub, '?', '[]');
             }
 
