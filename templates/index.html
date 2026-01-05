@@ -1201,33 +1201,10 @@
         function updateBrowserTitle(pageTitle) {
             const base = "L8teStudy";
             const context = window.currentUser?.className || "Portal";
-
             if (pageTitle) {
-                document.title = `$ {
-    base
-    }
-
-    - $ {
-    context
-    }
-
-    | $ {
-    pageTitle
-    }
-
-    `;
-            }
-
-            else {
-                document.title = `$ {
-    base
-    }
-
-    - $ {
-    context
-    }
-
-    `;
+                document.title = `${base} - ${pageTitle}`;
+            } else {
+                document.title = `${base} | ${context}`;
             }
         }
 
@@ -1392,13 +1369,7 @@
                 enterAnim = 'slideInLeft';
             }
 
-            const container = document.getElementById('app-container');
-
-            container.style.animation = `$ {
-    exitAnim
-    }
-
-    0.1s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+            container.style.animation = `${exitAnim} 0.1s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
             setTimeout(() => {
                 previousView = (currentView === 'settings' || currentView.startsWith('sub_')) ? previousView : currentView;
@@ -1672,34 +1643,14 @@
                 day: '2-digit', month: 'long'
             });
 
-            document.getElementById('app-container').innerHTML = ` <div class="floating-card">
-        <h3 style="margin:0">$ {
-            t('morning')
-            }
-
-        </h3>
-        <p class="item-sub">$ {
-            t('today_is')
-            }
-
-            $ {
-            dateStr
-            }
-
-            .</p>
+            document.getElementById('app-container').innerHTML = `<div class="floating-card">
+        <h3 style="margin:0">${t('morning')}</h3>
+        <p class="item-sub">${t('today_is')} ${dateStr}.</p>
     </div>
     <div id="home-next-event"></div>
     <div class="floating-card">
-        <h4 style="margin:0 0 15px 0; font-size:17px;">$ {
-            t('due_tasks')
-            }
-
-        </h4>
-        <div id="home-due-tasks" style="padding:10px; color:var(--text-sec); text-align:center;">$ {
-            t('loading_tasks')
-            }
-
-        </div>
+        <h4 style="margin:0 0 15px 0; font-size:17px;">${t('due_tasks')}</h4>
+        <div id="home-due-tasks" style="padding:10px; color:var(--text-sec); text-align:center;">${t('loading_tasks')}</div>
     </div>`;
 
             try {
@@ -1728,27 +1679,15 @@
 
                     document.getElementById('home-next-event').innerHTML = ` <div class="floating-card"
         style="padding: 20px 24px 10px 24px;">
-        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">$ {
-            t('next_event')
-            }
-
-        </h4>
+        <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('next_event')}</h4>
         <div class="list-item"
             onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
             <div class="account-item-icon"
                 style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);"><i
                     data-lucide="calendar" style="width:18px; height:18px;"></i></div>
             <div class="item-content">
-                <div class="item-title">$ {
-                    e.title
-                    }
-
-                </div>
-                <div class="item-sub">$ {
-                    timeText
-                    }
-
-                </div>
+                <div class="item-title">${e.title}</div>
+                <div class="item-sub">${timeText}</div>
             </div><i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
         </div>
     </div>`;
@@ -1761,18 +1700,10 @@
                 }
 
                 else {
-                    document.getElementById('home-next-event').innerHTML = ` <div class="floating-card"
+                    document.getElementById('home-next-event').innerHTML = `<div class="floating-card"
         onclick="navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'))">
-        <h4 style="margin:0 0 5px 0; font-size:17px; color:var(--accent);">$ {
-            t('next_event')
-            }
-
-        </h4>
-        <p class="item-sub">$ {
-            t('no_upcoming_events')
-            }
-
-        </p>
+        <h4 style="margin:0 0 5px 0; font-size:17px; color:var(--accent);">${t('next_event')}</h4>
+        <p class="item-sub">${t('no_upcoming_events')}</p>
     </div>`;
                 }
             }
@@ -1922,31 +1853,16 @@
                     return;
                 }
 
-                const listHtml = filteredTasks.map(task => ` <div class="list-item" style="padding: 18px 0;"
+                const listHtml = filteredTasks.map(task => `<div class="list-item" style="padding: 18px 0;"
         onclick="openTaskDetails(${task.id})">
         <div class="check-circle ${task.is_done ? 'checked' : ''}"
             onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})"> <i data-lucide="check"
                 style="width:14px; opacity:${task.is_done ? 1 : 0}"></i> </div>
         <div class="item-content">
-            <div class="item-title">$ {
-                task.title
-                }
-
-            </div>
-            <div class="item-sub" style="display:flex; align-items:center;"> $ {
-                task.subject || t('general')
-                }
-
-                • $ {
-                task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')
-                }
-
-                $ {
-                task.unread_chat_count > 0 ? `< div
-                    style = "background:var(--danger); width:8px; height:8px; border-radius:50%; margin-left:8px;" ></div > `
-                : ''
-                }
-
+            <div class="item-title">${task.title}</div>
+            <div class="item-sub" style="display:flex; align-items:center;">
+                ${task.subject || t('general')} • ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}
+                ${task.unread_chat_count > 0 ? `<div style="background:var(--danger); width:8px; height:8px; border-radius:50%; margin-left:8px;"></div>` : ''}
             </div>
         </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
     </div>`).join('');
@@ -1983,32 +1899,30 @@
 
         async function toggleTaskStatus(id, currentStatus, refreshHome = false) {
             try {
-                const res = await fetch(`/ api / tasks / $ {
-    id
-    }
-
-    `, {
-
+                const res = await fetch(`/api/tasks/${id}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-
-                    ,
-                    body: JSON.stringify({
-                        is_done: !currentStatus
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_done: !currentStatus })
                 });
 
                 if (res.ok) {
                     if (refreshHome) renderHome();
                     else renderTasks(currentStatus ? 'done' : 'open');
                 }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        if (res.ok) {
+            if (refreshHome) renderHome();
+            else renderTasks(currentStatus ? 'done' : 'open');
+        }
             }
 
             catch (err) {
-                console.error(err);
-            }
+            console.error(err);
+        }
         }
 
         async function renderCalendar(tab = 'termine') {
@@ -2016,21 +1930,9 @@
 
             container.innerHTML = `<div class="controls-row">
         <div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}"
-                onclick="renderCalendar('termine')">$ {
-                t('events')
-                }
-
-            </button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">$ {
-                t('month')
-                }
-
-            </button></div>
+                onclick="renderCalendar('termine')">${t('events')}</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">${t('month')}</button></div>
     </div>
-    <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">$ {
-        t('loading')
-        }
-
-    </div>`;
+    <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}</div>`;
             lucide.createIcons();
 
             try {
@@ -2040,39 +1942,25 @@
                 if (tab === 'termine') {
                     const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                    const listHtml = sortedEvents.map(e => ` <div class="list-item" style="padding: 18px 0;"
+                    const listHtml = sortedEvents.map(e => `<div class="list-item" style="padding: 18px 0;"
         onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
         <div class="account-item-icon"
             style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
             <i data-lucide="calendar" style="width:20px; height:20px;"></i> </div>
         <div class="item-content">
-            <div class="item-title">$ {
-                e.title
-                }
-
-            </div>
-            <div class="item-sub">$ {
-                new Date(e.date).toLocaleDateString(locale, {
-                weekday: 'long', day: '2-digit', month: 'long'
-                })
-                }
-
-            </div>
+            <div class="item-title">${e.title}</div>
+            <div class="item-sub">${new Date(e.date).toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long' })}</div>
         </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-    </div> `).join('');
+    </div>`).join('');
 
-                    document.getElementById('calendar-content').innerHTML = listHtml ? `< div class="floating-card"
-        style="padding:0 24px">$ {
-        listHtml
-        }
-
-        </div>` : `< div class="floating-card" style="padding:40px; text-align:center">
+                    document.getElementById('calendar-content').innerHTML = listHtml ? `<div class="floating-card"
+        style="padding:0 24px">${listHtml}</div>` : `<div class="floating-card" style="padding:40px; text-align:center">
             <p class="item-sub">Keine anstehenden Termine.</p>
             </div>`;
                 }
 
                 else {
-                    document.getElementById('calendar-content').innerHTML = ` < div class="floating-card">
+                    document.getElementById('calendar-content').innerHTML = `<div class="floating-card">
                 <div class="calendar-header">
                     <div style="padding:10px" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
                     <span id="main-calendar-month-year" style="font-weight:700"></span>
@@ -2101,17 +1989,7 @@
             });
             grid.innerHTML = '';
 
-            ['M',
-                'D',
-                'M',
-                'D',
-                'F',
-                'S',
-                'S'].forEach(d => grid.innerHTML += `< div class="day-label"> $ {
-                    d
-                    }
-
-                    </div> `);
+            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `<div class="day-label">${d}</div>`);
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
             const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
             const offset = firstDay === 0 ? 6 : firstDay - 1;
@@ -2403,56 +2281,31 @@
                         totalCount++;
                     }
 
-                    listHtml += `<div class="floating-card"
-                                onclick="renderSubjectDetails('${sub}', '${avg}', '${JSON.stringify(subjects[sub].grades).replace(/"
-                        / g, '&quot;')} ')">
- <div style="display:flex; justify-content:space-between; align-items:center;"><div><h3 style="margin:0">$ {
-                    sub
-                }
-
-                </h3><p class="item-sub">$ {
-                    subjects[sub].grades.length
-                }
-
-                Note$ {
-                    subjects[sub].grades.length !==1 ? ' n': '' } </p></div>
+                    listHtml += `<div class="floating-card" onclick="renderSubjectDetails('${sub}', '${avg}', '${JSON.stringify(subjects[sub].grades).replace(/"/g, '&quot;')}')">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <h3 style="margin:0">${sub}</h3>
+                                <p class="item-sub">${subjects[sub].grades.length} Note${subjects[sub].grades.length !== 1 ? 'n' : ''}</p>
+                            </div>
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <div style="font-size: 20px; font-weight: 700; color: var(--accent);">$ {
-                                    avg
-                                    }
-
-                                </div><i data-lucide="chevron-right" style="width:18px"></i>
+                                <div style="font-size: 20px; font-weight: 700; color: var(--accent);">${avg}</div>
                             </div>
                         </div>
-                        </div>`;
+                    </div>`;
                 }
 
                 const totalAvg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : null;
-
-                document.getElementById('app-container').innerHTML = ` $ {
-                        totalAvg !==null ? ` < div class="floating-card"
-                style = "text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;" >
-                            <p style="opacity:0.8; font-size:14px;">Gesamtdurchschnitt</p>
-                            <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">$ {
-                                totalAvg
-                                }
-
-                            </div>
-                        </div > ` : ''
-                        }
-
-                        $ {
-                        listHtml || '<div class="floating-card" style="text-align:center; padding:40px;">
-                            <p class="item-sub">Noch keine Noten eingetragen.</p>
-                        </div>'
-                        }
-
-                        `;
+                document.getElementById('app-container').innerHTML = `
+                    ${totalAvg !== null ? `<div class="floating-card" style="text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;">
+                        <p style="opacity:0.8; font-size:14px;">Gesamtdurchschnitt</p>
+                        <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">${totalAvg}</div>
+                    </div>` : ''}
+                    ${listHtml || `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Noch keine Noten eingetragen.</p></div>`}
+                `;
                 lucide.createIcons();
-            }
-
-            catch (e) {
+            } catch (e) {
                 console.error(e);
+                document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Fehler beim Laden der Noten.</div>`;
             }
         }
 
@@ -2517,14 +2370,14 @@
                 if (!listContainer) return;
 
                 if (filteredTasks.length === 0) {
-                    listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;">
-                            <p class="item-sub">Keine Ergebnisse.</p>
-                        </div>`;
+                    listContainer.innerHTML = `< div class="floating-card" style = "text-align:center; padding:40px;" >
+                        <p class="item-sub">Keine Ergebnisse.</p>
+                        </div > `;
                     return;
                 }
 
-                const listHtml = filteredTasks.map(task => ` <div class="list-item" style="padding: 18px 0;"
-                            onclick="openTaskDetails(${task.id})">
+                const listHtml = filteredTasks.map(task => ` < div class="list-item" style = "padding: 18px 0;"
+                    onclick = "openTaskDetails(${task.id})" >
                             <div class="check-circle ${task.is_done ? 'checked' : ''}"
                                 onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})"> <i
                                     data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}"></i> </div>
@@ -2544,13 +2397,13 @@
 
                                 </div>
                             </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                        </div>`).join('');
+                        </div > `).join('');
 
-                listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">$ {
-                            listHtml
-                            }
+                listContainer.innerHTML = `< div class="floating-card" style = "padding:0 24px" > $ {
+                        listHtml
+                    }
 
-                        </div>`;
+                        </div > `;
                 lucide.createIcons();
             }
 
@@ -2564,8 +2417,8 @@
             currentCalendarTab = tab;
             const container = document.getElementById('app-container');
 
-            container.innerHTML = ` <div class="controls-row ${isSearchActive ? 'search-active' : ''}">
-                            < !-- Tab Bar -->
+            container.innerHTML = ` < div class="controls-row ${isSearchActive ? 'search-active' : ''}" >
+                            < !--Tab Bar-- >
                                 <div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}"
                                         onclick="renderCalendar('termine')">$ {
                                         t('events')
@@ -2577,21 +2430,21 @@
                                         }
 
                                     </button></div>
-                                < !-- Search Button/Bar -->
-                                    <div class="search-container ${isSearchActive ? 'active' : ''}"
-                                        onclick="if(!isSearchActive) toggleSearch(event)">
-                                        <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i>
-                                        </div><input type="text" class="search-input" placeholder="${t('search')}">
-                                        <div class="search-close-btn" onmousedown="toggleSearch(event, false)">$ {
-                                            t('cancel')
-                                            }
+                                < !--Search Button / Bar-- >
+                        <div class="search-container ${isSearchActive ? 'active' : ''}"
+                            onclick="if(!isSearchActive) toggleSearch(event)">
+                            <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i>
+                            </div><input type="text" class="search-input" placeholder="${t('search')}">
+                                <div class="search-close-btn" onmousedown="toggleSearch(event, false)">$ {
+                                    t('cancel')
+                                }
 
-                                        </div>
-                                    </div>
+                                </div>
                         </div>
+                        </div >
                         <div id="calendar-content"
                             style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">$ {
-                            t('loading')
+                                t('loading')
                             }
 
                         </div>`;
@@ -2623,7 +2476,7 @@
                 }
 
                 else {
-                    document.getElementById('calendar-content').innerHTML = ` <div class="floating-card">
+                    document.getElementById('calendar-content').innerHTML = ` < div class="floating-card" >
                             <div class="calendar-header">
                                 <div style="padding:10px" onclick="changeViewMonth(-1)"><i
                                         data-lucide="chevron-left"></i></div><span id="main-calendar-month-year"
@@ -2632,7 +2485,7 @@
                                         data-lucide="chevron-right"></i></div>
                             </div>
                             <div class="calendar-days-grid" id="main-calendar-grid"></div>
-                        </div>`;
+                        </div > `;
                     updateMainCalendarGrid(events);
                 }
 
@@ -2647,8 +2500,8 @@
         function renderEventList(events) {
             const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            const listHtml = sortedEvents.map(e => ` <div class="list-item" style="padding: 18px 0;"
-                            onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+            const listHtml = sortedEvents.map(e => ` < div class="list-item" style = "padding: 18px 0;"
+                    onclick = "openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})" >
                             <div class="account-item-icon"
                                 style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
                                 <i data-lucide="calendar" style="width:20px; height:20px;"></i> </div>
@@ -2667,20 +2520,20 @@
 
                                 </div>
                             </div> <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                        </div>`).join('');
+                        </div > `).join('');
 
-            document.getElementById('calendar-content').innerHTML = listHtml ? `<div class="floating-card"
-                            style="padding:0 24px">$ {
-                            listHtml
-                            }
+            document.getElementById('calendar-content').innerHTML = listHtml ? `< div class="floating-card"
+                    style = "padding:0 24px" > $ {
+                        listHtml
+                    }
 
-                        </div>` : `<div class="floating-card" style="padding:40px; text-align:center">
-                            <p class="item-sub">$ {
-                                t('no_events_list')
-                                }
+                        </div > ` : ` < div class="floating-card" style = "padding:40px; text-align:center" >
+                        <p class="item-sub">$ {
+                            t('no_events_list')
+                        }
 
-                            </p>
-                        </div>`;
+                        </p>
+                        </div > `;
             lucide.createIcons();
         }
 
@@ -2707,11 +2560,11 @@
             });
             grid.innerHTML = '';
 
-            t('day_initials').split(',').forEach(d => grid.innerHTML += `<div class="day-label">$ {
-                            d
-                            }
+            t('day_initials').split(',').forEach(d => grid.innerHTML += `< div class="day-label" > $ {
+                        d
+                    }
 
-                        </div>`);
+                        </div > `);
             const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
             const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
             const offset = firstDay === 0 ? 6 : firstDay - 1;
@@ -2720,13 +2573,14 @@
                 const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i); const
                     year = dayDate.getFullYear(); const month = String(dayDate.getMonth() + 1).padStart(2, '0');
                 const d = String(dayDate.getDate()).padStart(2, '0'); const dateStr = `$ { year } -$ { month }
-                            -$ { d } `; const dayEvents = events.filter(e => e.date === dateStr);
+                    -$ { d } `; const dayEvents = events.filter(e => e.date === dateStr);
                 const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
                 const hasEvent = dayEvents.length > 0;
-                const dotHtml = hasEvent ? `<div class="event-dot"></div>` : '';
-                grid.innerHTML += `<div
-                                class="calendar-day ${isToday ? 'today' : ''} ${hasEvent ? 'has-event' : ''}"
-                                onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/" /g, '&quot;')} ')">${i}${dotHtml}</div>`;
+                const dotHtml = hasEvent ? `< div class="event-dot" ></div > ` : '';
+                grid.innerHTML += `< div
+                    class="calendar-day ${isToday ? 'today' : ''} ${hasEvent ? 'has-event' : ''}"
+                    onclick = "openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/" / g, '&quot;')
+                    } ')">${i}${dotHtml}</div>`;
 
             }
         }
@@ -2943,35 +2797,30 @@
                                 <div style="font-weight:700; font-size:18px; color:var(--text-main);">$ {
                                     g.value
                                     }
+        function renderSubjectDetails(subject, avg, gradesJson) {
+            const grades = JSON.parse(gradesJson);
+            const locale = window.currentUser?.language === 'en' ? 'en-US' : 'de-DE';
+            const listHtml = grades.map(g => `
+                <div class="list-item" style="padding: 12px 0; border-bottom: 0.5px solid var(--border);">
+                    <div class="item-content">
+                        <div class="item-title">${g.title || t('grade')}</div>
+                        <div class="item-sub">${new Date(g.date).toLocaleDateString(locale)} • ${t('weight')}: ${g.weight}x</div>
+                    </div>
+                    <div style="font-weight:700; font-size:18px; color:var(--text-main);">${g.value}</div>
+                </div>
+            `).join('');
 
-                                </div>
-                            </div>`).join('');
-
-            document.getElementById('app-container').innerHTML = ` <div class="floating-card"
-                                style="text-align:center;">
-                                <h2 style="margin:0">$ {
-                                    subject
-                                    }
-
-                                </h2>
-                                <div style="color:var(--accent); font-size:32px; font-weight:700; margin:10px 0;">$ {
-                                    avg
-                                    }
-
-                                </div>
-                            </div>
-                            <h3 style="margin:30px 0 10px 5px; font-size:18px;">$ {
-                                t('single_grades')
-                                }
-
-                            </h3>
-                            <div class="floating-card" style="padding:10px; margin-bottom: 40px;">$ {
-                                listHtml
-                                }
-
-                            </div>`;
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card" style="text-align:center;">
+                    <h2 style="margin:0">${subject}</h2>
+                    <div style="color:var(--accent); font-size:32px; font-weight:700; margin:10px 0;">${avg}</div>
+                </div>
+                <h3 style="margin:30px 0 10px 5px; font-size:18px;">${t('single_grades')}</h3>
+                <div class="floating-card" style="padding:10px; margin-bottom: 40px;">${listHtml}</div>
+            `;
             document.getElementById('header-back-btn').style.display = 'block';
             document.getElementById('header-back-btn').onclick = () => window.history.back();
+        }
         }
 
         // --- Account & Settings Logic ---
@@ -2988,98 +2837,54 @@
             document.getElementById('header-back-btn').style.display = 'none';
 
             if (!window.isPoppingState) {
-                window.history.pushState({
-                    view: 'account'
-                }
-
-                    , '', '/account');
+                window.history.pushState({ view: 'account' }, '', '/account');
             }
-
             window.isPoppingState = false;
 
             const isAdmin = window.currentUser && window.currentUser.is_admin;
 
-            document.getElementById('app-container').innerHTML = ` <div class="floating-card">
-                                <div class="account-header" style="text-align:center; padding:20px;">
-                                    <div
-                                        style="width:80px; height:80px; background:var(--accent); border-radius:30px; margin:0 auto 15px auto; display:flex; align-items:center; justify-content:center; color:white; font-size:32px; font-weight:700;">
-                                        $ {
-                                        window.currentUser?.name?.charAt(0).toUpperCase() || 'U'
-                                        }
-
-                                    </div>
-                                    <h2 style="margin:0">$ {
-                                        window.currentUser?.name || 'User'
-                                        }
-
-                                    </h2>
-                                    <p class="item-sub" style="margin-top:5px;">$ {
-                                        window.currentUser?.email || ''
-                                        }
-
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="floating-card">
-                                <div class="account-item" onclick="navigate('settings', null, t('settings'))">
-                                    <div class="account-item-icon" style="background:var(--accent); color:white;"><i
-                                            data-lucide="settings"></i></div>
-                                    <div class="account-item-text">$ {
-                                        t('settings')
-                                        }
-
-                                    </div><i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                                </div>$ {
-                                isAdmin ? ` < div class="account-item" onclick = "renderAdminMenu()" >
-                                    <div class="account-item-icon" style="background:#FF9500; color:white;"><i
-                                            data-lucide="shield"></i></div>
-                                    <div class="account-item-text">$ {
-                                        t('admin')
-                                        }
-
-                                    </div><i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                                </div > ` : ''
-                                }
-
-                                <div class="account-item"
-                                    onclick="window.location.href='https://github.com/L8te/L8teStudy/issues'">
-                                    <div class="account-item-icon" style="background:#34C759; color:white;"><i
-                                            data-lucide="bug"></i></div>
-                                    <div class="account-item-text">$ {
-                                        t('reportbug')
-                                        }
-
-                                    </div><i data-lucide="external-link" style="width:18px; color:var(--text-sec)"></i>
-                                </div>
-                                <div class="account-item" style="border-bottom:none" onclick="installApp()"
-                                    id="install-btn-row">
-                                    <div class="account-item-icon" style="background:#5856D6; color:white;"><i
-                                            data-lucide="download"></i></div>
-                                    <div class="account-item-text">$ {
-                                        t('install')
-                                        }
-
-                                    </div><i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                                </div>
-                            </div>
-                            <div class="floating-card">
-                                <div class="account-item" style="color:var(--danger);"
-                                    onclick="window.location.href='/logout'">
-                                    <div class="account-item-icon"
-                                        style="background:rgba(255, 59, 48, 0.1); color:var(--danger);"><i
-                                            data-lucide="log-out"></i></div>
-                                    <div class="account-item-text">$ {
-                                        t('logout')
-                                        }
-
-                                    </div>
-                                </div>
-                            </div>
-                            <div style="text-align:center; padding:20px; color:var(--text-sec); font-size:12px;">
-                                L8teStudy v3.0.0 </div>`;
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card">
+                    <div class="account-header" style="text-align:center; padding:20px;">
+                        <div style="width:80px; height:80px; background:var(--accent); border-radius:30px; margin:0 auto 15px auto; display:flex; align-items:center; justify-content:center; color:white; font-size:32px; font-weight:700;">
+                            ${window.currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <h2 style="margin:0">${window.currentUser?.name || 'User'}</h2>
+                        <p class="item-sub" style="margin-top:5px;">${window.currentUser?.email || ''}</p>
+                    </div>
+                </div>
+                <div class="floating-card">
+                    <div class="account-item" onclick="navigate('settings', null, t('settings'))">
+                        <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="settings"></i></div>
+                        <div class="account-item-text">${t('settings')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    ${isAdmin ? `<div class="account-item" onclick="renderAdminMenu()">
+                        <div class="account-item-icon" style="background:#FF9500; color:white;"><i data-lucide="shield"></i></div>
+                        <div class="account-item-text">${t('admin')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>` : ''}
+                    <div class="account-item" onclick="window.location.href='https://github.com/L8te/L8teStudy/issues'">
+                        <div class="account-item-icon" style="background:#34C759; color:white;"><i data-lucide="bug"></i></div>
+                        <div class="account-item-text">${t('reportbug')}</div>
+                        <i data-lucide="external-link" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    <div class="account-item" style="border-bottom:none" onclick="installApp()" id="install-btn-row">
+                        <div class="account-item-icon" style="background:#5856D6; color:white;"><i data-lucide="download"></i></div>
+                        <div class="account-item-text">${t('install')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                </div>
+                <div class="floating-card">
+                    <div class="account-item" style="color:var(--danger);" onclick="window.location.href='/logout'">
+                        <div class="account-item-icon" style="background:rgba(255, 59, 48, 0.1); color:var(--danger);"><i data-lucide="log-out"></i></div>
+                        <div class="account-item-text">${t('logout')}</div>
+                    </div>
+                </div>
+                <div style="text-align:center; padding:20px; color:var(--text-sec); font-size:12px;">L8teStudy v3.0.0</div>
+            `;
             lucide.createIcons();
 
-            // Hide install button if not installable
             if (!deferredPrompt) {
                 const installRow = document.getElementById('install-btn-row');
                 if (installRow) installRow.style.display = 'none';
@@ -5151,15 +4956,9 @@
         }
 
         // Placeholder for the old renderSettings to avoid errors if referenced elsewhere
-        (though we replaced calls)
         function renderSettings() {
             renderSettingsPage();
         }
-
-
-
-
-
 
         function openDetails(type, title, subject, date, value = null, desc = '', id = null,
             imagesJson = '[]') {
@@ -5177,41 +4976,18 @@
             let actionBtns = '';
 
             if (id) {
-                actionBtns = ` <div
-                                    style="display: flex; flex-direction: column; gap: 10px; margin-top: 30px;">$ {
-                                    type==='task' && chatEnabled ? ` < button class="btn-chat-open"
-                onclick = "renderTaskChat(${id}, '${title.replace(/'/g, " \\'")}') ">
-                    < i data - lucide="message-circle" style = "width:20px; vertical-align:middle;" ></i > $
-                {
-                    t('open_chat')
-                }
-
-                        </button > ` : ''
-                                    }
-
-                        <div style="display:flex; gap:10px;"><button class="ios-btn btn-sec"
-                            style="flex: 1; margin-bottom: 0;"
-                            onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ' '}' , '${date}' , '${value || ' '}', '${desc.replace(/\r?\n/g, ' \\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">${t('edit')}</button>
-                                            $ {
-                                    type=== 'task' ? `< button class="ios-btn btn-small btn-danger-light"
-                style = "width: auto; margin-bottom: 0;" onclick = "deleteTask(${id})" > <i
-                    data-lucide="trash-2" style="width:18px"></i></button > `: ''
-                                            }
-
-                            $ {
-                                type === 'event' ? `< button class="ios-btn btn-small btn-danger-light"
-                style = "width: auto; margin-bottom: 0;" onclick = "deleteEvent(${id})" > <i
-                    data-lucide="trash-2" style="width:18px"></i></button > `: ''
-                            }
-
-                            $ {
-                                type === 'grade' ? `< button class="ios-btn btn-small btn-danger-light"
-                style = "width: auto; margin-bottom: 0;" onclick = "deleteGrade(${id})" > <i
-                    data-lucide="trash-2" style="width:18px"></i></button > `: ''
-                            }
-
-                        </div>
-                    </div>`;
+                actionBtns = `<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 30px;">
+                    ${(type === 'task' && chatEnabled) ? `<button class="btn-chat-open" onclick="renderTaskChat(${id}, '${title.replace(/'/g, "\\'")}')">
+                        <i data-lucide="message-circle" style="width:20px; vertical-align:middle;"></i>
+                        ${t('open_chat')}
+                    </button>` : ''}
+                    <div style="display:flex; gap:10px;">
+                        <button class="ios-btn btn-sec" style="flex: 1; margin-bottom: 0;" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date}', '${value || ''}', '${desc.replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">${t('edit')}</button>
+                        ${type === 'task' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteTask(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                        ${type === 'event' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteEvent(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                        ${type === 'grade' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteGrade(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
+                    </div>
+                </div>`;
             }
 
             let imagesHtml = '';
