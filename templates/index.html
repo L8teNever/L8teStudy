@@ -925,6 +925,180 @@
                 transform: scale(1) translateY(0);
             }
 
+            /* Chat UI */
+            .chat-messages-area {
+                flex: 1;
+                overflow-y: auto;
+                padding: 15px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.02) 100%);
+            }
+
+            .chat-date-separator {
+                text-align: center;
+                font-size: 11px;
+                color: var(--text-sec);
+                margin: 10px 0;
+                font-weight: 500;
+                opacity: 0.7;
+            }
+
+            .chat-bubble-row {
+                display: flex;
+                flex-direction: column;
+                max-width: 80%;
+            }
+
+            .chat-bubble-row.me {
+                align-self: flex-end;
+                align-items: flex-end;
+            }
+
+            .chat-bubble-row.other {
+                align-self: flex-start;
+                align-items: flex-start;
+            }
+
+            .chat-bubble {
+                padding: 10px 14px;
+                border-radius: 18px;
+                font-size: 15px;
+                line-height: 1.4;
+                position: relative;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
+            .chat-bubble-row.me .chat-bubble {
+                background: var(--accent);
+                color: white;
+                border-bottom-right-radius: 4px;
+            }
+
+            .chat-bubble-row.other .chat-bubble {
+                background: var(--card-bg);
+                /* or specifically white/dark-grey */
+                background: #f2f2f7;
+                color: black;
+                border-bottom-left-radius: 4px;
+            }
+
+            [data-theme="dark"] .chat-bubble-row.other .chat-bubble {
+                background: #2c2c2e;
+                color: white;
+            }
+
+            .chat-meta {
+                font-size: 10px;
+                color: var(--text-sec);
+                margin-top: 4px;
+                margin-left: 4px;
+                opacity: 0.8;
+            }
+
+            .chat-bubble-row.me .chat-meta {
+                margin-right: 4px;
+                text-align: right;
+            }
+
+            .chat-input-bar {
+                padding: 10px 15px;
+                background: var(--card-bg);
+                border-top: 1px solid var(--border);
+                display: flex;
+                align-items: flex-end;
+                /* for multiline expansion if needed */
+                gap: 10px;
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+            }
+
+            .chat-input-field-wrapper {
+                flex: 1;
+                background: var(--tab-bg);
+                border-radius: 20px;
+                padding: 8px 12px;
+                display: flex;
+                align-items: center;
+                position: relative;
+                border: 1px solid transparent;
+                transition: all 0.2s;
+            }
+
+            .chat-input-field-wrapper:focus-within {
+                background: var(--card-bg);
+                border-color: var(--accent);
+                box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+            }
+
+            .chat-input {
+                width: 100%;
+                background: transparent;
+                border: none;
+                font-size: 15px;
+                color: var(--text-main);
+                outline: none;
+                max-height: 100px;
+                resize: none;
+                padding: 2px 0;
+            }
+
+            .chat-send-btn {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: var(--accent);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: none;
+                cursor: pointer;
+                transition: transform 0.2s;
+                flex-shrink: 0;
+            }
+
+            .chat-send-btn:active {
+                transform: scale(0.9);
+            }
+
+            .chat-attach-btn {
+                color: var(--accent);
+                cursor: pointer;
+                padding: 8px;
+                border-radius: 50%;
+                transition: background 0.2s;
+            }
+
+            .chat-attach-btn:active {
+                background: rgba(0, 0, 0, 0.1);
+            }
+
+            /* Improved Chat Button */
+            .btn-chat-open {
+                background: linear-gradient(135deg, var(--accent) 0%, #005bb5 100%);
+                color: white;
+                border: none;
+                padding: 16px;
+                border-radius: 16px;
+                font-weight: 700;
+                font-size: 16px;
+                width: 100%;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+
+            .btn-chat-open:active {
+                transform: scale(0.98);
+                box-shadow: 0 2px 6px rgba(0, 113, 227, 0.2);
+            }
+
             /* Hover Effects for Desktop */
             .floating-card:hover {
                 transform: translateY(-2px);
@@ -932,6 +1106,11 @@
 
             .ios-btn:hover {
                 filter: brightness(1.1);
+            }
+
+            .btn-chat-open:hover {
+                box-shadow: 0 6px 16px rgba(0, 113, 227, 0.35);
+                transform: translateY(-1px);
             }
 
             .nav-link:hover {
@@ -3254,8 +3433,8 @@
                 actionBtns = `
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 30px;">
                          ${type === 'task' && chatEnabled ? `
-                            <button class="ios-btn" style="background:var(--accent); color:white; font-weight:600; margin-bottom:0;" onclick="renderTaskChat(${id}, '${title.replace(/'/g, "\\'")}')">
-                                <i data-lucide="message-circle" style="width:18px; margin-right:8px; vertical-align:text-bottom;"></i> ${t('open_chat') || 'Chat öffnen'}
+                            <button class="btn-chat-open" onclick="renderTaskChat(${id}, '${title.replace(/'/g, "\\'")}')">
+                                <i data-lucide="message-circle" style="width:20px; vertical-align:middle;"></i> ${t('open_chat')}
                             </button>
                          ` : ''}
                         <div style="display:flex; gap:10px;">
@@ -3663,7 +3842,40 @@
 
 
 
+        // Shared function for generating chat HTML
+        function generateChatMessagesHTML(msgs) {
+            if (!msgs || msgs.length === 0) return `<div style="text-align:center; padding:40px; color:var(--text-sec); opacity:0.6;">Keine Nachrichten</div>`;
 
+            let lastDate = null;
+            return msgs.map(m => {
+                const isMe = m.is_own;
+                const dateObj = new Date(m.created_at);
+                const dateStr = dateObj.toLocaleDateString();
+                const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                let dateSep = '';
+                if (dateStr !== lastDate) {
+                    dateSep = `<div class="chat-date-separator">${dateStr === new Date().toLocaleDateString() ? (t('today') || 'Heute') : dateStr}</div>`;
+                    lastDate = dateStr;
+                }
+
+                let contentHtml = '';
+                if (m.message_type === 'text') contentHtml = m.content;
+                else if (m.message_type === 'image') contentHtml = `<img src="${m.file_url}" onclick="window.open('${m.file_url}')" style="max-width:100%; border-radius:12px; cursor:pointer;">`;
+                else contentHtml = `<a href="${m.file_url}" target="_blank" style="display:flex; align-items:center; gap:8px; color:inherit; text-decoration:none;"><div style="background:rgba(0,0,0,0.1); padding:8px; border-radius:8px;"><i data-lucide="file" style="width:18px"></i></div> <span>${m.file_name}</span></a>`;
+
+                return `
+                    ${dateSep}
+                    <div class="chat-bubble-row ${isMe ? 'me' : 'other'}">
+                         <div class="chat-meta" style="margin-left:8px; margin-bottom:2px; display:${isMe ? 'none' : 'block'}">${m.user_name}</div>
+                        <div class="chat-bubble">
+                            ${contentHtml}
+                        </div>
+                        <div class="chat-meta">${timeStr}</div>
+                    </div>
+                `;
+            }).join('');
+        }
 
         async function renderTaskChat(id, title) {
             // Fetch messages
@@ -3673,62 +3885,58 @@
                 if (res.ok) messages = await res.json();
             } catch (e) { console.error(e); }
 
-            // Mark as read immediately
+            // Mark as read
             fetch(`/api/tasks/${id}/read`, { method: 'POST' });
-            // refresh tasks unread count silently?
             refreshTasksSilent();
 
-            const renderMsgs = (msgs) => {
-                if (!msgs || msgs.length === 0) return `<div style="text-align:center; padding:40px; color:var(--text-sec); opacity:0.6;">Keine Nachrichten</div>`;
-                return msgs.map(m => {
-                    const isMe = m.is_own;
-                    let contentHtml = '';
-                    if (m.message_type === 'text') contentHtml = `<div style="background:${isMe ? 'var(--accent)' : 'var(--tab-bg)'}; color:${isMe ? 'white' : 'var(--text-main)'}; padding:8px 12px; border-radius:12px; display:inline-block; max-width:100%; word-break:break-word;">${m.content}</div>`;
-                    else if (m.message_type === 'image') contentHtml = `<img src="${m.file_url}" onclick="window.open('${m.file_url}')" style="max-width:200px; border-radius:12px; cursor:pointer;">`;
-                    else contentHtml = `<a href="${m.file_url}" target="_blank" style="display:flex; align-items:center; gap:8px; background:var(--tab-bg); padding:10px; border-radius:8px; text-decoration:none; color:var(--text-main);"><i data-lucide="file" style="width:16px"></i> ${m.file_name}</a>`;
-
-                    return `
-                        <div style="display:flex; flex-direction:column; align-items:${isMe ? 'flex-end' : 'flex-start'}; margin-bottom:12px;">
-                            <div style="font-size:11px; color:var(--text-sec); margin-bottom:2px; margin-left:4px;">${isMe ? 'Du' : m.user_name} • ${new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                            ${contentHtml}
-                        </div>
-                    `;
-                }).join('');
-            };
+            // Store for filtering
+            window.currentChatMessages = messages;
 
             const ui = `
-                <div class="sheet-header" style="border-bottom:1px solid var(--border);">
+                <div class="sheet-header" style="border-bottom:1px solid var(--border); padding-bottom:15px; margin-bottom:0;">
                     <div class="sheet-close-btn" onclick="openTaskDetails(${id})" style="left:0; right:auto;"><i data-lucide="chevron-left" style="width:18px"></i></div>
-                    <h2 style="margin:0; font-size:16px; font-weight:700; flex:1; text-align:center;">${title}</h2>
-                    <div style="width:30px;"></div>
-                </div>
-                <div style="padding:10px 20px;">
-                    <button id="chat-filter-all" class="ios-btn btn-small active" style="width:auto; display:inline-block; padding:5px 12px; margin-right:5px;" onclick="toggleChatFilter(${id}, '${title}', 'all')">Alle</button>
-                    <button id="chat-filter-media" class="ios-btn btn-small btn-sec" style="width:auto; display:inline-block; padding:5px 12px;" onclick="toggleChatFilter(${id}, '${title}', 'media')">Medien</button>
-                </div>
-                <div id="chat-messages-area" style="flex:1; overflow-y:auto; padding:0 20px 20px 20px; min-height:300px; max-height:60vh;">
-                    ${renderMsgs(messages)}
-                </div>
-                <div style="padding:10px 20px 30px 20px; border-top:1px solid var(--border); display:flex; gap:10px; align-items:center;">
-                    <label for="chat-file-input" style="color:var(--accent); cursor:pointer;"><i data-lucide="paperclip"></i></label>
-                    <input type="file" id="chat-file-input" multiple style="display:none;" onchange="handleChatFiles(this)">
-                    <div style="flex:1; position:relative;">
-                        <input type="text" id="chat-input-text" class="ios-input" placeholder="Nachricht..." style="margin:0; padding-right:40px;">
-                        <div id="chat-file-count" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:10px; background:var(--accent); color:white; padding:2px 6px; border-radius:10px; display:none;"></div>
+                    <div style="flex:1; text-align:center;">
+                        <h2 style="margin:0; font-size:16px; font-weight:700;">${title}</h2>
+                        <div style="font-size:11px; color:var(--text-sec); margin-top:2px;">Chat</div>
                     </div>
-                    <button class="ios-btn" style="width:auto; margin:0; padding:10px; background:var(--accent); color:white;" onclick="sendChatMessage(${id}, '${title}')"><i data-lucide="send" style="width:16px;"></i></button>
+                     <div style="width:30px;"></div>
+                </div>
+                
+                <div style="padding:10px 20px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02);">
+                    <div style="display:flex; justify-content:center; gap:8px;">
+                        <button id="chat-filter-all" class="ios-btn btn-small active" style="width:auto; padding:6px 16px; height:auto; font-size:13px; margin:0;" onclick="toggleChatFilter(${id}, '${title}', 'all')">${t('chat_filter_all')}</button>
+                        <button id="chat-filter-media" class="ios-btn btn-small btn-sec" style="width:auto; padding:6px 16px; height:auto; font-size:13px; margin:0;" onclick="toggleChatFilter(${id}, '${title}', 'media')">${t('chat_filter_media')}</button>
+                    </div>
+                </div>
+
+                <div id="chat-messages-area" class="chat-messages-area">
+                    ${generateChatMessagesHTML(messages)}
+                </div>
+
+                <div class="chat-input-bar">
+                    <label for="chat-file-input" class="chat-attach-btn"><i data-lucide="paperclip" style="width:22px"></i></label>
+                    <input type="file" id="chat-file-input" multiple style="display:none;" onchange="handleChatFiles(this)">
+                    
+                    <div class="chat-input-field-wrapper">
+                         <textarea id="chat-input-text" class="chat-input" rows="1" placeholder="${t('chat_input_placeholder')}" oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 100) + 'px'"></textarea>
+                         <div id="chat-file-count" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:10px; background:var(--accent); color:white; padding:2px 6px; border-radius:10px; display:none;"></div>
+                    </div>
+                    
+                    <button class="chat-send-btn" onclick="sendChatMessage(${id}, '${title}')"><i data-lucide="send" style="width:18px; margin-left:2px;"></i></button>
                 </div>
             `;
 
             document.getElementById('sheet-content').innerHTML = ui;
+            document.getElementById('sheet-content').style.padding = "0";
+            document.getElementById('sheet-content').style.height = "85vh";
+            document.getElementById('sheet-content').style.display = "flex";
+            document.getElementById('sheet-content').style.flexDirection = "column";
+
             lucide.createIcons();
             setTimeout(() => {
                 const area = document.getElementById('chat-messages-area');
                 if (area) area.scrollTop = area.scrollHeight;
             }, 100);
-
-            // Store messages for filtering
-            window.currentChatMessages = messages;
         }
 
         function toggleChatFilter(id, title, filter) {
@@ -3736,37 +3944,22 @@
             const medBtn = document.getElementById('chat-filter-media');
             const area = document.getElementById('chat-messages-area');
 
+            if (!allBtn || !medBtn || !area) return; // safety
+
+            let msgs = window.currentChatMessages || [];
+
             if (filter === 'all') {
                 allBtn.classList.remove('btn-sec'); allBtn.classList.add('active');
                 medBtn.classList.add('btn-sec'); medBtn.classList.remove('active');
-                // re-render all
-                renderTaskChat(id, title); // Simple re-render
-                // Wait, calling renderTaskChat fetches again. Avoid that.
-                // Better: Client side filter.
-                // But filter logic is embedded in renderTaskChat inner logic. 
-                // I should have separated it. For now, filter existing `window.currentChatMessages`.
-
-                // Reuse render logic? I'll cheat and just re-call renderTaskChat for full refresh (polling-like)
-                // Or actually implement client filtering:
             } else {
                 allBtn.classList.add('btn-sec'); allBtn.classList.remove('active');
                 medBtn.classList.remove('btn-sec'); medBtn.classList.add('active');
-
-                const msgs = window.currentChatMessages.filter(m => m.message_type !== 'text');
-                // Must re-render just the message area
-                // Duplicate render logic... 
-                // I'll leave the button onclick to just re-fetch for now to ensure robustness.
-                // Optimization: pass 'filter' arg to renderTaskChat?
+                msgs = msgs.filter(m => m.message_type !== 'text');
             }
-            // To implement correctly without duplicate code:
-            // I'll update renderTaskChat to accept a filter arg?
-        }
 
-        // Re-implement toggle to call render with filter?
-        // Let's just fix toggleChatFilter to do DOM manipulation or re-fetch.
-        // Actually, user wants "nur nach medien zu filtern".
-        // I'll stick to re-fetching or using a global var/param is easiest in this limited context.
-        // I will not complexify.
+            area.innerHTML = generateChatMessagesHTML(msgs);
+            lucide.createIcons(); // refresh icons in new html
+        }
 
         async function sendChatMessage(id, title) {
             const input = document.getElementById('chat-input-text');
@@ -3777,14 +3970,17 @@
             fd.append('content', content);
             for (let f of chatFiles) fd.append('files', f);
 
+            // Optimistic UI update could go here, but for now we wait for server
             try {
                 const res = await fetch(`/api/tasks/${id}/chat`, { method: 'POST', body: fd });
                 if (res.ok) {
                     chatFiles = [];
-                    renderTaskChat(id, title);
+                    // Refresh chat
+                    await renderTaskChat(id, title);
                 }
             } catch (e) { alert('Senden fehlgeschlagen'); }
         }
+
 
         function handleChatFiles(el) {
             chatFiles = Array.from(el.files);

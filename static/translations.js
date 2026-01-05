@@ -236,7 +236,11 @@ const translations = {
         system_activity: "System-Aktivität",
         subjects_label: "Fächer",
         log_label: "Log",
-        take_photo: "Foto aufnehmen"
+        take_photo: "Foto aufnehmen",
+        open_chat: "Chat öffnen",
+        chat_input_placeholder: "Nachricht...",
+        chat_filter_all: "Alle",
+        chat_filter_media: "Medien"
     },
     en: {
         home: "Home",
@@ -475,6 +479,10 @@ const translations = {
         system_activity: "System Activity",
         subjects_label: "Subjects",
         log_label: "Log",
-        take_photo: "Take Photo"
+        take_photo: "Take Photo",
+        open_chat: "Open Chat",
+        chat_input_placeholder: "Message...",
+        chat_filter_all: "All",
+        chat_filter_media: "Media"
     }
 };
