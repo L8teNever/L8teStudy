@@ -527,6 +527,14 @@ def post_task_chat(id):
 
         db.session.commit()
         
+        # Trigger notifications
+        from app.notifications import notify_chat_message
+        for m in posted_msgs:
+            try:
+                notify_chat_message(m)
+            except Exception as e:
+                current_app.logger.error(f"Failed to notify chat message: {e}")
+
         # Mark as read for sender
         read_stat = TaskChatRead.query.filter_by(user_id=current_user.id, task_id=id).first()
         if not read_stat:
@@ -1103,6 +1111,7 @@ def get_notification_settings():
     return jsonify({
         'notify_new_task': settings.notify_new_task,
         'notify_new_event': settings.notify_new_event,
+        'notify_chat_message': settings.notify_chat_message,
         'reminder_homework': settings.reminder_homework,
         'reminder_exam': settings.reminder_exam,
         'server_time': get_local_now().strftime("%H:%M"),
@@ -1144,6 +1153,8 @@ def update_notification_settings():
         settings.notify_new_task = bool(data['notify_new_task'])
     if 'notify_new_event' in data:
         settings.notify_new_event = bool(data['notify_new_event'])
+    if 'notify_chat_message' in data:
+        settings.notify_chat_message = bool(data['notify_chat_message'])
     
     if 'reminder_homework' in data:
         settings.reminder_homework = data['reminder_homework']

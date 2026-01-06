@@ -205,7 +205,17 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Schema migration (parent_id) error: {e}")
 
-
+        # Schema Update: Add notify_chat_message to notification_setting if missing
+        try:
+            if 'notification_setting' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('notification_setting')]
+                if 'notify_chat_message' not in cols:
+                    app.logger.info("Migrating: Adding notify_chat_message to notification_setting")
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE notification_setting ADD COLUMN notify_chat_message BOOLEAN DEFAULT 1"))
+                        conn.commit()
+        except Exception as e:
+            app.logger.error(f"Schema migration (notify_chat_message) error: {e}")
 
     # Initialize Scheduler
     scheduler.init_app(app)

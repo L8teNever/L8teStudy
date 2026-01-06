@@ -76,6 +76,7 @@ class NotificationSetting(db.Model):
     # Notify when OTHER users create new content
     notify_new_task = db.Column(db.Boolean, default=True)
     notify_new_event = db.Column(db.Boolean, default=True)
+    notify_chat_message = db.Column(db.Boolean, default=True)
     
     # Daily Reminders (Time stored as string "HH:MM", null means deactivated)
     reminder_homework = db.Column(db.String(5), nullable=True) # e.g. "17:00" for tasks due tomorrow

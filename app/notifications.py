@@ -189,6 +189,30 @@ def notify_new_event(event):
         if user.notification_settings.notify_new_event:
             notify_user(user, "Neuer Termin", f"{event.author.username} hat '{event.title}' erstellt.", url='/calendar')
 
+def notify_chat_message(message):
+    """Notify all users (except author) that a new chat message was posted in a task"""
+    from app.models import Task
+    task = Task.query.get(message.task_id)
+    if not task:
+        return
+
+    # Notify users in the same class (or who have access to the task)
+    # excluding the sender
+    users = User.query.filter(User.class_id == message.task.class_id, User.id != message.user_id).all()
+    
+    msg_preview = message.content if message.message_type == 'text' else (f"Datei: {message.file_name}" if message.file_name else "Anhang")
+    if len(msg_preview) > 50:
+        msg_preview = msg_preview[:47] + "..."
+
+    for user in users:
+        if not user.notification_settings:
+             user.notification_settings = NotificationSetting(user_id=user.id)
+             db.session.add(user.notification_settings)
+             db.session.commit()
+        
+        if user.notification_settings.notify_chat_message:
+            notify_user(user, f"Chat: {task.title}", f"{message.user.username}: {msg_preview}", url='/tasks')
+
 def check_reminders():
     """Scheduled job to check for due tasks and alarms"""
     with scheduler.app.app_context():
