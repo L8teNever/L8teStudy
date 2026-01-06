@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>L8teStudy - Minimal Plus</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0071e3">
@@ -511,12 +511,21 @@
             width: 100%;
             border-radius: 30px 30px 0 0;
             padding: 20px 25px 40px 25px;
-            transform: translateY(100%);
-            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            /* transform: translateY(100%);  <-- Remove this */
+            transition: bottom 0.4s cubic-bezier(0.32, 0.72, 0, 1), transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
             border-top: 1px solid var(--border);
             max-height: 95vh;
             overflow-y: auto;
-            position: relative;
+            position: absolute;
+            /* Fix to bottom */
+            bottom: -100%;
+            /* Start hidden below */
+            left: 0;
+            right: 0;
+            /* Ensure content isn't hidden behind keyboard on scroll if needed, 
+                but mainly the browser resizes the viewport. 
+                Setting pb-safe helps on iOS */
+            padding-bottom: env(safe-area-inset-bottom, 20px);
         }
 
         .sheet-drag-indicator {
@@ -555,7 +564,8 @@
         }
 
         .sheet-overlay.active .sheet {
-            transform: translateY(0);
+            /* transform: translateY(0); */
+            bottom: 0;
         }
 
         .ios-input {
@@ -796,6 +806,169 @@
             transform: translateX(20px);
         }
 
+        /* --- Chat UI (Global) --- */
+        .chat-messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.02) 100%);
+        }
+
+        .chat-date-separator {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-sec);
+            margin: 10px 0;
+            font-weight: 500;
+            opacity: 0.7;
+        }
+
+        .chat-bubble-row {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+
+        .chat-bubble-row.me {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .chat-bubble-row.other {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .chat-bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-bubble-row.me .chat-bubble {
+            background: var(--accent);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-bubble-row.other .chat-bubble {
+            background: #f2f2f7;
+            color: black;
+            border-bottom-left-radius: 4px;
+        }
+
+        [data-theme="dark"] .chat-bubble-row.other .chat-bubble {
+            background: #2c2c2e;
+            color: white;
+        }
+
+        .chat-meta {
+            font-size: 10px;
+            color: var(--text-sec);
+            margin-top: 4px;
+            margin-left: 4px;
+            opacity: 0.8;
+        }
+
+        .chat-bubble-row.me .chat-meta {
+            margin-right: 4px;
+            margin-left: 0;
+            text-align: right;
+        }
+
+        .chat-input-bar {
+            padding: 10px 15px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 0 0 24px 24px;
+        }
+
+        .chat-input-field-wrapper {
+            flex: 1;
+            background: var(--tab-bg);
+            border-radius: 20px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            position: relative;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .chat-input-field-wrapper:focus-within {
+            background: var(--card-bg);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+        }
+
+        .chat-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            font-size: 15px;
+            color: var(--text-main);
+            outline: none;
+            max-height: 100px;
+            resize: none;
+            padding: 2px 0;
+            line-height: 1.4;
+        }
+
+        .chat-send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .chat-attach-btn {
+            color: var(--accent);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-chat-open {
+            background: linear-gradient(135deg, var(--accent) 0%, #005bb5 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 16px;
+            width: 100%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
         /* --- Desktop Responsive --- */
         @media (min-width: 1024px) {
             body {
@@ -915,183 +1088,25 @@
             .sheet {
                 max-width: 500px;
                 border-radius: 24px;
-                transform: scale(0.9) translateY(20px);
+                /* transform: scale(0.9) translateY(20px); */
                 border: 1px solid var(--border);
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
                 padding: 30px;
+
+                /* Reset Mobile Bottom-Sheet Styles */
+                position: relative;
+                bottom: auto;
+                left: auto;
+                right: auto;
+                opacity: 0;
+                transform: scale(0.95);
+                transition: opacity 0.3s ease, transform 0.3s ease;
             }
 
             .sheet-overlay.active .sheet {
-                transform: scale(1) translateY(0);
-            }
-
-            /* Chat UI */
-            .chat-messages-area {
-                flex: 1;
-                overflow-y: auto;
-                padding: 15px 20px;
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.02) 100%);
-            }
-
-            .chat-date-separator {
-                text-align: center;
-                font-size: 11px;
-                color: var(--text-sec);
-                margin: 10px 0;
-                font-weight: 500;
-                opacity: 0.7;
-            }
-
-            .chat-bubble-row {
-                display: flex;
-                flex-direction: column;
-                max-width: 80%;
-            }
-
-            .chat-bubble-row.me {
-                align-self: flex-end;
-                align-items: flex-end;
-            }
-
-            .chat-bubble-row.other {
-                align-self: flex-start;
-                align-items: flex-start;
-            }
-
-            .chat-bubble {
-                padding: 10px 14px;
-                border-radius: 18px;
-                font-size: 15px;
-                line-height: 1.4;
-                position: relative;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
-
-            .chat-bubble-row.me .chat-bubble {
-                background: var(--accent);
-                color: white;
-                border-bottom-right-radius: 4px;
-            }
-
-            .chat-bubble-row.other .chat-bubble {
-                background: var(--card-bg);
-                /* or specifically white/dark-grey */
-                background: #f2f2f7;
-                color: black;
-                border-bottom-left-radius: 4px;
-            }
-
-            [data-theme="dark"] .chat-bubble-row.other .chat-bubble {
-                background: #2c2c2e;
-                color: white;
-            }
-
-            .chat-meta {
-                font-size: 10px;
-                color: var(--text-sec);
-                margin-top: 4px;
-                margin-left: 4px;
-                opacity: 0.8;
-            }
-
-            .chat-bubble-row.me .chat-meta {
-                margin-right: 4px;
-                text-align: right;
-            }
-
-            .chat-input-bar {
-                padding: 10px 15px;
-                background: var(--card-bg);
-                border-top: 1px solid var(--border);
-                display: flex;
-                align-items: flex-end;
-                /* for multiline expansion if needed */
-                gap: 10px;
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
-            }
-
-            .chat-input-field-wrapper {
-                flex: 1;
-                background: var(--tab-bg);
-                border-radius: 20px;
-                padding: 8px 12px;
-                display: flex;
-                align-items: center;
-                position: relative;
-                border: 1px solid transparent;
-                transition: all 0.2s;
-            }
-
-            .chat-input-field-wrapper:focus-within {
-                background: var(--card-bg);
-                border-color: var(--accent);
-                box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
-            }
-
-            .chat-input {
-                width: 100%;
-                background: transparent;
-                border: none;
-                font-size: 15px;
-                color: var(--text-main);
-                outline: none;
-                max-height: 100px;
-                resize: none;
-                padding: 2px 0;
-            }
-
-            .chat-send-btn {
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                background: var(--accent);
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: none;
-                cursor: pointer;
-                transition: transform 0.2s;
-                flex-shrink: 0;
-            }
-
-            .chat-send-btn:active {
-                transform: scale(0.9);
-            }
-
-            .chat-attach-btn {
-                color: var(--accent);
-                cursor: pointer;
-                padding: 8px;
-                border-radius: 50%;
-                transition: background 0.2s;
-            }
-
-            .chat-attach-btn:active {
-                background: rgba(0, 0, 0, 0.1);
-            }
-
-            /* Improved Chat Button */
-            .btn-chat-open {
-                background: linear-gradient(135deg, var(--accent) 0%, #005bb5 100%);
-                color: white;
-                border: none;
-                padding: 16px;
-                border-radius: 16px;
-                font-weight: 700;
-                font-size: 16px;
-                width: 100%;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                box-shadow: 0 4px 12px rgba(0, 113, 227, 0.25);
-                transition: transform 0.2s, box-shadow 0.2s;
+                opacity: 1;
+                transform: scale(1);
+                /* bottom: auto; already set */
             }
 
             .btn-chat-open:active {
@@ -1115,6 +1130,31 @@
 
             .nav-link:hover {
                 opacity: 0.8;
+            }
+
+            .loading {
+                opacity: 0.5 !important;
+                pointer-events: none !important;
+                position: relative;
+            }
+
+            .loading::after {
+                content: "";
+                position: absolute;
+                width: 16px;
+                height: 16px;
+                top: calc(50% - 8px);
+                right: 20px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: spin 0.6s linear infinite;
+            }
+
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
             }
         }
     </style>
@@ -1190,11 +1230,13 @@
             language: "{{ user.language }}" || 'de',
             is_admin: "{{ 'true' if user.is_admin else 'false' }}" === 'true',
             is_super_admin: "{{ 'true' if user.is_super_admin else 'false' }}" === 'true',
+            role: "{{ user.role }}",
             needs_password_change: "{{ 'true' if user.needs_password_change else 'false' }}" === 'true',
             has_seen_tutorial: "{{ 'true' if user.has_seen_tutorial else 'false' }}" === 'true',
-            className: "{{ user.school_class.name if user.school_class else '' }}",
-            class_id: {{ user.class_id if user.class_id else 'null' }}
+            className: "{{ active_class.name if active_class else (user.school_class.name if user.school_class else '') }}",
+            class_id: {{ active_class.id if active_class else (user.class_id if user.class_id else 'null') }}
         };
+        let isProcessing = false;
 
         function updateBrowserTitle(pageTitle) {
             const base = "L8teStudy";
@@ -1231,6 +1273,12 @@
             const el = document.getElementById(id);
             if (el) el.classList.toggle('active');
         }
+
+        function openSheetOverlay() {
+            const overlay = document.getElementById('sheet-overlay');
+            if (overlay) overlay.classList.add('active');
+        }
+
 
         function t(key) {
             try {
@@ -1356,7 +1404,7 @@
 
                 // Update URL
                 const pathMap = {
-                    home: '/',
+                    home: '/home',
                     tasks: '/tasks',
                     calendar: '/calendar',
                     grades: '/grades',
@@ -1370,7 +1418,13 @@
                     sub_super_admin: '/superadmin',
                     sub_shared_content: '/superadmin/shared'
                 };
-                let path = pathMap[view] || '/';
+
+                let path = pathMap[view] || '/home';
+
+                // Prefix with class name if available
+                if (window.currentUser && window.currentUser.className) {
+                    path = '/' + window.currentUser.className + path;
+                }
 
                 if (!window.isPoppingState) {
                     window.history.pushState({ view: view }, '', path);
@@ -1505,6 +1559,13 @@
         });
 
         function openSheetOverlay() {
+            const content = document.getElementById('sheet-content');
+            // Reset potential inline styles from Chat
+            content.style.height = 'auto';
+            content.style.display = 'block';
+            content.style.padding = '0';
+            content.style.flexDirection = 'initial';
+
             document.getElementById('sheet-overlay').classList.add('active');
             window.history.pushState({ modal: true }, '', null);
         }
@@ -1512,12 +1573,16 @@
         // Modified closeSheet to handle history
         function closeSheet() {
             const sheet = document.getElementById('sheet-overlay');
-            if (sheet.classList.contains('active')) {
-                // Block interaction to prevent ghost clicks on mobile
+            if (sheet && sheet.classList.contains('active')) {
+                sheet.classList.remove('active');
+
+                // Block interaction briefly to prevent ghost clicks on mobile
                 document.body.classList.add('no-interaction');
                 setTimeout(() => document.body.classList.remove('no-interaction'), 400);
 
-                window.history.back();
+                if (window.history.state && window.history.state.modal) {
+                    window.history.back();
+                }
             }
         }
 
@@ -1559,7 +1624,9 @@
 
             // 1. Fetch Next Event
             try {
-                const res = await fetch('/api/events');
+                let query = '';
+                if (window.currentUser?.class_id) query = `?class_id=${window.currentUser.class_id}`;
+                const res = await fetch(`/api/events${query}`);
                 if (currentView !== 'home') return;
                 const events = await res.json();
                 const upcoming = events
@@ -1579,7 +1646,7 @@
                     document.getElementById('home-next-event').innerHTML = `
                         <div class="floating-card" style="padding: 20px 24px 10px 24px;">
                             <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('next_event')}</h4>
-                            <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                            <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id}, '[]', ${e.subject_id || 'null'})">
                                 <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
                                     <i data-lucide="calendar" style="width:18px; height:18px;"></i>
                                 </div>
@@ -1598,7 +1665,9 @@
 
             // 3. Fetch Tasks
             try {
-                const res = await fetch('/api/tasks');
+                let query = '';
+                if (window.currentUser?.class_id) query = `?class_id=${window.currentUser.class_id}`;
+                const res = await fetch(`/api/tasks${query}`);
                 if (currentView !== 'home') return;
                 const tasks = await res.json();
                 cachedTasks = tasks;
@@ -1634,7 +1703,7 @@
             if (!cachedTasks) return;
             const task = cachedTasks.find(t => t.id === id);
             if (task) {
-                openDetails('task', task.title, task.subject || '', task.due_date || '', null, task.description || '', task.id, JSON.stringify(task.images || []));
+                openDetails('task', task.title, task.subject || '', task.due_date || '', null, task.description || '', task.id, JSON.stringify(task.images || []), task.subject_id);
             }
         }
 
@@ -1663,12 +1732,20 @@
             lucide.createIcons();
 
             try {
-                const response = await fetch('/api/tasks');
+                let query = '';
+                if (window.currentUser?.class_id) query = `?class_id=${window.currentUser.class_id}`;
+                const response = await fetch(`/api/tasks${query}`);
                 const tasks = await response.json();
+
+                // Safety check: if view changed while fetching, abort to prevent errors
+                if (currentView !== 'tasks') return;
+
                 cachedTasks = tasks; // Cache for search
 
                 const filteredTasks = tasks.filter(t => tab === 'open' ? !t.is_done : t.is_done);
                 const listContainer = document.getElementById('tasks-list-container');
+                if (!listContainer) return;
+
                 if (filteredTasks.length === 0) {
                     const emptyText = tab === 'open' ? t('no_open_tasks') : t('no_completed_tasks');
                     listContainer.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${emptyText}</p></div>`;
@@ -1710,9 +1787,15 @@
                 }
             } catch (err) {
                 console.error(err);
-                document.getElementById('tasks-list-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+                if (currentView === 'tasks') {
+                    const listContainer = document.getElementById('tasks-list-container');
+                    if (listContainer) {
+                        listContainer.innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+                    }
+                }
             }
         }
+
 
         async function toggleTaskStatus(id, currentStatus, refreshHome = false) {
             try {
@@ -1728,144 +1811,8 @@
             } catch (err) { console.error(err); }
         }
 
-        async function renderCalendar(tab = 'termine') {
-            const container = document.getElementById('app-container');
-            container.innerHTML = `<div class="controls-row"><div class="tab-bar"><button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">${t('events')}</button><button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">${t('month')}</button></div></div>
-                    <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}</div>`;
-            lucide.createIcons();
 
-            try {
-                const response = await fetch('/api/events');
-                const events = await response.json();
-                if (tab === 'termine') {
-                    const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
-                    const listHtml = sortedEvents.map(e => `
-                        <div class="list-item" style="padding: 18px 0;" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
-                             <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: rgba(0, 113, 227, 0.1); color: var(--accent); flex-shrink:0;">
-                                <i data-lucide="calendar" style="width:20px; height:20px;"></i>
-                            </div>
-                            <div class="item-content">
-                                <div class="item-title">${e.title}</div>
-                                <div class="item-sub">${new Date(e.date).toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long' })}</div>
-                            </div>
-                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                        </div > `).join('');
-                    document.getElementById('calendar-content').innerHTML = listHtml ?
-                        `< div class="floating-card" style = "padding:0 24px" > ${listHtml}</div > ` :
-                        `< div class="floating-card" style = "padding:40px; text-align:center" > <p class="item-sub">Keine anstehenden Termine.</p></div > `;
-                } else {
-                    document.getElementById('calendar-content').innerHTML = `
-                    < div class="floating-card" >
-                            <div class="calendar-header">
-                                <div style="padding:10px" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
-                                <span id="main-calendar-month-year" style="font-weight:700"></span>
-                                <div style="padding:10px" onclick="changeViewMonth(1)"><i data-lucide="chevron-right"></i></div>
-                            </div>
-                            <div class="calendar-days-grid" id="main-calendar-grid"></div>
-                        </div > `;
-                    updateMainCalendarGrid(events);
-                }
-                lucide.createIcons();
-            } catch (err) { console.error(err); }
-        }
 
-        function updateMainCalendarGrid(events = []) {
-            const grid = document.getElementById('main-calendar-grid');
-            const title = document.getElementById('main-calendar-month-year');
-            if (!grid || !title) return;
-            title.innerText = viewDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
-            grid.innerHTML = '';
-            ['M', 'D', 'M', 'D', 'F', 'S', 'S'].forEach(d => grid.innerHTML += `< div class="day-label" > ${d}</div > `);
-            const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-            const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-            const offset = firstDay === 0 ? 6 : firstDay - 1;
-            for (let i = 0; i < offset; i++) grid.innerHTML += '<div></div>';
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dayDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i);
-                const year = dayDate.getFullYear();
-                const month = String(dayDate.getMonth() + 1).padStart(2, '0');
-                const d = String(dayDate.getDate()).padStart(2, '0');
-                const dateStr = `${year}-${month}-${d}`;
-                const dayEvents = events.filter(e => e.date === dateStr);
-                const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
-                const dotHtml = dayEvents.length > 0 ? `<div class="event-dot"></div>` : '';
-                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotHtml}</div>`;
-            }
-        }
-
-        function changeViewMonth(delta) { viewDate.setMonth(viewDate.getMonth() + delta); renderCalendar('monat'); }
-
-        function openDayDetails(day, eventsJson) {
-            const events = JSON.parse(eventsJson);
-            if (events.length === 0) {
-                const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
-                const year = targetDate.getFullYear();
-                const month = String(targetDate.getMonth() + 1).padStart(2, '0');
-                const d = String(targetDate.getDate()).padStart(2, '0');
-                const dateStr = `${year}-${month}-${d}`;
-                openCreateMenu('Termin', '', null, dateStr);
-            } else {
-                let listHtml = events.map(e => `
-                     <div class="list-item" onclick="openDetails('Termin', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
-                         <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
-                            <i data-lucide="calendar" style="width:18px; height:18px;"></i>
-                         </div>
-                         <div class="item-content"><div class="item-title">${e.title}</div><div class="item-sub">${new Date(e.date).toLocaleDateString('de-DE')}</div></div>
-                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                     </div>`).join('');
-
-                document.getElementById('sheet-content').innerHTML = `
-                    <div class="sheet-header">
-                        <h2 style="margin:0; font-size:20px;">${day}. ${viewDate.toLocaleDateString('de-DE', { month: 'long' })}</h2>
-                        <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
-                    </div>
-                    <div class="floating-card" style="padding:0 24px; margin-bottom:20px;">${listHtml}</div>
-                    <button class="ios-btn" onclick="openCreateMenu('Termin', '', null, '${events[0].date}')">Neuer Termin</button>
-                    <button class="ios-btn btn-sec" onclick="closeSheet()">Fertig</button>
-                `;
-                document.getElementById('sheet-overlay').classList.add('active');
-                lucide.createIcons();
-            }
-        }
-
-        async function renderGrades() {
-            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">Lade Noten...</div>`;
-            try {
-                const res = await fetch('/api/grades');
-                const grades = await res.json();
-                const subjects = {};
-                grades.forEach(g => {
-                    if (!subjects[g.subject]) subjects[g.subject] = { sum: 0, count: 0, grades: [] };
-                    subjects[g.subject].sum += (g.value * g.weight);
-                    subjects[g.subject].count += g.weight;
-                    subjects[g.subject].grades.push(g);
-                });
-                let totalSum = 0, totalCount = 0, listHtml = '';
-                for (let sub in subjects) {
-                    const avg = subjects[sub].count > 0 ? (subjects[sub].sum / subjects[sub].count).toFixed(1) : '-';
-                    if (subjects[sub].count > 0) {
-                        totalSum += (subjects[sub].sum / subjects[sub].count);
-                        totalCount++;
-                    }
-                    listHtml += `<div class="floating-card" onclick="renderSubjectDetails('${sub}', '${avg}', '${JSON.stringify(subjects[sub].grades).replace(/"/g, '&quot;')}')">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div><h3 style="margin:0">${sub}</h3><p class="item-sub">${subjects[sub].grades.length} Note${subjects[sub].grades.length !== 1 ? 'n' : ''}</p></div>
-                            <div style="display:flex; align-items:center; gap:10px;"><div style="font-size: 20px; font-weight: 700; color: var(--accent);">${avg}</div><i data-lucide="chevron-right" style="width:18px"></i></div>
-                        </div>
-                    </div>`;
-                }
-                const totalAvg = totalCount > 0 ? (totalSum / totalCount).toFixed(1) : null;
-                document.getElementById('app-container').innerHTML = `
-                    ${totalAvg !== null ? `
-                    <div class="floating-card" style="text-align:center; background: var(--accent); color: white; border:none; margin-bottom: 25px;">
-                        <p style="opacity:0.8; font-size:14px;">Gesamtdurchschnitt</p>
-                        <div style="font-size: 42px; font-weight: 800; margin-bottom: 5px;">${totalAvg}</div>
-                    </div>` : ''}
-                    ${listHtml || '<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Noch keine Noten eingetragen.</p></div>'}
-                `;
-                lucide.createIcons();
-            } catch (e) { console.error(e); }
-        }
 
 
         let cachedEvents = [];
@@ -1974,19 +1921,22 @@
             }
 
             try {
-                const response = await fetch('/api/events');
+                let query = '';
+                if (window.currentUser?.class_id) query = `?class_id=${window.currentUser.class_id}`;
+                const response = await fetch(`/api/events${query}`);
                 const events = await response.json();
-                cachedEvents = events;
 
-                if (isSearchActive) {
-                    // Start with empty or full list? Let's show full list or wait for input.
-                    // If toggleSearch just happened, input is empty.
-                }
+                // Safety check: if view changed while fetching, abort
+                if (currentView !== 'calendar') return;
+
+                cachedEvents = events;
 
                 if (tab === 'termine') {
                     renderEventList(events);
                 } else {
-                    document.getElementById('calendar-content').innerHTML = `
+                    const contentContainer = document.getElementById('calendar-content');
+                    if (!contentContainer) return;
+                    contentContainer.innerHTML = `
                         <div class="floating-card">
                             <div class="calendar-header">
                                 <div style="padding:10px" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
@@ -2015,7 +1965,9 @@
                     <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                 </div>`).join('');
 
-            document.getElementById('calendar-content').innerHTML = listHtml ?
+            const contentContainer = document.getElementById('calendar-content');
+            if (!contentContainer) return;
+            contentContainer.innerHTML = listHtml ?
                 `<div class="floating-card" style="padding:0 24px">${listHtml}</div>` :
                 `<div class="floating-card" style="padding:40px; text-align:center"><p class="item-sub">${t('no_events_list')}</p></div>`;
             lucide.createIcons();
@@ -2071,7 +2023,7 @@
                 openCreateMenu('event', '', null, dateStr);
             } else {
                 let listHtml = events.map(e => `
-                     <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                     <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id}, '[]', ${e.subject_id || 'null'})">
                          <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
                             <i data-lucide="calendar" style="width:18px; height:18px;"></i>
                          </div>
@@ -2099,6 +2051,10 @@
             try {
                 const res = await fetch('/api/grades');
                 const grades = await res.json();
+
+                // Safety check: if view changed while fetching, abort
+                if (currentView !== 'grades') return;
+
                 const subjects = {};
                 grades.forEach(g => {
                     if (!subjects[g.subject]) subjects[g.subject] = { sum: 0, count: 0, grades: [] };
@@ -2135,7 +2091,9 @@
 
         function renderSubjectDetails(subject, avg, gradesJson, pushToHistory = true) {
             if (pushToHistory) {
-                window.history.pushState({ view: 'sub_subject_details', subject, avg, gradesJson }, '', `/subject/${encodeURIComponent(subject)}`);
+                let url = `/subject/${encodeURIComponent(subject)}`;
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'sub_subject_details', subject, avg, gradesJson }, '', url);
             }
             previousView = currentView;
             currentView = 'sub_subject_details';
@@ -2176,7 +2134,9 @@
             document.getElementById('header-back-btn').style.display = 'none';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'account' }, '', '/account');
+                let url = '/account';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'account' }, '', url);
             }
             window.isPoppingState = false;
 
@@ -2244,7 +2204,9 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'settings' }, '', '/settings');
+                let url = '/settings';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'settings' }, '', url);
             }
             window.isPoppingState = false;
 
@@ -2338,7 +2300,9 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_notifications' }, '', '/settings/notifications');
+                let url = '/settings/notifications';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'sub_notifications' }, '', url);
             }
             window.isPoppingState = false;
 
@@ -2612,7 +2576,9 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_password' }, '', '/settings/password');
+                let url = '/settings/password';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'sub_password' }, '', url);
             }
             window.isPoppingState = false;
 
@@ -2638,7 +2604,9 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_admin_menu' }, '', '/admin');
+                let url = '/admin';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'sub_admin_menu' }, '', url);
             }
             window.isPoppingState = false;
 
@@ -2700,7 +2668,9 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_activity', class_id: filterClassId, class_name: filterClassName }, '', filterClassId ? `/admin/activity/${filterClassId}` : '/admin/activity');
+                let url = filterClassId ? `/admin/activity/${filterClassId}` : '/admin/activity';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'sub_activity', class_id: filterClassId, class_name: filterClassName }, '', url);
             }
             window.isPoppingState = false;
 
@@ -2724,11 +2694,16 @@
 
             try {
                 const res = await fetch(apiUrl);
-                cachedActivityLogs = await res.json();
+                const data = await res.json();
+
+                if (currentView !== 'sub_activity') return;
+
+                cachedActivityLogs = data;
                 currentActivityFilter = { user: null, action: null };
                 renderActivityLogList(cachedActivityLogs);
             } catch (e) {
-                document.getElementById('activity-list-container').innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">${t('error_loading')}</div>`;
+                const container = document.getElementById('activity-list-container');
+                if (container) container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">${t('error_loading')}</div>`;
             }
         }
 
@@ -2784,7 +2759,9 @@
                 </div>
              `).join('');
 
-            document.getElementById('activity-list-container').innerHTML = `
+            const listContainer = document.getElementById('activity-list-container');
+            if (!listContainer) return;
+            listContainer.innerHTML = `
                 <div class="floating-card" style="padding:0 15px; margin-bottom:40px;">
                     ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_results')}</div>`}
                 </div>
@@ -2832,7 +2809,9 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_classes' }, '', '/admin/classes');
+                let url = '/admin/classes';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'sub_classes' }, '', url);
             }
             window.isPoppingState = false;
 
@@ -2846,6 +2825,8 @@
                 const res = await fetch('/api/admin/classes');
                 const classes = await res.json();
 
+                if (currentView !== 'sub_classes') return;
+
                 const listHtml = classes.map(c => `
                     <div class="list-item">
                         <div class="account-item-icon"><i data-lucide="school"></i></div>
@@ -2855,7 +2836,7 @@
                         </div>
                         <div style="display:flex;">
                             <div style="color:var(--accent); padding:10px; cursor:pointer;" onclick="renderSingleClassAdmin(${c.id}, '${c.name.replace(/'/g, "\\'")}')"><i data-lucide="settings" style="width:20px;"></i></div>
-                            <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteClass(${c.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>
+                            <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteClass(${id})"><i data-lucide="trash-2" style="width:20px;"></i></div>
                         </div>
                     </div>
                 `).join('');
@@ -2869,7 +2850,8 @@
                 lucide.createIcons();
             } catch (e) {
                 console.error(e);
-                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+                const container = document.getElementById('app-container');
+                if (container) container.innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
             }
         }
 
@@ -2936,6 +2918,8 @@
                 const res = await fetch(apiUrl);
                 const users = await res.json();
 
+                if (currentView !== 'sub_users') return;
+
                 // Store current filtering context for the "plus" button (new user)
                 window.lastAdminFilterClassId = filterClassId;
                 window.lastAdminFilterClassName = filterClassName;
@@ -2944,7 +2928,10 @@
                     <div class="list-item">
                         <div class="account-item-icon"><i data-lucide="user"></i></div>
                         <div class="item-content">
-                            <div class="item-title">${u.username} ${u.is_admin ? `<span style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">${t('admin').toUpperCase()}</span>` : ''}</div>
+                            <div class="item-title">${u.username} 
+                                ${u.role === 'admin' ? `<span style="font-size:11px; background:var(--accent); color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">ADMIN</span>` : ''}
+                                ${u.role === 'super_admin' ? `<span style="font-size:11px; background:#8E8E93; color:white; padding:2px 6px; border-radius:6px; margin-left:5px;">SUPER ADMIN</span>` : ''}
+                            </div>
                             ${window.currentUser.is_super_admin && !filterClassId ? `<div class="item-sub">${t('class_label')}: ${u.class_name || t('global_label')}</div>` : ''}
                         </div>
                         <div style="display:flex;">
@@ -2963,7 +2950,8 @@
                 lucide.createIcons();
             } catch (e) {
                 console.error(e);
-                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+                const container = document.getElementById('app-container');
+                if (container) container.innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
             }
         }
 
@@ -3029,6 +3017,8 @@
                 const res = await fetch(`/api/admin/classes/${id}`);
                 const c = await res.json();
 
+                if (currentView !== 'sub_class_settings') return;
+
                 document.getElementById('app-container').innerHTML = `
                     <div style="padding: 10px 0;">
                         <h4 style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">${t('general')}</h4>
@@ -3071,7 +3061,8 @@
                 lucide.createIcons();
             } catch (e) {
                 console.error(e);
-                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+                const container = document.getElementById('app-container');
+                if (container) container.innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
             }
         }
 
@@ -3126,6 +3117,15 @@
                 } catch (e) { console.error(e); }
             }
 
+
+            let roleOptions = `
+                <option value="student">${t('student') || 'Schüler'}</option>
+                <option value="admin">${t('admin') || 'Admin'}</option>
+            `;
+            if (window.currentUser.is_super_admin) {
+                roleOptions += `<option value="super_admin">Super Admin</option>`;
+            }
+
             document.getElementById('sheet-content').innerHTML = `
                 <div class="sheet-header">
                     <h2 style="margin:0; font-size:20px; font-weight:700;">${t('new_user')}</h2>
@@ -3134,21 +3134,16 @@
                 <input type="text" id="new-user-name" class="ios-input" placeholder="${t('msg_username')}">
                 <input type="password" id="new-user-pw" class="ios-input" placeholder="${t('msg_password')}">
                 ${classSelectorHtml}
-                <div class="account-item" onclick="toggleAdminCheck()" style="border:none; margin-bottom:15px; background:var(--tab-bg); border-radius:12px; padding:15px;">
-                    <div class="account-item-text">${t('admin_rights')}</div>
-                    <div id="admin-check-toggle" class="ios-toggle"><div class="ios-toggle-knob"></div></div>
-                </div>
+                
+                <label style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin: 10px 0 5px 5px;">Rolle</label>
+                <select id="new-user-role" class="ios-input" style="appearance:none; background:var(--tab-bg);">
+                    ${roleOptions}
+                </select>
+
                 <button class="ios-btn" onclick="saveNewUser()">${t('create')}</button>
             `;
             document.getElementById('sheet-overlay').classList.add('active');
             lucide.createIcons();
-        }
-
-        let newIsAdmin = false;
-        function toggleAdminCheck() {
-            newIsAdmin = !newIsAdmin;
-            const toggle = document.getElementById('admin-check-toggle');
-            if (newIsAdmin) toggle.classList.add('active'); else toggle.classList.remove('active');
         }
 
         async function renderSuperAdminDashboard() {
@@ -3192,6 +3187,7 @@
             const password = document.getElementById('new-user-pw').value;
             const classIdEl = document.getElementById('new-user-class');
             const class_id = classIdEl ? classIdEl.value : null;
+            const role = document.getElementById('new-user-role').value;
 
             if (!username || !password) return alert(t('error'));
 
@@ -3202,14 +3198,13 @@
                     body: JSON.stringify({
                         username,
                         password,
-                        is_admin: newIsAdmin,
+                        role,
                         class_id: class_id === "" ? null : class_id
                     })
                 });
                 const data = await res.json();
                 if (data.success) {
                     closeSheet();
-                    newIsAdmin = false;
                     renderUserManagement();
                 } else alert(data.message || t('error'));
             } catch (e) { alert(t('connection_error')); }
@@ -3423,7 +3418,7 @@
 
 
 
-        function openDetails(type, title, subject, date, value = null, desc = '', id = null, imagesJson = '[]') {
+        function openDetails(type, title, subject, date, value = null, desc = '', id = null, imagesJson = '[]', subjectId = null) {
             const hasDesc = desc && desc.trim() !== '' && desc !== 'null' && desc !== 'undefined';
             let images = [];
             try { images = JSON.parse(imagesJson); } catch (e) { console.error(e); }
@@ -3438,7 +3433,7 @@
                             </button>
                          ` : ''}
                         <div style="display:flex; gap:10px;">
-                            <button class="ios-btn btn-sec" style="flex: 1; margin-bottom: 0;" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date}', '${value || ''}', '${desc.replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">${t('edit')}</button>
+                            <button class="ios-btn btn-sec" style="flex: 1; margin-bottom: 0;" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date}', '${value || ''}', '${desc.replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${subjectId || 'null'})">${t('edit')}</button>
                             ${type === 'task' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteTask(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
                             ${type === 'event' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteEvent(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
                             ${type === 'grade' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteGrade(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
@@ -3589,7 +3584,7 @@
             } catch (e) { console.error(e); }
         }
 
-        function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]') {
+        function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]', editSubjectId = null) {
             taskFiles = []; // Reset file selection
             if (currentView === 'sub_users') {
                 openCreateUserMenu();
@@ -3615,9 +3610,9 @@
             }
             pickerViewDate = new Date(selectedDate);
 
-            // If string "null" or empty passed
             if (editSubject && editSubject !== 'null' && editSubject !== 'undefined') selectedSubject = editSubject;
             else selectedSubject = null;
+            selectedSubjectId = editSubjectId || null;
 
             const safeId = id ? id : 'null';
             const saveFunction = (type === 'task') ? `saveTask(${safeId})` : (type === 'event' ? `saveEvent(${safeId})` : `saveGrade(${safeId})`);
@@ -3649,7 +3644,6 @@
                     <div class="custom-picker-trigger" onclick="toggleOptionList('subject-list')"><span id="selected-subject-display">${selectedSubject || t('choose_subject')}</span><i data-lucide="chevron-down" style="width:18px"></i></div>
                     <div class="picker-options" id="subject-list">
                         <!-- Loaded dynamically -->
-                    </div>
                     </div>
                 ` : ''}
                 <input type="text" id="input-title" class="ios-input" placeholder="${t('title_placeholder')}" value="${titleVal}">
@@ -3698,8 +3692,8 @@
                     <div class="calendar-days-grid" id="calendar-grid"></div>
                 </div>
                 <textarea id="input-desc" class="ios-input" placeholder="${t('desc_placeholder')}">${descVal}</textarea>
-                <button class="ios-btn" onclick="${saveFunction}">${t('save')}</button>
-                <button class="ios-btn btn-sec" onclick="closeSheet()">${t('cancel')}</button>`;
+                <button type="button" class="ios-btn" onclick="event.stopPropagation(); ${saveFunction}">${t('save')}</button>
+                <button type="button" class="ios-btn btn-sec" onclick="event.stopPropagation(); closeSheet()">${t('cancel')}</button>`;
             openSheetOverlay();
             lucide.createIcons();
 
@@ -3710,7 +3704,7 @@
                     .then(res => res.json())
                     .then(data => {
                         subjectList.innerHTML = data.map(s =>
-                            `<div class="picker-option" data-id="${s.id}" onclick="selectSubject('${s.name}')">${s.name}</div>`
+                            `<div class="picker-option" data-id="${s.id}" onclick="selectSubject('${s.name.replace(/'/g, "\\'")}', ${s.id})">${s.name}</div>`
                         ).join('');
                     })
                     .catch(e => {
@@ -3740,22 +3734,22 @@
 
         async function saveTask(updateId = null) {
             const title = document.getElementById('input-title').value;
+            if (!title) return alert(t('title_required') || 'Titel erforderlich');
+
             const desc = document.getElementById('input-desc').value;
             const subject = selectedSubject;
             const year = selectedDate.getFullYear();
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const d = String(selectedDate.getDate()).padStart(2, '0');
             const date = `${year}-${month}-${d}`;
-            if (!title) return;
-
             const url = updateId ? `/api/tasks/${updateId}` : '/api/tasks';
 
-            try {
-                let body, headers;
-                // Always use FormData if there are images to upload or delete (if updateId is present but we want to use form data for consistent image handling? 
-                // Wait, update_task supports FormData.
-                // It is simpler to always use FormData for tasks now.
+            if (isProcessing) return;
+            isProcessing = true;
+            const btn = event.currentTarget;
+            if (btn) btn.classList.add('loading');
 
+            try {
                 const formData = new FormData();
                 formData.append('title', title);
                 formData.append('description', desc);
@@ -3763,6 +3757,7 @@
                 formData.append('subject_id', selectedSubjectId || '');
                 formData.append('is_shared', isShared ? 'true' : 'false');
                 formData.append('due_date', date);
+                if (window.currentUser?.class_id) formData.append('class_id', window.currentUser.class_id);
 
                 if (taskFiles.length > 0) {
                     for (let i = 0; i < taskFiles.length; i++) {
@@ -3774,19 +3769,26 @@
                     formData.append('deleted_images', Array.from(imagesToDelete).join(','));
                 }
 
-                body = formData;
-                // Headers auto
-
                 const res = await fetch(url, {
                     method: updateId ? 'PUT' : 'POST',
-                    body: body
+                    body: formData
                 });
-                if (res.ok) {
+                const data = await res.json();
+
+                if (data.success) {
                     imagesToDelete.clear();
                     closeSheet();
                     refreshCurrentView();
-                } else { alert(t('error')); }
-            } catch (err) { alert(t('connection_error')); }
+                } else {
+                    alert(data.message || t('error'));
+                }
+            } catch (e) {
+                console.error('saveTask error:', e);
+                alert(t('connection_error') || 'Verbindungsfehler');
+            } finally {
+                isProcessing = false;
+                if (btn) btn.classList.remove('loading');
+            }
         }
 
         async function saveEvent(updateId = null) {
@@ -3796,20 +3798,37 @@
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const d = String(selectedDate.getDate()).padStart(2, '0');
             const date = `${year}-${month}-${d}`;
-            if (!title) return;
+            if (!title) return alert(t('title_required') || 'Titel erforderlich');
 
             const method = updateId ? 'PUT' : 'POST';
             const url = updateId ? `/api/events/${updateId}` : '/api/events';
 
+            if (isProcessing) return;
+            isProcessing = true;
+            const btn = event.currentTarget;
+            if (btn) btn.classList.add('loading');
+
             try {
-                await fetch(url, {
+                const res = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, description: desc, date, subject_id: selectedSubjectId, is_shared: isShared })
+                    body: JSON.stringify({ title, description: desc, date, subject_id: selectedSubjectId, is_shared: isShared, class_id: window.currentUser?.class_id })
                 });
-                closeSheet();
-                refreshCurrentView();
-            } catch (e) { alert(t('error')); }
+                const data = await res.json();
+
+                if (data.success) {
+                    closeSheet();
+                    refreshCurrentView();
+                } else {
+                    alert(data.message || t('error'));
+                }
+            } catch (e) {
+                console.error('saveEvent error:', e);
+                alert(t('connection_error') || 'Verbindungsfehler');
+            } finally {
+                isProcessing = false;
+                if (btn) btn.classList.remove('loading');
+            }
         }
 
         async function saveGrade(updateId = null) {
@@ -3819,20 +3838,37 @@
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const d = String(selectedDate.getDate()).padStart(2, '0');
             const date = `${year}-${month}-${d}`;
-            if (!selectedSubject || !value) { alert(t('error')); return; }
+            if (!selectedSubject || !value) return alert(t('fields_required') || 'Fach und Note erforderlich');
 
             const method = updateId ? 'PUT' : 'POST';
             const url = updateId ? `/api/grades/${updateId}` : '/api/grades';
 
+            if (isProcessing) return;
+            isProcessing = true;
+            const btn = event.currentTarget;
+            if (btn) btn.classList.add('loading');
+
             try {
-                await fetch(url, {
+                const res = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'), date })
                 });
-                closeSheet();
-                refreshCurrentView();
-            } catch (e) { alert(t('error')); }
+                const data = await res.json();
+
+                if (data.success) {
+                    closeSheet();
+                    refreshCurrentView();
+                } else {
+                    alert(data.message || t('error'));
+                }
+            } catch (e) {
+                console.error('saveGrade error:', e);
+                alert(t('connection_error') || 'Verbindungsfehler');
+            } finally {
+                isProcessing = false;
+                if (btn) btn.classList.remove('loading');
+            }
         }
 
 
@@ -4052,8 +4088,9 @@
             el.style.display = isVisible ? 'none' : 'block';
         }
 
-        function selectSubject(name) {
+        function selectSubject(name, id) {
             selectedSubject = name;
+            selectedSubjectId = id;
             const display = document.getElementById('selected-subject-display');
             if (display) display.innerText = name;
             toggleOptionList('subject-list');
@@ -4111,7 +4148,9 @@
             document.getElementById('header-back-btn').style.display = 'block';
 
             if (!window.isPoppingState) {
-                window.history.pushState({ view: 'sub_subjects', class_id: filterClassId, class_name: filterClassName }, '', filterClassId ? `/admin/subjects/${filterClassId}` : '/admin/subjects');
+                let url = filterClassId ? `/admin/subjects/${filterClassId}` : '/admin/subjects';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'sub_subjects', class_id: filterClassId, class_name: filterClassName }, '', url);
             }
             window.isPoppingState = false;
 
@@ -4124,6 +4163,8 @@
             try {
                 const res = await fetch(apiUrl);
                 const subjects = await res.json();
+
+                if (currentView !== 'sub_subjects') return;
 
                 window.lastAdminFilterClassId = filterClassId;
 
@@ -4258,8 +4299,21 @@
                 <div style="padding:10px; color:var(--text-sec); font-size:14px; line-height:1.4; margin-bottom:15px;">
                     ${t('force_pw_msg')}
                 </div>
-                <input type="password" id="force-new-pw" class="ios-input" placeholder="${t('msg_password')}">
-                <input type="password" id="force-new-pw-confirm" class="ios-input" placeholder="${t('msg_password')} (Wiederholen)">
+                
+                <div style="position:relative; margin-bottom:15px;">
+                    <input type="password" id="force-new-pw" class="ios-input" placeholder="${t('msg_password')}" style="margin-bottom:0; padding-right:45px;">
+                    <div onclick="togglePwVis('force-new-pw', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--text-sec); cursor:pointer; display:flex;">
+                        <i data-lucide="eye" style="width:22px;"></i>
+                    </div>
+                </div>
+
+                <div style="position:relative; margin-bottom:15px;">
+                    <input type="password" id="force-new-pw-confirm" class="ios-input" placeholder="${t('msg_password')} (Wiederholen)" style="margin-bottom:0; padding-right:45px;">
+                    <div onclick="togglePwVis('force-new-pw-confirm', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--text-sec); cursor:pointer; display:flex;">
+                        <i data-lucide="eye" style="width:22px;"></i>
+                    </div>
+                </div>
+
                 <div id="force-pw-error" style="color:var(--danger); font-size:12px; margin: 5px 0 15px 5px; display:none;"></div>
                 <button class="ios-btn" onclick="saveForcedPassword()">${t('save_btn')}</button>
             `;
@@ -4268,6 +4322,18 @@
             overlay.onclick = null; // Disable background click close
             overlay.classList.add('active');
             overlay.querySelector('.sheet-close-btn')?.remove(); // Ensure no close button
+            lucide.createIcons();
+        }
+
+        function togglePwVis(id, btn) {
+            const input = document.getElementById(id);
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = '<i data-lucide="eye-off" style="width:22px;"></i>';
+            } else {
+                input.type = 'password';
+                btn.innerHTML = '<i data-lucide="eye" style="width:22px;"></i>';
+            }
             lucide.createIcons();
         }
 
@@ -4289,8 +4355,8 @@
                 return;
             }
 
-            const current = prompt("Bitte dein aktuelles (temporäres) Passwort zur Bestätigung eingeben:");
-            if (!current) return;
+            // No current password needed for forced change (first login)
+            const current = null;
 
             try {
                 const res = await fetch('/api/change_password', {
@@ -4414,33 +4480,39 @@
                 return;
             }
 
-            if (path === '/') renderHome();
-            else if (path === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));
-            else if (path === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'));
-            else if (path === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
-            else if (path === '/settings') renderSettingsPage();
-            else if (path === '/settings/password') renderChangePassword();
-            else if (path === '/settings/notifications') renderNotificationSettings();
-            else if (path === '/account') renderAccountHub();
-            else if (path === '/admin') renderAdminMenu();
-            else if (path === '/admin/users') renderUserManagement();
-            else if (path.startsWith('/admin/users/')) renderUserManagement(path.split('/').pop());
-            else if (path === '/admin/activity') renderActivityLog();
-            else if (path.startsWith('/admin/activity/')) renderActivityLog(path.split('/').pop());
-            else if (path === '/admin/subjects') renderSubjectManagement();
-            else if (path.startsWith('/admin/subjects/')) renderSubjectManagement(path.split('/').pop());
-            else if (path === '/admin/classes') renderSchoolClassManagement();
-            else if (path.startsWith('/admin/classes/')) renderSingleClassAdmin(path.split('/').pop(), 'Klasse');
-            else if (path === '/superadmin') renderSuperAdminDashboard();
-            else if (path === '/superadmin/shared') renderSharedContentManagement();
-            else if (path.includes('/settings') && path.includes('/admin/classes/')) {
-                const parts = path.split('/');
+            let relevantPath = window.location.pathname;
+            const cls = window.currentUser.className;
+            if (cls && relevantPath.toLowerCase().startsWith('/' + cls.toLowerCase())) {
+                relevantPath = relevantPath.substring(cls.length + 1);
+                if (!relevantPath) relevantPath = '/';
+            }
+
+            if (relevantPath === '/' || relevantPath === '/home') renderHome();
+            else if (relevantPath === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));
+            else if (relevantPath === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'));
+            else if (relevantPath === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
+            else if (relevantPath === '/settings') renderSettingsPage();
+            else if (relevantPath === '/settings/password') renderChangePassword();
+            else if (relevantPath === '/settings/notifications') renderNotificationSettings();
+            else if (relevantPath === '/account') renderAccountHub();
+            else if (relevantPath === '/admin') renderAdminMenu();
+            else if (relevantPath === '/admin/users') renderUserManagement();
+            else if (relevantPath.startsWith('/admin/users/')) renderUserManagement(relevantPath.split('/').pop());
+            else if (relevantPath === '/admin/activity') renderActivityLog();
+            else if (relevantPath.startsWith('/admin/activity/')) renderActivityLog(relevantPath.split('/').pop());
+            else if (relevantPath === '/admin/subjects') renderSubjectManagement();
+            else if (relevantPath.startsWith('/admin/subjects/')) renderSubjectManagement(relevantPath.split('/').pop());
+            else if (relevantPath === '/admin/classes') renderSchoolClassManagement();
+            else if (relevantPath.startsWith('/admin/classes/')) renderSingleClassAdmin(relevantPath.split('/').pop(), 'Klasse');
+            else if (relevantPath === '/superadmin') renderSuperAdminDashboard();
+            else if (relevantPath === '/superadmin/shared') renderSharedContentManagement();
+            else if (relevantPath.includes('/settings') && relevantPath.includes('/admin/classes/')) {
+                const parts = relevantPath.split('/');
                 const id = parts[parts.indexOf('classes') + 1];
                 renderClassSettings(id);
             }
-            else if (path.startsWith('/subject/')) {
-                const sub = decodeURIComponent(path.split('/').pop());
-                // Note: This won't have the avg/gradesJson pre-cached, so subject detail might need adjustment to fetch if missing.
+            else if (relevantPath.startsWith('/subject/')) {
+                const sub = decodeURIComponent(relevantPath.split('/').pop());
                 renderSubjectDetails(sub, '?', '[]');
             }
             else renderHome();

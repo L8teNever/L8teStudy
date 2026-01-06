@@ -168,25 +168,32 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Schema migration error: {e}")
 
-        # Create default admin user if no users exist
-        # Use a try-except to handle race conditions when multiple workers start simultaneously
-        from .models import User
+        # Schema Update: Add role if missing
         try:
-            if User.query.first() is None:
-                default_admin = User(username='admin', is_admin=True)
-                default_admin.set_password('admin')
-                db.session.add(default_admin)
-                db.session.commit()
-                app.logger.info("="*60)
-                app.logger.info("  DEFAULT ADMIN ACCOUNT CREATED")
-                app.logger.info("  Username: admin")
-                app.logger.info("  Password: admin")
-                app.logger.info("  ⚠️  PLEASE CHANGE THIS PASSWORD IMMEDIATELY!")
-                app.logger.info("="*60)
+            if 'user' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('user')]
+                if 'role' not in cols:
+                    app.logger.info("Migrating: Adding role to user")
+                    with db.engine.connect() as conn:
+                        # Add column
+                        conn.execute(text("ALTER TABLE user ADD COLUMN role VARCHAR(20) DEFAULT 'student'"))
+                        # Migrate existing admins
+                        # Note: We use raw SQL because we can't be sure the boolean columns are in the model anymore,
+                        # but they should be in the DB if this is a migration.
+                        try:
+                            # Try to migrate from old columns if they exist
+                            if 'is_super_admin' in cols:
+                                conn.execute(text("UPDATE user SET role='super_admin' WHERE is_super_admin=1"))
+                            if 'is_admin' in cols:
+                                conn.execute(text("UPDATE user SET role='admin' WHERE is_admin=1 AND (is_super_admin=0 OR is_super_admin IS NULL)"))
+                        except Exception as ex:
+                            app.logger.warning(f"Could not migrate roles from old columns: {ex}")
+                        
+                        conn.commit()
         except Exception as e:
-            # If another worker already created the admin, rollback and continue
-            db.session.rollback()
-            app.logger.debug(f"Admin account creation skipped: {str(e)}")
+            app.logger.error(f"Schema migration (role) error: {e}")
+
+
 
     # Initialize Scheduler
     scheduler.init_app(app)

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Setup - L8teStudy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text: #000000;
+            --text-sec: #8E8E93;
+            --accent: #007AFF;
+            --border: rgba(0, 0, 0, 0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #000000;
+                --card-bg: #1C1C1E;
+                --text: #FFFFFF;
+                --text-sec: #8E8E93;
+                --border: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .setup-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: var(--text-sec);
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .input-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-sec);
+            margin-bottom: 8px;
+            margin-left: 4px;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            background: var(--bg);
+            border: 1px solid transparent;
+            color: var(--text);
+            font-size: 16px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="setup-card" id="step-1">
+        <div
+            style="width:60px; height:60px; background:var(--accent); border-radius:18px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto;">
+            <i data-lucide="sparkles" style="color:white; width:30px; height:30px;"></i>
+        </div>
+        <h1>Willkommen!</h1>
+        <p>Lass uns deinen Super-Admin Account erstellen, um L8teStudy einzurichten.</p>
+
+        <div class="input-group">
+            <label>Dein Name</label>
+            <input type="text" id="admin-name" placeholder="John Doe">
+        </div>
+        <div class="input-group">
+            <label>Passwort</label>
+            <input type="password" id="admin-pw" placeholder="Sicheres Passwort">
+        </div>
+
+        <button onclick="createAdmin()">Account erstellen</button>
+    </div>
+
+    <div class="setup-card" id="step-2" style="display:none;">
+        <div
+            style="width:60px; height:60px; background:var(--accent); border-radius:18px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto;">
+            <i data-lucide="school" style="color:white; width:30px; height:30px;"></i>
+        </div>
+        <h1>Erste Klasse</h1>
+        <p>Erstelle nun die erste Klasse (z.B. für dich selbst).</p>
+
+        <div class="input-group">
+            <label>Klassenname (z.B. BKT1)</label>
+            <input type="text" id="class-name" placeholder="Name eingeben...">
+        </div>
+
+        <button onclick="createClass()">Klasse erstellen</button>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        async function createAdmin() {
+            const username = document.getElementById('admin-name').value;
+            const password = document.getElementById('admin-pw').value;
+
+            if (!username || !password) return alert('Bitte alle Felder ausfüllen');
+
+            try {
+                // Special setup endpoint that allows unauthenticated creation IF no users exist
+                const res = await fetch('/api/setup/create-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    // Auto-login happens on backend or we just proceed
+                    document.getElementById('step-1').style.display = 'none';
+                    document.getElementById('step-2').style.display = 'block';
+                } else {
+                    alert('Fehler: ' + data.message);
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            }
+        }
+
+        async function createClass() {
+            const name = document.getElementById('class-name').value;
+            if (!name) return alert('Bitte einen Namen eingeben');
+
+            try {
+                const res = await fetch('/api/admin/classes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Login and redirect
+                    window.location.href = '/' + name + '/home';
+                } else {
+                    alert('Fehler: ' + data.message);
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            }
+        }
+    </script>
+</body>
+
+</html>

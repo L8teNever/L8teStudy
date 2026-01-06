@@ -23,7 +23,8 @@ def get_config():
     
     return jsonify({
         'chat_enabled': chat_enabled,
-        'user_id': current_user.id
+        'user_id': current_user.id,
+        'role': current_user.role
     })
 
 @login_manager.user_loader
@@ -46,9 +47,89 @@ def uploaded_file(filename):
 
 @main_bp.route('/')
 def index():
+    # Fresh Install Check
+    from .models import User
+    if not User.query.first():
+        return redirect('/setup')
+
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login_page'))
+    
+    # First time setup check (no classes)
+    from .models import SchoolClass
+    if not SchoolClass.query.first():
+         return redirect('/setup')
+         
+    # Redirect to user's class if student/admin
+    if current_user.school_class:
+        return redirect(f"/{current_user.school_class.name}/home")
+        
+    # If Super Admin and no class assigned/in context, goes to a class selection or default one?
+    # For now, grab the first class or a special dashboard
+    first_class = SchoolClass.query.first()
+    if first_class:
+        return redirect(f"/{first_class.name}/home")
+        
     return render_template('index.html', user=current_user)
+
+@main_bp.route('/setup')
+def setup():
+    # Allow if no users exist OR (logged in AND super admin AND no classes)
+    from .models import User, SchoolClass
+    has_users = User.query.first() is not None
+    
+    if not has_users:
+        return render_template('setup.html')
+        
+    if current_user.is_authenticated and current_user.is_super_admin:
+        if not SchoolClass.query.first():
+             return render_template('setup.html')
+             
+    # If we are here, setup is not allowed
+    return redirect('/')
+
+@api_bp.route('/setup/create-admin', methods=['POST'])
+def setup_create_admin():
+    from .models import User, UserRole
+    if User.query.first():
+        return jsonify({'success': False, 'message': 'Setup already completed'}), 403
+        
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Missing data'}), 400
+        
+    user = User(username=username, role=UserRole.SUPER_ADMIN, needs_password_change=False)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    
+    login_user(user)
+    return jsonify({'success': True})
+
+@main_bp.route('/<class_name>/<path:subpath>')
+def class_view(class_name, subpath):
+    if not current_user.is_authenticated:
+        return redirect(url_for('auth.login_page'))
+        
+    from .models import SchoolClass
+    # Case insensitive lookup
+    target_class = SchoolClass.query.filter(SchoolClass.name.ilike(class_name)).first()
+    
+    if not target_class:
+        # Invalid class in URL
+        return redirect('/')
+        
+    # Permission Check
+    if not current_user.is_super_admin:
+        if not current_user.school_class or current_user.school_class.id != target_class.id:
+            # Student accessing wrong class
+            return "Access Denied: You do not belong to this class.", 403
+            
+    # Inject active class context into template
+    return render_template('index.html', user=current_user, active_class=target_class)
 
 @main_bp.route('/<path:path>')
 def catch_all(path):
@@ -129,9 +210,26 @@ def login_page(class_code=None):
 def get_tasks():
     try:
         # Return tasks for the user's class
+        target_class_id = request.args.get('class_id')
         if current_user.is_super_admin:
-            # Super admin sees everything
-            tasks = Task.query.filter(Task.deleted_at.is_(None)).order_by(Task.due_date).all()
+            if target_class_id:
+                # Super admin viewing a specific class
+                from .models import SchoolClass
+                tasks = Task.query.filter(
+                    Task.deleted_at.is_(None),
+                    db.or_(
+                        Task.class_id == target_class_id,
+                         db.and_(
+                            Task.is_shared == True,
+                            Task.subject_id.in_(
+                                db.session.query(Subject.id).join(Subject.classes).filter(SchoolClass.id == target_class_id)
+                            )
+                        )
+                    )
+                ).order_by(Task.due_date).all()
+            else:
+                # Super admin sees everything (default fallback)
+                tasks = Task.query.filter(Task.deleted_at.is_(None)).order_by(Task.due_date).all()
         else:
             from .models import SchoolClass
             # Tasks for own class OR shared tasks for subjects linked to own class
@@ -160,6 +258,7 @@ def get_tasks():
                 'id': t.id,
                 'title': t.title,
                 'subject': t.subject,
+                'subject_id': t.subject_id,
                 'due_date': t.due_date.strftime('%Y-%m-%d') if t.due_date else None,
                 'description': t.description,
                 'is_done': is_done,
@@ -197,12 +296,23 @@ def create_task():
         if date_str and date_str != 'null' and date_str != 'undefined':
             due_date = datetime.strptime(date_str, '%Y-%m-%d')
             
+        target_class_id = current_user.class_id
+        # Super Admins can optionally create tasks for a specific class
+        class_id_val = data.get('class_id')
+        if current_user.is_super_admin and class_id_val:
+             if class_id_val not in ['null', 'undefined', '']:
+                target_class_id = class_id_val
+
+        sub_id_val = data.get('subject_id')
+        if sub_id_val in ['null', 'undefined', '', 'None']:
+            sub_id_val = None
+
         new_task = Task(
             user_id=current_user.id,
-            class_id=current_user.class_id,
+            class_id=target_class_id,
             title=data['title'],
             subject=data.get('subject', 'Allgemein'),
-            subject_id=data.get('subject_id'),
+            subject_id=sub_id_val,
             is_shared=data.get('is_shared', 'false').lower() == 'true',
             due_date=due_date,
             description=data.get('description', '')
@@ -268,7 +378,10 @@ def update_task(id):
             if 'description' in data:
                 task.description = data['description']
             if 'subject_id' in data:
-                task.subject_id = data['subject_id']
+                sub_id_val = data['subject_id']
+                if sub_id_val in ['null', 'undefined', '', 'None']:
+                    sub_id_val = None
+                task.subject_id = sub_id_val
             if 'is_shared' in data:
                 val = data['is_shared']
                 if isinstance(val, str): val = val.lower() == 'true'
@@ -455,8 +568,24 @@ def mark_task_chat_read(id):
 def get_events():
     try:
         # Filter events by class
+        target_class_id = request.args.get('class_id')
         if current_user.is_super_admin:
-            events = Event.query.filter(Event.deleted_at.is_(None)).order_by(Event.date).all()
+            if target_class_id:
+                 from .models import SchoolClass
+                 events = Event.query.filter(
+                    Event.deleted_at.is_(None),
+                    db.or_(
+                        Event.class_id == target_class_id,
+                        db.and_(
+                            Event.is_shared == True,
+                            Event.subject_id.in_(
+                                db.session.query(Subject.id).join(Subject.classes).filter(SchoolClass.id == target_class_id)
+                            )
+                        )
+                    )
+                ).order_by(Event.date).all()
+            else:
+                events = Event.query.filter(Event.deleted_at.is_(None)).order_by(Event.date).all()
         else:
             from .models import SchoolClass
             events = Event.query.filter(
@@ -474,6 +603,7 @@ def get_events():
         return jsonify([{
             'id': e.id,
             'title': e.title,
+            'subject_id': e.subject_id,
             'date': e.date.strftime('%Y-%m-%d'),
             'description': e.description
         } for e in events])
@@ -496,13 +626,23 @@ def create_event():
         if data.get('date'):
             event_date = datetime.strptime(data['date'], '%Y-%m-%d')
             
+        target_class_id = current_user.class_id
+        class_id_val = data.get('class_id')
+        if current_user.is_super_admin and class_id_val:
+             if class_id_val not in ['null', 'undefined', '']:
+                target_class_id = class_id_val
+
+        sub_id_val = data.get('subject_id')
+        if sub_id_val in ['null', 'undefined', '', 'None']:
+            sub_id_val = None
+
         new_event = Event(
             user_id=current_user.id,
-            class_id=current_user.class_id,
+            class_id=target_class_id,
             title=data['title'],
             date=event_date,
             description=data.get('description', ''),
-            subject_id=data.get('subject_id'),
+            subject_id=sub_id_val,
             is_shared=data.get('is_shared', False)
         )
         db.session.add(new_event)
@@ -626,13 +766,14 @@ def create_grade():
         
         # Audit Log
         from .models import AuditLog
-        target_class_id = current_user.class_id or (current_user.school_class.id if current_user.school_class else Grade.query.get(new_grade.id).author.class_id)
-        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Created grade: {new_grade.subject} {new_grade.value}")
+        log = AuditLog(user_id=current_user.id, class_id=current_user.class_id, action=f"Created grade: {new_grade.subject} {new_grade.value}")
         db.session.add(log)
         
         db.session.commit()
         return jsonify({'success': True, 'id': new_grade.id})
     except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in create_grade: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 400
 
 @api_bp.route('/grades/<int:id>', methods=['PUT'])
@@ -656,7 +797,7 @@ def update_grade(id):
             
         # Audit Log
         from .models import AuditLog
-        target_class_id = current_user.class_id or grade.author.class_id
+        target_class_id = current_user.class_id
         log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Updated grade: {grade.id}")
         db.session.add(log)
         
@@ -676,7 +817,7 @@ def delete_grade(id):
     
     # Audit Log
     from .models import AuditLog
-    target_class_id = current_user.class_id or grade.author.class_id
+    target_class_id = current_user.class_id
     log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted grade: {grade.id}")
     db.session.add(log)
     
@@ -692,11 +833,17 @@ def change_password():
     current_pw = data.get('current_password')
     new_pw = data.get('new_password')
     
-    if not current_pw or not new_pw:
+    # Validation logic depends on context
+    if not new_pw:
         return jsonify({'success': False, 'message': 'Missing data'}), 400
-        
-    if not current_user.check_password(current_pw):
-        return jsonify({'success': False, 'message': 'Aktuelles Passwort falsch'}), 400
+
+    # If the user is forced to change password (e.g. first login), we skip the current_password check
+    # as per user request to make it smoother.
+    if not current_user.needs_password_change:
+        if not current_pw:
+            return jsonify({'success': False, 'message': 'Missing data'}), 400
+        if not current_user.check_password(current_pw):
+            return jsonify({'success': False, 'message': 'Aktuelles Passwort falsch'}), 400
 
     # Complexity check
     import re
@@ -734,7 +881,7 @@ def get_users():
         users = User.query.filter_by(class_id=current_user.class_id).all()
     else:
         return jsonify({'success': False}), 403
-    return jsonify([{'id': u.id, 'username': u.username, 'is_admin': u.is_admin, 'class_name': u.school_class.name if u.school_class else 'Global'} for u in users])
+    return jsonify([{'id': u.id, 'username': u.username, 'role': u.role, 'is_admin': u.is_admin, 'class_name': u.school_class.name if u.school_class else 'Global'} for u in users])
 
 @api_bp.route('/admin/users', methods=['POST'])
 @login_required
@@ -744,17 +891,28 @@ def create_user():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    is_admin = data.get('is_admin', False)
-    
+    role = data.get('role', 'student')
+    # Legacy support
+    if 'is_admin' in data and data['is_admin']:
+        if role == 'student': role = 'admin'
+
     # Super admin can specify class_id, class admin is locked to their own class
     target_class_id = current_user.class_id
     if current_user.is_super_admin:
         target_class_id = data.get('class_id') # Can be None for global admin
+    
+    # Permission Validation
+    if role == 'super_admin' and not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Nur Super Admins können Super Admins erstellen'}), 403
+    
+    # Check if role is valid
+    if role not in ['student', 'admin', 'super_admin']:
+        return jsonify({'success': False, 'message': 'Ungültige Rolle'}), 400
 
     if User.query.filter_by(username=username, class_id=target_class_id).first():
         return jsonify({'success': False, 'message': 'User exists in this class'}), 400
         
-    new_user = User(username=username, is_admin=is_admin, class_id=target_class_id)
+    new_user = User(username=username, role=role, class_id=target_class_id)
     new_user.set_password(password)
     new_user.needs_password_change = True
     db.session.add(new_user)
@@ -930,7 +1088,13 @@ def get_subjects():
             subjects = Subject.query.order_by(Subject.name).all()
     else:
         from .models import SchoolClass
-        subjects = Subject.query.join(Subject.classes).filter(SchoolClass.id == current_user.class_id).order_by(Subject.name).all()
+        if not current_user.class_id:
+            subjects = Subject.query.filter(~Subject.classes.any()).order_by(Subject.name).all()
+        else:
+            subjects = Subject.query.filter(
+                (Subject.classes.any(id=current_user.class_id)) | 
+                (~Subject.classes.any())
+            ).order_by(Subject.name).all()
         
     if not subjects and not class_id and current_user.is_super_admin:
        defaults = ['Mathematik', 'Deutsch', 'Englisch', 'Physik', 'Biologie', 'Geschichte', 'Kunst', 'Sport', 'Chemie', 'Religion']
@@ -945,7 +1109,7 @@ def get_subjects():
 @api_bp.route('/subjects', methods=['POST'])
 @login_required
 def add_subject():
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.is_super_admin:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     data = request.json
     name = data.get('name')

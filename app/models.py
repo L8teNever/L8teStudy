@@ -27,18 +27,32 @@ class SchoolClass(db.Model):
     # Use relationship through junction table for shared subjects
     audit_logs = db.relationship('AuditLog', backref='school_class', lazy='dynamic')
 
+
+
+class UserRole:
+    STUDENT = 'student'
+    ADMIN = 'admin'
+    SUPER_ADMIN = 'super_admin'
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)  # This is now "Class Admin"
-    is_super_admin = db.Column(db.Boolean, default=False) # Access to all classes
+    role = db.Column(db.String(20), default=UserRole.STUDENT)
     class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True) # Super admins don't need a class
     dark_mode = db.Column(db.Boolean, default=False)
     language = db.Column(db.String(5), default='de')
     needs_password_change = db.Column(db.Boolean, default=True) # Forced for new users
     has_seen_tutorial = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def is_super_admin(self):
+        return self.role == UserRole.SUPER_ADMIN
+
+    @property
+    def is_admin(self):
+        return self.role in [UserRole.ADMIN, UserRole.SUPER_ADMIN]
 
     tasks = db.relationship('Task', backref='author', lazy='dynamic')
     events = db.relationship('Event', backref='author', lazy='dynamic')
@@ -82,7 +96,7 @@ class PushSubscription(db.Model):
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
     is_shared = db.Column(db.Boolean, default=False) # If true, visible to all classes linked to subject_id
     title = db.Column(db.String(128), nullable=False)
@@ -109,7 +123,7 @@ class TaskCompletion(db.Model):
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
     is_shared = db.Column(db.Boolean, default=False) 
     title = db.Column(db.String(128), nullable=False)
@@ -132,7 +146,7 @@ class Grade(db.Model):
 class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)
     action = db.Column(db.String(256), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
