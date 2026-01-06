@@ -95,7 +95,10 @@ def create_app():
         'connect-src': '\'self\'',
         'frame-ancestors': '\'none\'',  # Prevent clickjacking attacks
         'base-uri': '\'self\'',         # Restrict base tag URLs
-        'form-action': '\'self\''       # Restrict form submissions to same origin
+        'form-action': '\'self\'',      # Restrict form submissions to same origin
+        'object-src': '\'none\'',       # Block plugins like Flash
+        'media-src': '\'self\'',        # Restrict audio/video sources
+        'worker-src': '\'self\' blob:'  # Allow service workers
     }
 
     # Enable Force HTTPS in production
@@ -119,6 +122,10 @@ def create_app():
         response.headers['X-Content-Type-Options'] = 'nosniff'
         # Additional clickjacking protection
         response.headers['X-Frame-Options'] = 'DENY'
+        # Referrer Policy - don't leak referrer information
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # Permissions Policy - restrict browser features
+        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
         # Prevent caching of sensitive pages
         if request.endpoint and 'api' in request.endpoint:
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
