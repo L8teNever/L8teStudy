@@ -469,7 +469,10 @@ def get_task_chat(id):
             'file_url': m.file_url,
             'file_name': m.file_name,
             'created_at': m.created_at.isoformat(),
-            'is_own': m.user_id == current_user.id
+            'is_own': m.user_id == current_user.id,
+            'parent_id': m.parent_id,
+            'parent_user': m.parent.user.username if m.parent else None,
+            'parent_content': m.parent.content if m.parent else (m.parent.file_name if m.parent and m.parent.file_name else None)
         } for m in messages]
         return jsonify(results)
     except Exception as e:
@@ -494,8 +497,12 @@ def post_task_chat(id):
         posted_msgs = []
 
         # 1. Text Message
+        parent_id = request.form.get('parent_id')
+        if parent_id == 'null' or not parent_id:
+            parent_id = None
+            
         if content and content.strip():
-            msg = TaskMessage(task_id=id, user_id=current_user.id, content=content, message_type='text')
+            msg = TaskMessage(task_id=id, user_id=current_user.id, content=content, message_type='text', parent_id=parent_id)
             db.session.add(msg)
             posted_msgs.append(msg)
 
@@ -538,7 +545,10 @@ def post_task_chat(id):
             'file_url': m.file_url,
             'file_name': m.file_name,
             'created_at': m.created_at.isoformat(),
-            'is_own': True
+            'is_own': True,
+            'parent_id': m.parent_id,
+            'parent_user': m.parent.user.username if m.parent else None,
+            'parent_content': m.parent.content if m.parent else (m.parent.file_name if m.parent and m.parent.file_name else None)
         } for m in posted_msgs])
 
     except Exception as e:
@@ -573,6 +583,18 @@ def delete_chat_message(msg_id):
         db.session.rollback()
         current_app.logger.error(f"Error in delete_chat_message: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@api_bp.route('/class/members', methods=['GET'])
+@login_required
+def get_class_members():
+    if not current_user.class_id:
+        return jsonify([])
+    members = User.query.filter_by(class_id=current_user.class_id).all()
+    # Also include superadmins if needed? Let's stick to class members for now
+    return jsonify([{
+        'id': u.id,
+        'username': u.username
+    } for u in members])
 
 @api_bp.route('/tasks/<int:id>/read', methods=['POST'])
 @login_required

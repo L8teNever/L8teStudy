@@ -998,6 +998,146 @@
             box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
         }
 
+        /* Reply Context Styles */
+        .chat-reply-context {
+            font-size: 13px;
+            background: rgba(0, 0, 0, 0.04);
+            padding: 8px 12px;
+            border-left: 3px solid var(--accent);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .chat-reply-context {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .reply-user-name {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 12px;
+        }
+
+        .reply-content-preview {
+            color: var(--text-sec);
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Reply Preview Bar above Input */
+        .reply-preview-bar {
+            background: var(--card-bg);
+            border-top: 1px solid var(--border);
+            padding: 10px 15px;
+            display: none;
+            align-items: center;
+            gap: 15px;
+            animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .reply-preview-bar.active {
+            display: flex;
+        }
+
+        .reply-preview-info {
+            flex: 1;
+            border-left: 3px solid var(--accent);
+            padding-left: 12px;
+            overflow: hidden;
+        }
+
+        .reply-preview-user {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+
+        .reply-preview-text {
+            font-size: 14px;
+            color: var(--text-sec);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .reply-close-btn {
+            color: var(--text-sec);
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .reply-close-btn:hover {
+            opacity: 1;
+        }
+
+        /* Mentions Dropdown */
+        .mention-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 15px;
+            right: 15px;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.15);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            margin-bottom: 8px;
+        }
+
+        .mention-dropdown.active {
+            display: block;
+        }
+
+        .mention-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .mention-item:last-child {
+            border-bottom: none;
+        }
+
+        .mention-item:hover,
+        .mention-item.selected {
+            background: rgba(0, 122, 255, 0.1);
+        }
+
+        .mention-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .mention-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
         .chat-input {
             width: 100%;
             background: transparent;
@@ -1320,9 +1460,12 @@
             needs_password_change: "{{ 'true' if user.needs_password_change else 'false' }}" === 'true',
             has_seen_tutorial: "{{ 'true' if user.has_seen_tutorial else 'false' }}" === 'true',
             className: "{{ active_class.name if active_class else (user.school_class.name if user.school_class else '') }}",
-            class_id: {{ active_class.id if active_class else (user.class_id if user.class_id else 'null') }}
+            class_id: Number("{{ active_class.id if active_class else (user.class_id if user.class_id else '0') }}")
         };
         let isProcessing = false;
+        let currentReplyTo = null;
+        let classMembers = [];
+        let selectedMentionIdx = -1;
 
         function updateBrowserTitle(pageTitle) {
             const base = "L8teStudy";
@@ -1579,58 +1722,30 @@
             if (event.state && event.state.view) {
                 window.isPoppingState = true;
 
+                if (event.state.view === currentView) {
+                    // We are already on this view, just ensure sheet is closed
+                    if (sheet && sheet.classList.contains('active')) sheet.classList.remove('active');
+                    return;
+                }
+
                 if (event.state.view === 'sub_subject_details') {
                     renderSubjectDetails(event.state.subject, event.state.avg, event.state.gradesJson, false);
                     return;
                 }
-                if (event.state.view === 'sub_admin_menu') {
-                    renderAdminMenu();
-                    return;
-                }
-                if (event.state.view === 'sub_activity') {
-                    renderActivityLog(event.state.class_id, event.state.class_name);
-                    return;
-                }
-                if (event.state.view === 'sub_users') {
-                    renderUserManagement(event.state.class_id, event.state.class_name);
-                    return;
-                }
-                if (event.state.view === 'sub_password') {
-                    renderChangePassword();
-                    return;
-                }
-                if (event.state.view === 'sub_notifications') {
-                    renderNotificationSettings();
-                    return;
-                }
-                if (event.state.view === 'sub_subjects') {
-                    renderSubjectManagement(event.state.class_id, event.state.class_name);
-                    return;
-                }
-                if (event.state.view === 'sub_classes') {
-                    renderSchoolClassManagement();
-                    return;
-                }
-                if (event.state.view === 'sub_class_detail') {
-                    renderSingleClassAdmin(event.state.id, event.state.name);
-                    return;
-                }
-                if (event.state.view === 'sub_class_settings') {
-                    renderClassSettings(event.state.id);
-                    return;
-                }
-                if (event.state.view === 'sub_super_admin') {
-                    renderSuperAdminDashboard();
-                    return;
-                }
-                if (event.state.view === 'sub_shared_content') {
-                    renderSharedContentManagement();
-                    return;
-                }
+                // ... (rest of sub-views)
+                if (event.state.view === 'sub_admin_menu') { renderAdminMenu(); return; }
+                if (event.state.view === 'sub_activity') { renderActivityLog(event.state.class_id, event.state.class_name); return; }
+                if (event.state.view === 'sub_users') { renderUserManagement(event.state.class_id, event.state.class_name); return; }
+                if (event.state.view === 'sub_password') { renderChangePassword(); return; }
+                if (event.state.view === 'sub_notifications') { renderNotificationSettings(); return; }
+                if (event.state.view === 'sub_subjects') { renderSubjectManagement(event.state.class_id, event.state.class_name); return; }
+                if (event.state.view === 'sub_classes') { renderSchoolClassManagement(); return; }
+                if (event.state.view === 'sub_class_detail') { renderSingleClassAdmin(event.state.id, event.state.name); return; }
+                if (event.state.view === 'sub_class_settings') { renderClassSettings(event.state.id); return; }
+                if (event.state.view === 'sub_super_admin') { renderSuperAdminDashboard(); return; }
+                if (event.state.view === 'sub_shared_content') { renderSharedContentManagement(); return; }
 
-                // Find existing nav link for the view to pass element
                 const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
-                // Map view to title
                 let title = t('home');
                 if (event.state.view === 'tasks') title = t('tasks');
                 if (event.state.view === 'calendar') title = t('calendar');
@@ -1638,12 +1753,8 @@
                 if (event.state.view === 'settings') title = t('settings');
                 navigate(event.state.view, navLink, title);
             } else if (event.state && event.state.modal) {
-                // If it was a modal state but the sheet is not active (due to back button), 
-                // just ensure it stays closed or handle it. For now, do nothing is safest
-                // to avoid redirecting to home.
                 return;
-            } else {
-                // identifying 'home' or default
+            } else if (currentView !== 'home') {
                 window.isPoppingState = true;
                 navigate('home', document.querySelectorAll('.nav-link')[0], t('home'));
             }
@@ -1665,14 +1776,19 @@
         }
 
         // Modified closeSheet to handle history
+        let isModalClosing = false;
         function closeSheet() {
             const sheet = document.getElementById('sheet-overlay');
             if (sheet && sheet.classList.contains('active')) {
                 sheet.classList.remove('active');
+                isModalClosing = true;
 
                 // Block interaction briefly to prevent ghost clicks on mobile
                 document.body.classList.add('no-interaction');
-                setTimeout(() => document.body.classList.remove('no-interaction'), 400);
+                setTimeout(() => {
+                    document.body.classList.remove('no-interaction');
+                    isModalClosing = false;
+                }, 400);
 
                 if (window.history.state && window.history.state.modal) {
                     window.history.back();
@@ -3973,16 +4089,11 @@
 
 
         let pressTimer;
-        function handleMsgPressStart(msgId, taskId, taskTitle, isOwn) {
-            // "man soll nur seine eigenen nachrichten löschen können" 
-            // We still allow superadmin for safety/moderation if needed, or strictly own if user insisted.
-            // User said "nur seine eigenen", I will stick to that and superadmin.
-            const canManage = isOwn || window.currentUser?.is_super_admin;
-            if (!canManage) return;
-
-            // Add a visual hint?
+        function handleMsgPressStart(msgId, taskId, taskTitle, isOwn, userName, content) {
+            // User requested that long press on ANY message shows options (like reply).
+            // Deletion is still restricted.
             pressTimer = window.setTimeout(() => {
-                showMessageMenu(msgId, taskId, taskTitle, isOwn);
+                showMessageMenu(msgId, taskId, taskTitle, isOwn, userName, content);
             }, 600);
         }
 
@@ -3990,14 +4101,22 @@
             clearTimeout(pressTimer);
         }
 
-        function showMessageMenu(msgId, taskId, taskTitle, isOwn) {
+        function showMessageMenu(msgId, taskId, taskTitle, isOwn, userName, content) {
             const overlay = document.getElementById('message-menu-overlay');
             const menuContent = document.getElementById('message-menu-content');
             if (!overlay || !menuContent) return;
 
-            let html = '';
-            const canDelete = isOwn || window.currentUser?.is_super_admin;
+            const isText = content && !content.includes('<img') && !content.includes('<a');
+            const previewText = isText ? content : (content.includes('<img') ? 'Bild' : 'Datei');
 
+            let html = `
+                <div class="message-menu-item" onclick="closeMessageMenu(); replyToMessage(${msgId}, '${userName.replace(/'/g, "\\'")}', '${previewText.replace(/'/g, "\\'")}')">
+                    <i data-lucide="reply"></i>
+                    <span>${t('reply') || 'Antworten'}</span>
+                </div>
+            `;
+
+            const canDelete = isOwn || window.currentUser?.is_super_admin;
             if (canDelete) {
                 html += `
                     <div class="message-menu-item danger" onclick="closeMessageMenu(); deleteChatMessage(${msgId}, ${taskId}, '${taskTitle.replace(/'/g, "\\'")}')">
@@ -4008,13 +4127,29 @@
             }
 
             if (!html) return;
-
-            // Haptic feedback if supported
             if (window.navigator.vibrate) window.navigator.vibrate(50);
 
             menuContent.innerHTML = html;
             overlay.classList.add('active');
             lucide.createIcons();
+        }
+
+        function replyToMessage(id, user, text) {
+            currentReplyTo = { id, user, text };
+            const bar = document.querySelector('.reply-preview-bar');
+            if (bar) {
+                bar.querySelector('.reply-preview-user').innerText = user;
+                bar.querySelector('.reply-preview-text').innerText = text;
+                bar.classList.add('active');
+            }
+            const input = document.getElementById('chat-input-text');
+            if (input) input.focus();
+        }
+
+        function clearReply() {
+            currentReplyTo = null;
+            const bar = document.querySelector('.reply-preview-bar');
+            if (bar) bar.classList.remove('active');
         }
 
         function closeMessageMenu() {
@@ -4039,18 +4174,31 @@
                 }
 
                 let contentHtml = '';
-                if (m.message_type === 'text') contentHtml = m.content;
+                if (m.message_type === 'text') {
+                    // Highlight mentions
+                    contentHtml = m.content.replace(/@\w+/g, match => `<span style="color:var(--accent); font-weight:700;">${match}</span>`);
+                }
                 else if (m.message_type === 'image') contentHtml = `<img src="${m.file_url}" onclick="window.open('${m.file_url}')" style="max-width:100%; border-radius:12px; cursor:pointer;">`;
                 else contentHtml = `<a href="${m.file_url}" target="_blank" style="display:flex; align-items:center; gap:8px; color:inherit; text-decoration:none;"><div style="background:rgba(0,0,0,0.1); padding:8px; border-radius:8px;"><i data-lucide="file" style="width:18px"></i></div> <span>${m.file_name}</span></a>`;
 
-                const canManage = isMe || window.currentUser?.is_super_admin;
-                const pressHandler = canManage ? `onmousedown="handleMsgPressStart(${m.id}, ${taskId}, '${taskTitle.replace(/'/g, "\\'")}', ${isMe})" onmouseup="handleMsgPressEnd()" onmouseleave="handleMsgPressEnd()" ontouchstart="handleMsgPressStart(${m.id}, ${taskId}, '${taskTitle.replace(/'/g, "\\'")}', ${isMe})" ontouchend="handleMsgPressEnd()"` : '';
+                const pressHandler = `onmousedown="handleMsgPressStart(${m.id}, ${taskId}, '${taskTitle.replace(/'/g, "\\'")}', ${isMe}, '${m.user_name.replace(/'/g, "\\'")}', '${(m.content || '').replace(/'/g, "\\'").replace(/\n/g, " ")}')" onmouseup="handleMsgPressEnd()" onmouseleave="handleMsgPressEnd()" ontouchstart="handleMsgPressStart(${m.id}, ${taskId}, '${taskTitle.replace(/'/g, "\\'")}', ${isMe}, '${m.user_name.replace(/'/g, "\\'")}', '${(m.content || '').replace(/'/g, "\\'").replace(/\n/g, " ")}')" ontouchend="handleMsgPressEnd()"`;
+
+                let replyHtml = '';
+                if (m.parent_id) {
+                    replyHtml = `
+                        <div class="chat-reply-context" onclick="scrollToMessage(${m.parent_id})">
+                            <div class="reply-user-name">${m.parent_user}</div>
+                            <div class="reply-content-preview">${m.parent_content}</div>
+                        </div>
+                    `;
+                }
 
                 return `
                     ${dateSep}
-                    <div class="chat-bubble-row ${isMe ? 'me' : 'other'}">
+                    <div id="msg-${m.id}" class="chat-bubble-row ${isMe ? 'me' : 'other'}">
                          <div class="chat-meta" style="margin-left:8px; margin-bottom:2px; display:${isMe ? 'none' : 'block'}">${m.user_name}</div>
                         <div class="chat-bubble" ${pressHandler} style="user-select:none; -webkit-user-select:none;">
+                            ${replyHtml}
                             ${contentHtml}
                         </div>
                         <div class="chat-meta">${timeStr}</div>
@@ -4059,12 +4207,27 @@
             }).join('');
         }
 
+        function scrollToMessage(id) {
+            const el = document.getElementById(`msg-${id}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.transition = 'background 0.5s';
+                const originalBg = el.style.background;
+                el.style.background = 'rgba(0, 122, 255, 0.2)';
+                setTimeout(() => el.style.background = originalBg, 1500);
+            }
+        }
+
         async function renderTaskChat(id, title) {
             // Fetch messages
             let messages = [];
             try {
                 const res = await fetch(`/api/tasks/${id}/chat`);
                 if (res.ok) messages = await res.json();
+
+                // Fetch members for mentions
+                const mRes = await fetch('/api/class/members');
+                if (mRes.ok) classMembers = await mRes.json();
             } catch (e) { console.error(e); }
 
             // Mark as read
@@ -4095,12 +4258,21 @@
                     ${generateChatMessagesHTML(messages, id, title)}
                 </div>
 
+                <div class="reply-preview-bar">
+                    <div class="reply-preview-info">
+                        <div class="reply-preview-user">User</div>
+                        <div class="reply-preview-text">Nachricht...</div>
+                    </div>
+                    <div class="reply-close-btn" onclick="clearReply()"><i data-lucide="x" style="width:18px"></i></div>
+                </div>
+
                 <div class="chat-input-bar">
+                    <div class="mention-dropdown" id="mention-dropdown"></div>
                     <label for="chat-file-input" class="chat-attach-btn"><i data-lucide="paperclip" style="width:22px"></i></label>
                     <input type="file" id="chat-file-input" multiple style="display:none;" onchange="handleChatFiles(this)">
                     
                     <div class="chat-input-field-wrapper">
-                         <textarea id="chat-input-text" class="chat-input" rows="1" placeholder="${t('chat_input_placeholder')}" oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 100) + 'px'"></textarea>
+                         <textarea id="chat-input-text" class="chat-input" rows="1" placeholder="${t('chat_input_placeholder')}" oninput="handleChatInputMention(event); this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 100) + 'px'"></textarea>
                          <div id="chat-file-count" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:10px; background:var(--accent); color:white; padding:2px 6px; border-radius:10px; display:none;"></div>
                     </div>
                     
@@ -4159,32 +4331,92 @@
             }
         }
 
-        async function sendChatMessage(id, title) {
-            const input = document.getElementById('chat-input-text');
-            const content = input.value;
-            if ((!content || !content.trim()) && chatFiles.length === 0) return;
+        function handleChatInputMention(e) {
+            const textarea = e.target;
+            const val = textarea.value;
+            const cursor = textarea.selectionStart;
+            const textBefore = val.substring(0, cursor);
+            const atIdx = textBefore.lastIndexOf('@');
+            const dropdown = document.getElementById('mention-dropdown');
 
-            const fd = new FormData();
-            fd.append('content', content);
-            for (let f of chatFiles) fd.append('files', f);
+            if (atIdx !== -1 && (atIdx === 0 || textBefore[atIdx - 1] === ' ')) {
+                const query = textBefore.substring(atIdx + 1).toLowerCase();
+                const filtered = classMembers.filter(m => m.username.toLowerCase().includes(query)).slice(0, 5);
 
-            // Optimistic UI update could go here, but for now we wait for server
-            try {
-                const res = await fetch(`/api/tasks/${id}/chat`, { method: 'POST', body: fd });
-                if (res.ok) {
-                    chatFiles = [];
-                    // Refresh chat
-                    await renderTaskChat(id, title);
+                if (filtered.length > 0) {
+                    let html = '';
+                    filtered.forEach((m, idx) => {
+                        html += `
+                            <div class="mention-item ${idx === selectedMentionIdx ? 'selected' : ''}" onclick="selectMention('${m.username}', ${atIdx}, ${cursor})">
+                                <div class="mention-avatar">${m.username[0].toUpperCase()}</div>
+                                <div class="mention-name">${m.username}</div>
+                            </div>
+                        `;
+                    });
+                    dropdown.innerHTML = html;
+                    dropdown.classList.add('active');
+                } else {
+                    dropdown.classList.remove('active');
                 }
-            } catch (e) { alert('Senden fehlgeschlagen'); }
+            } else {
+                dropdown.classList.remove('active');
+            }
         }
 
+        function selectMention(name, start, end) {
+            const input = document.getElementById('chat-input-text');
+            const val = input.value;
+            input.value = val.substring(0, start) + '@' + name + ' ' + val.substring(end);
+            document.getElementById('mention-dropdown').classList.remove('active');
+            input.focus();
+        }
+
+        async function sendChatMessage(taskId, taskTitle) {
+            const input = document.getElementById('chat-input-text');
+            const fileInput = document.getElementById('chat-file-input');
+            const content = input.value.trim();
+            const files = fileInput ? fileInput.files : [];
+
+            if (!content && files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('content', content);
+            if (currentReplyTo) formData.append('parent_id', currentReplyTo.id);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            // Clear input early for UX
+            input.value = '';
+            input.style.height = '';
+            if (fileInput) fileInput.value = '';
+            document.getElementById('chat-file-count').style.display = 'none';
+            clearReply();
+
+            try {
+                const res = await fetch(`/api/tasks/${taskId}/chat`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.ok) {
+                    const newMsgs = await res.json();
+                    // Append local for speed or just refresh
+                    const area = document.getElementById('chat-messages-area');
+                    if (area) {
+                        const existingMsgs = window.currentChatMessages || [];
+                        window.currentChatMessages = [...existingMsgs, ...newMsgs];
+                        area.innerHTML = generateChatMessagesHTML(window.currentChatMessages, taskId, taskTitle);
+                        area.scrollTop = area.scrollHeight;
+                        lucide.createIcons();
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
 
         function handleChatFiles(el) {
-            chatFiles = Array.from(el.files);
             const badge = document.getElementById('chat-file-count');
-            if (chatFiles.length > 0) {
-                badge.innerText = chatFiles.length;
+            if (el.files && el.files.length > 0) {
+                badge.innerText = el.files.length;
                 badge.style.display = 'block';
             } else {
                 badge.style.display = 'none';
@@ -4589,8 +4821,8 @@
         });
 
         function handleSwipe(startX, startY, endX, endY, target) {
-            // Prevent if sheet is open
-            if (document.getElementById('sheet-overlay').classList.contains('active')) return;
+            // Prevent if sheet is open or just closed
+            if (document.getElementById('sheet-overlay').classList.contains('active') || isModalClosing) return;
 
             // Check scrollable
             let el = target;
@@ -4649,10 +4881,28 @@
                 if (!relevantPath) relevantPath = '/';
             }
 
+            // Initial State setup to avoid duplication
+            const viewMapping = {
+                '/home': 'home', '/': 'home',
+                '/tasks': 'tasks',
+                '/calendar': 'calendar',
+                '/grades': 'grades',
+                '/settings': 'settings',
+                '/account': 'account',
+                '/admin': 'sub_admin_menu',
+                '/superadmin': 'sub_super_admin'
+            };
+            let initialView = 'home';
+            for (let k in viewMapping) { if (relevantPath.startsWith(k)) { initialView = viewMapping[k]; break; } }
+
+            // Replace the initial null state with the correct view state
+            window.history.replaceState({ view: initialView }, '', window.location.pathname);
+            currentView = initialView; // Set core variable early
+
             if (relevantPath === '/' || relevantPath === '/home') renderHome();
-            else if (relevantPath === '/tasks') navigate('tasks', document.querySelectorAll('.nav-link')[1], t('tasks'));
-            else if (relevantPath === '/calendar') navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'));
-            else if (relevantPath === '/grades') navigate('grades', document.querySelectorAll('.nav-link')[3], t('grades'));
+            else if (relevantPath === '/tasks') renderTasks();
+            else if (relevantPath === '/calendar') renderCalendar();
+            else if (relevantPath === '/grades') renderGrades();
             else if (relevantPath === '/settings') renderSettingsPage();
             else if (relevantPath === '/settings/password') renderChangePassword();
             else if (relevantPath === '/settings/notifications') renderNotificationSettings();

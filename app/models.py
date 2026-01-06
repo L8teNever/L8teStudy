@@ -168,9 +168,11 @@ class TaskMessage(db.Model):
     file_url = db.Column(db.String(512))
     file_name = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    parent_id = db.Column(db.Integer, db.ForeignKey('task_message.id'), nullable=True)
 
     user = db.relationship('User')
     task = db.relationship('Task', backref='messages')
+    parent = db.relationship('TaskMessage', remote_side=[id], backref=db.backref('replies', lazy='dynamic'))
 
 class TaskChatRead(db.Model):
     id = db.Column(db.Integer, primary_key=True)
