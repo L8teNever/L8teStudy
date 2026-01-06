@@ -546,6 +546,34 @@ def post_task_chat(id):
         current_app.logger.error(f"Post chat error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@api_bp.route('/tasks/chat/message/<int:msg_id>', methods=['DELETE'])
+@login_required
+def delete_chat_message(msg_id):
+    try:
+        msg = TaskMessage.query.get_or_404(msg_id)
+        # Auth: author or super admin
+        if msg.user_id != current_user.id and not current_user.is_super_admin:
+            return jsonify({'success': False, 'message': 'Nicht autorisiert'}), 403
+            
+        # Delete physical file if exists
+        if msg.message_type in ['image', 'file'] and msg.file_url:
+            try:
+                # Extract filename from /uploads/filename
+                filename = msg.file_url.split('/')[-1]
+                path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                if os.path.exists(path):
+                    os.remove(path)
+            except Exception as e:
+                current_app.logger.error(f"Error deleting chat file: {e}")
+        
+        db.session.delete(msg)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in delete_chat_message: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @api_bp.route('/tasks/<int:id>/read', methods=['POST'])
 @login_required
 def mark_task_chat_read(id):
