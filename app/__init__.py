@@ -109,15 +109,16 @@ def create_app():
                     force_https=is_production,
                     strict_transport_security=is_production,
                     strict_transport_security_max_age=31536000 if is_production else 0,
-                    strict_transport_security_include_subdomains=is_production,
-                    content_type_nosniff=True,  # Prevent MIME sniffing
-                    frame_options='DENY',        # Additional clickjacking protection
-                    frame_options_allow_from=None) 
+                    strict_transport_security_include_subdomains=is_production) 
     limiter.init_app(app)
     
     # Additional Security Headers
     @app.after_request
     def set_security_headers(response):
+        # Prevent MIME sniffing
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        # Additional clickjacking protection
+        response.headers['X-Frame-Options'] = 'DENY'
         # Prevent caching of sensitive pages
         if request.endpoint and 'api' in request.endpoint:
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
