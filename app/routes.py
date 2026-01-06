@@ -185,7 +185,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('auth.login_page')) # Assuming we have a standalone login page or handle it via index
+    return redirect('/login-page', code=302)
 
 @auth_bp.route('/login-page')
 @auth_bp.route('/<class_code>/login')

@@ -68,11 +68,38 @@ def create_app():
 
     # Security Init
     csrf.init_app(app)
-    # CSP is set to None to allow inline scripts/styles for now. 
-    # Enable Force HTTPS in production, but careful in dev (Talisman defaults force_https=True).
-    # We disable force_https for local dev to avoid redirect loops if no SSL cert is present.
+    
+    # Content Security Policy (CSP)
+    # Allowing 'unsafe-inline' for now to support active inline scripts/styles in index.html
+    csp = {
+        'default-src': '\'self\'',
+        'script-src': [
+            '\'self\'',
+            '\'unsafe-inline\'',
+            '\'unsafe-eval\'',
+            'https://unpkg.com'
+        ],
+        'style-src': [
+            '\'self\'',
+            '\'unsafe-inline\''
+        ],
+        'img-src': [
+            '\'self\'',
+            'data:',
+            'blob:'
+        ],
+        'font-src': [
+            '\'self\'',
+            'data:'
+        ],
+        'connect-src': '\'self\''
+    }
+
+    # Enable Force HTTPS in production
     is_production = os.environ.get('FLASK_ENV') == 'production'
-    talisman.init_app(app, content_security_policy=None, force_https=is_production) 
+    talisman.init_app(app, 
+                    content_security_policy=csp, 
+                    force_https=is_production) 
     limiter.init_app(app)
 
     # Error Handlers for debugging
