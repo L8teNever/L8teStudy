@@ -49,9 +49,9 @@ def create_app():
     # Ensure upload directory exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # Session Configuration
+    # Session Configuration - Enhanced Security
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'  # Changed from Lax to Strict for better CSRF protection
     app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 7  # 7 days
     # Only set secure cookies in production
     is_production = os.environ.get('FLASK_ENV') == 'production'
@@ -70,7 +70,7 @@ def create_app():
     csrf.init_app(app)
     
     # Content Security Policy (CSP)
-    # Allowing 'unsafe-inline' for now to support active inline scripts/styles in index.html
+    # Optimized for security while supporting the application's needs
     csp = {
         'default-src': '\'self\'',
         'script-src': [
@@ -92,15 +92,38 @@ def create_app():
             '\'self\'',
             'data:'
         ],
-        'connect-src': '\'self\''
+        'connect-src': '\'self\'',
+        'frame-ancestors': '\'none\'',  # Prevent clickjacking attacks
+        'base-uri': '\'self\'',         # Restrict base tag URLs
+        'form-action': '\'self\''       # Restrict form submissions to same origin
     }
 
     # Enable Force HTTPS in production
     is_production = os.environ.get('FLASK_ENV') == 'production'
+    
+    # HSTS (HTTP Strict Transport Security) configuration
+    # In production: enforce HTTPS for 1 year (31536000 seconds)
+    # In development: disable to allow local HTTP testing
     talisman.init_app(app, 
                     content_security_policy=csp, 
-                    force_https=is_production) 
+                    force_https=is_production,
+                    strict_transport_security=is_production,
+                    strict_transport_security_max_age=31536000 if is_production else 0,
+                    strict_transport_security_include_subdomains=is_production,
+                    content_type_nosniff=True,  # Prevent MIME sniffing
+                    frame_options='DENY',        # Additional clickjacking protection
+                    frame_options_allow_from=None) 
     limiter.init_app(app)
+    
+    # Additional Security Headers
+    @app.after_request
+    def set_security_headers(response):
+        # Prevent caching of sensitive pages
+        if request.endpoint and 'api' in request.endpoint:
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
 
     # Error Handlers for debugging
     from flask_wtf.csrf import CSRFError
