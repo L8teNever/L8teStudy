@@ -262,7 +262,6 @@ def get_tasks():
                 'due_date': t.due_date.strftime('%Y-%m-%d') if t.due_date else None,
                 'description': t.description,
                 'is_done': is_done,
-                'is_done': is_done,
                 # Updated to use secure route /uploads/<filename>
                 'images': [{'id': img.id, 'url': f"/uploads/{img.filename}"} for img in t.images],
                 'unread_chat_count': TaskMessage.query.filter(
@@ -907,6 +906,22 @@ def change_password():
     db.session.commit()
     
     return jsonify({'success': True})
+    
+@api_bp.route('/settings/username', methods=['POST'])
+@login_required
+def update_own_username():
+    data = request.json
+    new_username = data.get('username')
+    if not new_username or len(new_username.strip()) < 3:
+        return jsonify({'success': False, 'message': 'Username too short'}), 400
+    
+    # Check if taken in class
+    if User.query.filter_by(username=new_username.strip(), class_id=current_user.class_id).first():
+        return jsonify({'success': False, 'message': 'Username already taken in your class'}), 400
+        
+    current_user.username = new_username.strip()
+    db.session.commit()
+    return jsonify({'success': True, 'new_username': current_user.username})
 
 
 
@@ -984,6 +999,38 @@ def reset_user_password(id):
         
     user.set_password(new_pw)
     user.needs_password_change = True
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/admin/users/<int:id>', methods=['PUT', 'PATCH'])
+@login_required
+def update_user(id):
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'success': False}), 403
+        
+    user = User.query.get_or_404(id)
+    
+    # Class admins can only update users in their class
+    if not current_user.is_super_admin and user.class_id != current_user.class_id:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    data = request.json
+    if 'username' in data:
+        new_name = data['username'].strip()
+        if len(new_name) < 3:
+            return jsonify({'success': False, 'message': 'Name too short'}), 400
+            
+        # Check collision
+        existing = User.query.filter_by(username=new_name, class_id=user.class_id).first()
+        if existing and existing.id != user.id:
+            return jsonify({'success': False, 'message': 'Name already taken in this class'}), 400
+            
+        user.username = new_name
+        
+    if 'role' in data and current_user.is_super_admin:
+        # Only superadmin should change roles generally, or at least be careful
+        user.role = data['role']
+        
     db.session.commit()
     return jsonify({'success': True})
 

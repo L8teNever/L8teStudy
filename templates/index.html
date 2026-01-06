@@ -2358,7 +2358,10 @@
                          <div style="width:80px; height:80px; background:var(--accent); border-radius:30px; margin:0 auto 15px auto; display:flex; align-items:center; justify-content:center; color:white; font-size:32px; font-weight:700;">
                              ${window.currentUser?.name?.charAt(0).toUpperCase() || 'U'}
                          </div>
-                         <h2 style="margin:0">${window.currentUser?.name || 'User'}</h2>
+                          <h2 style="margin:0; display:flex; align-items:center; justify-content:center; gap:10px;">
+                              ${window.currentUser?.name || 'User'}
+                              <i data-lucide="edit-3" style="width:18px; cursor:pointer; color:var(--accent);" onclick="changeOwnUsername()"></i>
+                          </h2>
                          <p class="item-sub" style="margin-top:5px;">${window.currentUser?.email || ''}</p>
                      </div>
                  </div>
@@ -3046,7 +3049,7 @@
                         </div>
                         <div style="display:flex;">
                             <div style="color:var(--accent); padding:10px; cursor:pointer;" onclick="renderSingleClassAdmin(${c.id}, '${c.name.replace(/'/g, "\\'")}')"><i data-lucide="settings" style="width:20px;"></i></div>
-                            <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteClass(${id})"><i data-lucide="trash-2" style="width:20px;"></i></div>
+                            <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteClass(${c.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>
                         </div>
                     </div>
                 `).join('');
@@ -3106,6 +3109,52 @@
             } catch (e) { alert(t('connection_error')); }
         }
 
+        async function deleteUser(id) {
+            if (!confirm(t('delete_user_confirm'))) return;
+            try {
+                const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) renderUserManagement(window.lastAdminFilterClassId, window.lastAdminFilterClassName);
+                else alert(data.message || t('error_deleting'));
+            } catch (e) { alert(t('connection_error')); }
+        }
+
+        function editUsername(id, currentName) {
+            const newName = prompt("Neuer Benutzername:", currentName);
+            if (!newName || newName === currentName) return;
+
+            fetch(`/api/admin/users/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: newName })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    if (id === window.currentUser.id) window.currentUser.name = newName; // Corrected from window.currentUserId
+                    renderUserManagement(window.lastAdminFilterClassId, window.lastAdminFilterClassName);
+                } else {
+                    alert(data.message || 'Fehler beim Ändern');
+                }
+            });
+        }
+
+        function changeOwnUsername() {
+            const newName = prompt("Dein neuer Name:", window.currentUser?.name);
+            if (!newName || newName === window.currentUser?.name) return;
+
+            fetch('/api/settings/username', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: newName })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    window.currentUser.name = newName;
+                    renderAccountHub();
+                } else {
+                    alert(data.message || 'Fehler beim Ändern');
+                }
+            });
+        }
+
         // Sub-page: User Management
         async function renderUserManagement(filterClassId = null, filterClassName = null) {
             previousView = 'sub_admin_menu'; // Logically parent is admin menu now
@@ -3145,6 +3194,7 @@
                             ${window.currentUser.is_super_admin && !filterClassId ? `<div class="item-sub">${t('class_label')}: ${u.class_name || t('global_label')}</div>` : ''}
                         </div>
                         <div style="display:flex;">
+                            <div style="color:var(--accent); padding:10px; cursor:pointer;" onclick="editUsername(${u.id}, '${u.username.replace(/'/g, "\\'")}')"><i data-lucide="edit-2" style="width:20px;"></i></div>
                             <div style="color:var(--accent); padding:10px; cursor:pointer;" onclick="resetUserPassword(${u.id})"><i data-lucide="key" style="width:20px;"></i></div>
                             ${u.id !== window.currentUserId ? `
                             <div style="color:var(--danger); padding:10px; cursor:pointer;" onclick="deleteUser(${u.id})"><i data-lucide="trash-2" style="width:20px;"></i></div>

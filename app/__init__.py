@@ -193,6 +193,18 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Schema migration (role) error: {e}")
 
+        # Schema Update: Add parent_id to task_message if missing
+        try:
+            if 'task_message' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('task_message')]
+                if 'parent_id' not in cols:
+                    app.logger.info("Migrating: Adding parent_id to task_message")
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE task_message ADD COLUMN parent_id INTEGER REFERENCES task_message(id)"))
+                        conn.commit()
+        except Exception as e:
+            app.logger.error(f"Schema migration (parent_id) error: {e}")
+
 
 
     # Initialize Scheduler
