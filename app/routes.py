@@ -446,6 +446,52 @@ def delete_task(id):
     db.session.commit()
     return jsonify({'success': True})
 
+
+@api_bp.route('/tasks/<int:id>/toggle', methods=['POST'])
+@login_required
+def toggle_task(id):
+    """Toggle task completion status for current user"""
+    try:
+        task = Task.query.get_or_404(id)
+        
+        # Check if user has access to this task
+        if task.class_id != current_user.class_id and not current_user.is_super_admin:
+            return jsonify({'success': False, 'message': 'No permission'}), 403
+        
+        from .models import TaskCompletion
+        
+        # Find or create completion record
+        completion = TaskCompletion.query.filter_by(
+            user_id=current_user.id,
+            task_id=id
+        ).first()
+        
+        if completion:
+            # Toggle existing
+            completion.is_done = not completion.is_done
+            completion.completed_at = datetime.utcnow() if completion.is_done else None
+        else:
+            # Create new completion
+            completion = TaskCompletion(
+                user_id=current_user.id,
+                task_id=id,
+                is_done=True,
+                completed_at=datetime.utcnow()
+            )
+            db.session.add(completion)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'is_done': completion.is_done
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in toggle_task: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @api_bp.route('/tasks/<int:id>/chat', methods=['GET'])
 @login_required
 def get_task_chat(id):
