@@ -2364,14 +2364,17 @@
 
         async function toggleTaskStatus(id, currentStatus, refreshHome = false) {
             try {
-                const res = await fetch(`/ api / tasks / ${id} `, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ is_done: !currentStatus })
+                // Use the specialized toggle endpoint
+                const res = await fetch(`/api/tasks/${id}/toggle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 if (res.ok) {
                     if (refreshHome) renderHome();
-                    else renderTasks(currentStatus ? 'done' : 'open');
+                    else {
+                        // After toggle, we stay on the current tab but refresh
+                        renderTasks(currentTaskTab);
+                    }
                 }
             } catch (err) { console.error(err); }
         }
@@ -2388,7 +2391,7 @@
         function getEventVisuals(title) {
             const t = title.toLowerCase();
             if (t.includes('klassenarbeit')) {
-                return { color: 'var(--danger)', icon: 'graduation-cap', bg: 'rgba(255, 59, 48, 0.1)' };
+                return { color: '#AF52DE', icon: 'graduation-cap', bg: 'rgba(175, 82, 222, 0.1)' };
             } else if (t.includes('präsentation') || t.includes('prasentation')) {
                 return { color: '#FF9500', icon: 'presentation', bg: 'rgba(255, 149, 0, 0.1)' };
             } else if (t.includes('test')) {
@@ -4407,8 +4410,21 @@
 
             let actionBtns = '';
             if (id) {
+                // Determine task status if it's a task
+                let taskDone = false;
+                if (type === 'task' && cachedTasks) {
+                    const t = cachedTasks.find(x => x.id === id);
+                    if (t) taskDone = t.is_done;
+                }
+
                 actionBtns = `
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 30px;">
+                         ${type === 'task' ? `
+                             <button class="ios-btn" style="background:${taskDone ? 'var(--text-sec)' : 'var(--accent)'}; color:white; font-weight:700; border:none;" onclick="toggleTaskStatus(${id}, ${taskDone}, false); closeSheet();">
+                                <i data-lucide="${taskDone ? 'circle' : 'check-circle'}" style="width:20px; vertical-align:middle; margin-right:8px;"></i> 
+                                ${taskDone ? t('mark_as_open') : t('mark_as_done')}
+                             </button>
+                         ` : ''}
                          ${type === 'task' && chatEnabled ? `
                             <button class="btn-chat-open" onclick="renderTaskChat(${id}, '${title.replace(/'/g, "\\'")}')">
                                 <i data-lucide="message-circle" style="width:20px; vertical-align:middle;"></i> ${t('open_chat')}
@@ -4627,6 +4643,7 @@
                     <div class="picker-options" id="subject-list">
                         <!-- Loaded dynamically -->
                     </div>
+                    ${(!id && type === 'task') ? `<div id="subject-suggestion-hint" style="font-size:11px; color:var(--accent); margin: -10px 0 10px 10px; display:none; animation: fadeIn 0.3s;">Untis Suggestion...</div>` : ''}
                 ` : ''}
                 <input type="text" id="input-title" class="ios-input" placeholder="${t('title_placeholder')}" value="${titleVal}">
                 ${type === 'task' ? `
@@ -4694,6 +4711,40 @@
                         subjectList.innerHTML = '<div style="padding:10px; color:var(--text-sec); text-align:center;">Laden fehlgeschlagen</div>';
                     });
             }
+
+            // If creating NEW TASK, try to suggest subject from Untis
+            if (!id && type === 'task') {
+                suggestUntisSubject();
+            }
+        }
+
+        async function suggestUntisSubject() {
+            try {
+                const classId = window.currentUser.class_id;
+                if (!classId) return;
+
+                const res = await fetch(`/api/untis/current-subject?class_id=${classId}`);
+                const data = await res.json();
+
+                if (data.success && data.subject) {
+                    const hintEl = document.getElementById('subject-suggestion-hint');
+                    if (hintEl) {
+                        hintEl.innerText = `${data.is_current ? 'Aktuell' : 'Zuletzt'}: ${data.subject.name} (Vorgeschlagen)`;
+                        hintEl.style.display = 'block';
+
+                        // If we have an ID, pre-select it
+                        if (data.subject.id) {
+                            selectSubject(data.subject.name, data.subject.id);
+                        } else {
+                            // Only name available (maybe not imported yet)
+                            selectedSubject = data.subject.name;
+                            selectedSubjectId = null;
+                            const display = document.getElementById('selected-subject-display');
+                            if (display) display.innerText = data.subject.name;
+                        }
+                    }
+                }
+            } catch (e) { console.error("Untis suggestion error", e); }
         }
 
         let isShared = false;
@@ -5366,7 +5417,12 @@
                     </div>
                 ` : `
                     <div class="floating-card" style="padding: 20px;">
-                        <h3 style="margin-top:0">${t('new_subject')}</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0">${t('new_subject')}</h3>
+                            <button class="ios-btn btn-sec" style="width:auto; height:32px; padding:0 12px; font-size:12px; margin:0;" onclick="importUntisSubjects(event)">
+                                <i data-lucide="download" style="width:14px; margin-right:5px;"></i> Untis Import
+                            </button>
+                        </div>
                         <div style="display:flex; gap:10px;">
                             <input type="text" id="new-subject-name" class="ios-input" placeholder="${t('subject_placeholder')}" style="margin:0;">
                             <button class="ios-btn" style="width:auto; padding:0 20px;" onclick="addSubject()">${t('add_btn')}</button>
@@ -5464,6 +5520,43 @@
                     alert(data.message || t('error_adding'));
                 }
             } catch (e) { console.error(e); alert(t('error')); }
+        }
+
+        async function importUntisSubjects(ev) {
+            const btn = ev.currentTarget;
+            const originalHtml = btn.innerHTML;
+            const classId = window.currentUser.class_id || window.lastAdminFilterClassId;
+
+            if (!classId) return alert("Klasse nicht erkannt");
+
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="spinner-icon" style="width:14px;"></i> Lade...';
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/untis/import-subjects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ class_id: classId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (window.showToast) showToast(data.message, "success");
+                    else alert(data.message);
+                    renderSubjectManagement(window.lastAdminFilterClassId);
+                } else {
+                    alert(data.message || "Fehler beim Import");
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    lucide.createIcons();
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Verbindungsfehler");
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                lucide.createIcons();
+            }
         }
 
         async function renderForcePasswordChange() {

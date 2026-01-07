@@ -469,14 +469,12 @@ def toggle_task(id):
         if completion:
             # Toggle existing
             completion.is_done = not completion.is_done
-            completion.completed_at = datetime.utcnow() if completion.is_done else None
         else:
             # Create new completion
             completion = TaskCompletion(
                 user_id=current_user.id,
                 task_id=id,
-                is_done=True,
-                completed_at=datetime.utcnow()
+                is_done=True
             )
             db.session.add(completion)
         
@@ -1715,20 +1713,25 @@ def import_subjects_from_untis():
         skipped_count = 0
         
         for subject_name in subject_names:
-            # Check if subject already exists
-            existing = Subject.query.filter_by(
-                name=subject_name,
-                class_id=class_id
+            # Check if subject already exists for this class (via relationship)
+            existing = Subject.query.filter(
+                Subject.name == subject_name,
+                Subject.classes.any(id=class_id)
             ).first()
             
             if not existing:
-                new_subject = Subject(
-                    name=subject_name,
-                    class_id=class_id,
-                    is_global=False
-                )
-                db.session.add(new_subject)
-                imported_count += 1
+                # Check if subject already exists globally/for other class
+                global_subject = Subject.query.filter_by(name=subject_name).first()
+                if global_subject:
+                    # Link existing subject to this class
+                    global_subject.classes.append(school_class)
+                    imported_count += 1
+                else:
+                    # Create new and link
+                    new_subject = Subject(name=subject_name)
+                    new_subject.classes.append(school_class)
+                    db.session.add(new_subject)
+                    imported_count += 1
             else:
                 skipped_count += 1
         
@@ -1805,8 +1808,8 @@ def get_current_subject_from_untis():
         now = datetime.now()
         current_time = now.time()
         
-        current_subject = None
-        last_subject = None
+        current_subject_name = None
+        last_subject_name = None
         last_end_time = None
         
         for period in timetable_data:
@@ -1818,22 +1821,42 @@ def get_current_subject_from_untis():
             
             # Check if currently in this period
             if period_start <= current_time <= period_end:
-                current_subject = period.subjects[0].name if period.subjects else None
+                current_subject_name = period.subjects[0].name if period.subjects else None
                 break
             
             # Track last completed period
             if period_end < current_time:
                 if last_end_time is None or period_end > last_end_time:
                     last_end_time = period_end
-                    last_subject = period.subjects[0].name if period.subjects else None
+                    last_subject_name = period.subjects[0].name if period.subjects else None
         
         # Return current subject or last subject
-        suggested_subject = current_subject or last_subject
+        suggested_name = current_subject_name or last_subject_name
+        suggested_subject_data = None
+
+        if suggested_name:
+            # Try to find the subject in our database for this class
+            subject_obj = Subject.query.filter(
+                Subject.name == suggested_name,
+                Subject.classes.any(id=class_id)
+            ).first()
+            
+            if subject_obj:
+                suggested_subject_data = {
+                    'id': subject_obj.id,
+                    'name': subject_obj.name
+                }
+            else:
+                # If not found in DB, still return name but ID is None
+                suggested_subject_data = {
+                    'id': None,
+                    'name': suggested_name
+                }
         
         return jsonify({
             'success': True,
-            'subject': suggested_subject,
-            'is_current': current_subject is not None
+            'subject': suggested_subject_data,
+            'is_current': current_subject_name is not None
         })
         
     except Exception as e:

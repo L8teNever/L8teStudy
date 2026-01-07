@@ -242,7 +242,9 @@ const translations = {
         open_chat: "Chat öffnen",
         chat_input_placeholder: "Nachricht...",
         chat_filter_all: "Alle",
-        chat_filter_media: "Medien"
+        chat_filter_media: "Medien",
+        mark_as_done: "Als erledigt markieren",
+        mark_as_open: "Als offen markieren"
     },
     en: {
         home: "Home",
@@ -487,6 +489,8 @@ const translations = {
         open_chat: "Open Chat",
         chat_input_placeholder: "Message...",
         chat_filter_all: "All",
-        chat_filter_media: "Media"
+        chat_filter_media: "Media",
+        mark_as_done: "Mark as Completed",
+        mark_as_open: "Mark as Pending"
     }
 };
