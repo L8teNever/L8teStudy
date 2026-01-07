@@ -153,7 +153,7 @@ class AuditLog(db.Model):
 
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), nullable=False)
+    name = db.Column(db.String(128), nullable=False)
     # New many-to-many relationship
     classes = db.relationship('SchoolClass', secondary=subject_classes, backref='subjects')
     

@@ -227,6 +227,29 @@
             }
         }
 
+        @keyframes taskComplete {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.02);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(0.95);
+                opacity: 0;
+                filter: blur(10px);
+            }
+        }
+
+        .task-disappearing {
+            animation: taskComplete 0.4s cubic-bezier(0.4, 0.0, 0.2, 1) forwards !important;
+            pointer-events: none;
+        }
+
         .controls-row {
             display: flex;
             align-items: center;
@@ -1583,8 +1606,9 @@
         /* Mehr Dropdown Menü (Mobile) */
         .more-menu {
             position: fixed;
-            bottom: 115px;
-            right: 20px;
+            bottom: 180px;
+            /* Over the FAB */
+            right: 25px;
             width: 200px;
             background: var(--card-bg);
             backdrop-filter: var(--glass-blur);
@@ -2399,6 +2423,15 @@
 
 
         async function toggleTaskStatus(id, currentStatus, refreshHome = false) {
+            // Find the list item to animate it disappearing
+            const taskEl = document.querySelector(`.list-item[onclick*="openTaskDetails(${id})"]`);
+
+            if (taskEl && !currentStatus) {
+                taskEl.classList.add('task-disappearing');
+                // Wait for animation to finish
+                await new Promise(r => setTimeout(r, 400));
+            }
+
             try {
                 // Use the specialized toggle endpoint
                 const res = await fetch(`/api/tasks/${id}/toggle`, {
@@ -2412,7 +2445,10 @@
                         renderTasks(currentTaskTab);
                     }
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) {
+                console.error(err);
+                if (taskEl) taskEl.classList.remove('task-disappearing');
+            }
         }
 
 
@@ -4455,12 +4491,6 @@
 
                 actionBtns = `
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 30px;">
-                         ${type === 'task' ? `
-                             <button class="ios-btn" style="background:${taskDone ? 'var(--text-sec)' : 'var(--accent)'}; color:white; font-weight:700; border:none;" onclick="toggleTaskStatus(${id}, ${taskDone}, false); closeSheet();">
-                                <i data-lucide="${taskDone ? 'circle' : 'check-circle'}" style="width:20px; vertical-align:middle; margin-right:8px;"></i> 
-                                ${taskDone ? t('mark_as_open') : t('mark_as_done')}
-                             </button>
-                         ` : ''}
                          ${type === 'task' && chatEnabled ? `
                             <button class="btn-chat-open" onclick="renderTaskChat(${id}, '${title.replace(/'/g, "\\'")}')">
                                 <i data-lucide="message-circle" style="width:20px; vertical-align:middle;"></i> ${t('open_chat')}

@@ -1689,20 +1689,23 @@ def import_subjects_from_untis():
             s.logout()
             return jsonify({'success': False, 'message': f'Klasse "{creds.untis_class_name}" nicht gefunden'}), 404
         
-        # Fetch timetable for current week to get subjects
+        # Fetch timetable for current week and NEXT week to get all subjects
         today = date.today()
         monday = today - timedelta(days=today.weekday())
-        friday = monday + timedelta(days=4)
+        # End of next week (Friday of next week + some buffer)
+        end_date = monday + timedelta(days=13) 
         
-        timetable_data = s.timetable(klasse=untis_class, start=monday, end=friday)
+        timetable_data = s.timetable(klasse=untis_class, start=monday, end=end_date)
         
         # Extract unique subjects
         subject_names = set()
         for period in timetable_data:
             if hasattr(period, 'subjects') and period.subjects:
                 for subj in period.subjects:
-                    if hasattr(subj, 'name') and subj.name:
-                        subject_names.add(subj.name)
+                    # Prefer long_name (full name) over short name
+                    full_name = getattr(subj, 'long_name', None) or getattr(subj, 'name', None)
+                    if full_name:
+                        subject_names.add(full_name)
         
         s.logout()
         
@@ -1825,14 +1828,18 @@ def get_current_subject_from_untis():
             
             # Check if currently in this period
             if period_start <= current_time <= period_end:
-                current_subject_name = period.subjects[0].name if period.subjects else None
+                if period.subjects:
+                    subj = period.subjects[0]
+                    current_subject_name = getattr(subj, 'long_name', None) or getattr(subj, 'name', None)
                 break
             
             # Track last completed period
             if period_end < current_time:
                 if last_end_time is None or period_end > last_end_time:
                     last_end_time = period_end
-                    last_subject_name = period.subjects[0].name if period.subjects else None
+                    if period.subjects:
+                        subj = period.subjects[0]
+                        last_subject_name = getattr(subj, 'long_name', None) or getattr(subj, 'name', None)
         
         # Return current subject or last subject
         suggested_name = current_subject_name or last_subject_name
