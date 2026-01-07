@@ -1539,6 +1539,53 @@
             font-size: 11px;
         }
 
+        .timetable-tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 12px;
+            padding: 5px 2px 15px 2px;
+            margin-bottom: 20px;
+            scrollbar-width: none;
+            /* Hide scrollbar Firefox */
+            -ms-overflow-style: none;
+            /* Hide scrollbar IE/Edge */
+        }
+
+        .timetable-tabs::-webkit-scrollbar {
+            display: none;
+            /* Hide scrollbar Chrome/Safari */
+        }
+
+        .timetable-tab {
+            padding: 10px 18px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-sec);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .timetable-tab.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 5px 15px rgba(0, 113, 227, 0.2);
+        }
+
+        .day-section {
+            display: none;
+            /* Hidden by default, shown when active */
+        }
+
+        .day-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
         .period-divider {
             width: 1px;
             height: 35px;
@@ -1606,8 +1653,7 @@
         /* Mehr Dropdown Menü (Mobile) */
         .more-menu {
             position: fixed;
-            bottom: 180px;
-            /* Over the FAB */
+            bottom: 115px;
             right: 25px;
             width: 200px;
             background: var(--card-bg);
@@ -1889,14 +1935,21 @@
         function toggleMoreMenu(e) {
             if (e) e.stopPropagation();
             const menu = document.getElementById('more-menu');
+            const fab = document.getElementById('main-fab');
             menu.classList.toggle('active');
 
             if (menu.classList.contains('active')) {
+                // Hide FAB when menu is open
+                if (fab) fab.style.display = 'none';
+
                 const closeHandler = () => {
                     menu.classList.remove('active');
+                    if (fab) fab.style.display = 'flex'; // Show FAB again
                     document.removeEventListener('click', closeHandler);
                 };
                 setTimeout(() => document.addEventListener('click', closeHandler), 10);
+            } else {
+                if (fab) fab.style.display = 'flex';
             }
         }
 
@@ -2426,7 +2479,12 @@
             // Find the list item to animate it disappearing
             const taskEl = document.querySelector(`.list-item[onclick*="openTaskDetails(${id})"]`);
 
-            if (taskEl && !currentStatus) {
+            // Should hide if marking as done in Home/Open tab, or marking as open in Done tab
+            const shouldHide = (currentView === 'home' && !currentStatus) ||
+                (currentView === 'tasks' && currentTaskTab === 'open' && !currentStatus) ||
+                (currentView === 'tasks' && currentTaskTab === 'done' && currentStatus);
+
+            if (taskEl && shouldHide) {
                 taskEl.classList.add('task-disappearing');
                 // Wait for animation to finish
                 await new Promise(r => setTimeout(r, 400));
@@ -2439,10 +2497,24 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 if (res.ok) {
-                    if (refreshHome) renderHome();
-                    else {
-                        // After toggle, we stay on the current tab but refresh
-                        renderTasks(currentTaskTab);
+                    // Update cache
+                    if (cachedTasks) {
+                        const t = cachedTasks.find(x => x.id === id);
+                        if (t) t.is_done = !currentStatus;
+                    }
+
+                    if (shouldHide && taskEl) {
+                        const parent = taskEl.parentElement;
+                        taskEl.remove();
+                        // If empty now, do a full render to show empty message
+                        if (parent && parent.children.length === 0) {
+                            if (refreshHome) renderHome();
+                            else renderTasks(currentTaskTab);
+                        }
+                    } else {
+                        // If we are not hiding it, we still need to update the UI to show the new status
+                        if (refreshHome) renderHome();
+                        else renderTasks(currentTaskTab);
                     }
                 }
             } catch (err) {
@@ -3313,11 +3385,20 @@
             const formatDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 
             container.innerHTML = `
-                <div class="date-selector" style="display:flex; align-items:center; justify-content:center; gap:15px; margin-bottom:30px; background:var(--card-bg); padding:10px 20px; border-radius:100px; width:fit-content; margin-left:auto; margin-right:auto; border:1px solid var(--border); backdrop-filter:var(--glass-blur);">
-                    <button class="ios-btn" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%;" onclick="changeStundenplanWeek(-1)"><i data-lucide="chevron-left" style="width:20px;"></i></button>
-                    <div style="font-weight:700; font-size:16px; color:var(--text-main); min-width:110px; text-align:center;">${formatDate(monday)} - ${formatDate(friday)}</div>
-                    <button class="ios-btn" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%;" onclick="changeStundenplanWeek(1)"><i data-lucide="chevron-right" style="width:20px;"></i></button>
+                <div class="controls-row">
+                    <div class="tab-bar" style="display:flex; align-items:center; gap:5px; padding:4px;">
+                        <button class="tab-btn" style="flex:0 0 40px; height:40px; display:flex; align-items:center; justify-content:center;" onclick="changeStundenplanWeek(-1)">
+                            <i data-lucide="chevron-left" style="width:18px;"></i>
+                        </button>
+                        <div style="flex:1; text-align:center; font-weight:700; font-size:14px; color:var(--text-main);">
+                            ${formatDate(monday)} - ${formatDate(friday)}
+                        </div>
+                        <button class="tab-btn" style="flex:0 0 40px; height:40px; display:flex; align-items:center; justify-content:center;" onclick="changeStundenplanWeek(1)">
+                            <i data-lucide="chevron-right" style="width:18px;"></i>
+                        </button>
+                    </div>
                 </div>
+                <div id="timetable-tabs-container"></div>
                 <div id="timetable-content" style="animation: fadeIn 0.3s ease;">
                     <div class="timetable-loading">
                         <i data-lucide="loader-2" class="spinner-icon" width="40" height="40"></i>
@@ -3355,10 +3436,14 @@
             renderStundenplan();
         }
 
+        let currentDayTabIdx = -1;
+
         function renderTimetableList(periods) {
             const container = document.getElementById('timetable-content');
+            const tabsContainer = document.getElementById('timetable-tabs-container');
             if (!periods || periods.length === 0) {
                 container.innerHTML = '<div class="floating-card" style="text-align:center; padding:20px; color:var(--text-sec)">Keine Stunden gefunden.</div>';
+                if (tabsContainer) tabsContainer.innerHTML = '';
                 return;
             }
 
@@ -3375,10 +3460,36 @@
                 grouped[dayName].push(p);
             });
 
+            // If first time or week changed, default to today or first available day
+            if (currentDayTabIdx === -1) {
+                const todayNum = new Date().getDay();
+                currentDayTabIdx = todayNum === 0 ? 6 : todayNum - 1; // 0=Mon...6=Sun
+            }
+
+            // Ensure selected day has something, else find first day with content
+            const availableDays = days.filter(d => grouped[d]);
+            if (availableDays.length > 0 && !grouped[days[currentDayTabIdx]]) {
+                currentDayTabIdx = days.indexOf(availableDays[0]);
+            }
+
+            // Render Tabs
+            if (tabsContainer) {
+                tabsContainer.innerHTML = `
+                    <div class="timetable-tabs">
+                        ${availableDays.map(day => `
+                            <div class="timetable-tab ${days.indexOf(day) === currentDayTabIdx ? 'active' : ''}" 
+                                 onclick="switchTimetableDay(${days.indexOf(day)})">
+                                ${day}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
             let html = '<div class="timetable-container">';
             for (const day of days) {
                 if (!grouped[day]) continue;
-                html += `<div class="day-section"><div class="day-title">${day}</div>`;
+                html += `<div class="day-section ${days.indexOf(day) === currentDayTabIdx ? 'active' : ''}" id="day-sec-${days.indexOf(day)}">`;
 
                 const dayPeriods = grouped[day];
                 const processed = new Set();
@@ -3401,7 +3512,6 @@
                             const otherStart = new Date(other.start).getTime();
                             const otherEnd = new Date(other.end).getTime();
 
-                            // Check if times overlap (substitution at same time)
                             if (other.code === "substitution" && otherStart === pStart && otherEnd === pEnd) {
                                 substitution = other;
                                 substitutionIdx = j;
@@ -3411,7 +3521,6 @@
                     }
 
                     if (substitution) {
-                        // Render side-by-side
                         processed.add(i);
                         processed.add(substitutionIdx);
 
@@ -3448,9 +3557,7 @@
                             </div>
                         `;
                     } else {
-                        // Render normally
                         processed.add(i);
-
                         const dStart = new Date(p.start);
                         const dEnd = new Date(p.end);
                         const start = dStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -3486,6 +3593,31 @@
             html += '</div>';
             container.innerHTML = html;
             lucide.createIcons();
+
+            // Scroll to current tab if possible
+            const activeTab = tabsContainer.querySelector('.timetable-tab.active');
+            if (activeTab) activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+
+        function switchTimetableDay(idx) {
+            currentDayTabIdx = idx;
+            document.querySelectorAll('.timetable-tab').forEach((t, i) => {
+                const dayName = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"][i];
+                // Note: tabs horizontal bar might have different actual indices if some days were missing
+                // but idx is the true index in days[]
+                // Let's refetch by text or just find the one that matches our index
+            });
+            // Much simpler: just re-render the tabs and sections via ID
+            const sections = document.querySelectorAll('.day-section');
+            sections.forEach(s => s.classList.remove('active'));
+            const targetSec = document.getElementById(`day-sec-${idx}`);
+            if (targetSec) targetSec.classList.add('active');
+
+            const tabs = document.querySelectorAll('.timetable-tab');
+            tabs.forEach(t => {
+                t.classList.remove('active');
+                if (t.getAttribute('onclick').includes(`(${idx})`)) t.classList.add('active');
+            });
         }
 
         // Admin Menu
