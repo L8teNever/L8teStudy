@@ -4,8 +4,9 @@ from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, Pu
 from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
 import os
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from flask import send_from_directory
+import webuntis
 from . import login_manager, limiter, csrf
 
 main_bp = Blueprint('main', __name__)
@@ -1451,3 +1452,345 @@ def delete_class(id):
     db.session.delete(c)
     db.session.commit()
     return jsonify({'success': True})
+
+# --- Untis Routes ---
+@api_bp.route('/untis/config', methods=['GET'])
+@login_required
+def get_untis_config():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    from .models import UntisCredential
+    creds = UntisCredential.query.all()
+    results = []
+    for c in creds:
+        results.append({
+            'id': c.id,
+            'class_id': c.class_id,
+            'class_name': c.school_class.name,
+            'server': c.server,
+            'school': c.school,
+            'username': c.username,
+            'untis_class_name': c.untis_class_name
+        })
+    return jsonify(results)
+
+@api_bp.route('/untis/config', methods=['POST'])
+@login_required
+def set_untis_config():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    data = request.json
+    class_id = data.get('class_id')
+    server = data.get('server')
+    school = data.get('school')
+    username = data.get('username')
+    password = data.get('password')
+    untis_class_name = data.get('untis_class_name')
+    
+    if not all([class_id, server, school, username, password, untis_class_name]):
+        return jsonify({'success': False, 'message': 'Missing data'}), 400
+        
+    from .models import UntisCredential
+    creds = UntisCredential.query.filter_by(class_id=class_id).first()
+    if not creds:
+        creds = UntisCredential(class_id=class_id)
+        db.session.add(creds)
+        
+    creds.server = server
+    creds.school = school
+    creds.username = username
+    creds.set_password(password)
+    creds.untis_class_name = untis_class_name
+    
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/untis/schedule', methods=['GET'])
+@login_required
+def get_untis_schedule():
+    target_class_id = request.args.get('class_id') or current_user.class_id
+    if not target_class_id:
+        return jsonify({'success': False, 'message': 'No class selected'}), 400
+        
+    from .models import UntisCredential
+    creds = UntisCredential.query.filter_by(class_id=target_class_id).first()
+    if not creds:
+        return jsonify({'success': False, 'message': 'Untis not configured for this class'}), 404
+        
+    try:
+        # Clean server URL (remove https:// if present)
+        server_url = creds.server.strip().replace('https://', '').replace('http://', '').split('/')[0]
+        school_name = creds.school.strip()
+        
+        print(f"DEBUG: Attempting Untis login to {server_url} for school {school_name} with user {creds.username}")
+        
+        s = webuntis.Session(
+            server=server_url,
+            username=creds.username,
+            password=creds.get_password(),
+            school=school_name,
+            useragent='L8teStudy'
+        )
+        
+        try:
+            s.login()
+        except webuntis.errors.RemoteError as e:
+            # Re-raise with more context
+            error_text = str(e)
+            if "Request ID" in error_text:
+                return jsonify({'success': False, 'message': 'Untis-Fehler: Der Server hat ungültig geantwortet. Das passiert meistens, wenn der SCHULNAME oder der SERVER falsch ist (Groß-/Kleinschreibung prüfen!)'}), 500
+            raise e
+        
+        # Find class
+        untis_class = None
+        all_klassen = s.klassen()
+        for c in all_klassen:
+            if c.name.lower() == creds.untis_class_name.lower():
+                untis_class = c
+                break
+        
+        if not untis_class:
+            s.logout()
+            # Show the first few available classes to help the user find the right name
+            avail = ", ".join([k.name for k in all_klassen[:15]])
+            return jsonify({'success': False, 'message': f'Klasse "{creds.untis_class_name}" nicht gefunden. Verfügbar sind z.B.: {avail}'}), 404
+            
+        # Target Date
+        date_param = request.args.get('date')
+        if date_param:
+            try:
+                base_date = date.fromisoformat(date_param.split('T')[0])
+            except:
+                base_date = date.today()
+        else:
+            base_date = date.today()
+
+        monday = base_date - timedelta(days=base_date.weekday())
+        friday = monday + timedelta(days=6)
+        
+        # Fetch timetable
+        # The library expects 'klasse' (German) as the keyword for classes
+        timetable_data = s.timetable(klasse=untis_class, start=monday, end=friday)
+        
+        results = []
+        for period in timetable_data:
+            results.append({
+                'id': period.id,
+                'start': period.start.isoformat(),
+                'end': period.end.isoformat(),
+                'subjects': [sub.name for sub in period.subjects],
+                'teachers': [t.name for t in period.teachers],
+                'rooms': [r.name for r in period.rooms],
+                'code': period.code,
+                'substText': getattr(period, 'substText', "")
+            })
+            
+        s.logout()
+        return jsonify({'success': True, 'timetable': results})
+        
+    except webuntis.errors.RemoteError as e:
+        return jsonify({'success': False, 'message': f'Untis Remote-Fehler: {str(e)}'}), 500
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Allgemeiner Fehler: {str(e)}'}), 500
+
+
+@api_bp.route('/untis/import-subjects', methods=['POST'])
+@login_required
+def import_subjects_from_untis():
+    """Import subjects from WebUntis timetable"""
+    try:
+        data = request.get_json()
+        class_id = data.get('class_id')
+        
+        if not class_id:
+            return jsonify({'success': False, 'message': 'Klassen-ID fehlt'}), 400
+        
+        # Check permissions
+        if not current_user.is_super_admin and current_user.class_id != class_id:
+            return jsonify({'success': False, 'message': 'Keine Berechtigung'}), 403
+        
+        # Get Untis credentials
+        creds = UntisCredential.query.filter_by(class_id=class_id).first()
+        if not creds:
+            return jsonify({'success': False, 'message': 'Keine Untis-Konfiguration gefunden'}), 404
+        
+        # Clean server URL
+        server = creds.server.replace('https://', '').replace('http://', '').strip('/')
+        
+        # Connect to WebUntis
+        s = webuntis.Session(
+            server=server,
+            school=creds.school,
+            username=creds.username,
+            password=creds.get_password(),
+            useragent='L8teStudy'
+        )
+        s.login()
+        
+        # Get all classes to find the correct one
+        klassen = s.klassen()
+        untis_class = None
+        for k in klassen:
+            if k.name == creds.untis_class_name:
+                untis_class = k
+                break
+        
+        if not untis_class:
+            s.logout()
+            return jsonify({'success': False, 'message': f'Klasse "{creds.untis_class_name}" nicht gefunden'}), 404
+        
+        # Fetch timetable for current week to get subjects
+        today = date.today()
+        monday = today - timedelta(days=today.weekday())
+        friday = monday + timedelta(days=4)
+        
+        timetable_data = s.timetable(klasse=untis_class, start=monday, end=friday)
+        
+        # Extract unique subjects
+        subject_names = set()
+        for period in timetable_data:
+            if hasattr(period, 'subjects') and period.subjects:
+                for subj in period.subjects:
+                    if hasattr(subj, 'name') and subj.name:
+                        subject_names.add(subj.name)
+        
+        s.logout()
+        
+        # Import subjects into database
+        school_class = SchoolClass.query.get(class_id)
+        if not school_class:
+            return jsonify({'success': False, 'message': 'Klasse nicht gefunden'}), 404
+        
+        imported_count = 0
+        skipped_count = 0
+        
+        for subject_name in subject_names:
+            # Check if subject already exists
+            existing = Subject.query.filter_by(
+                name=subject_name,
+                class_id=class_id
+            ).first()
+            
+            if not existing:
+                new_subject = Subject(
+                    name=subject_name,
+                    class_id=class_id,
+                    is_global=False
+                )
+                db.session.add(new_subject)
+                imported_count += 1
+            else:
+                skipped_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'imported': imported_count,
+            'skipped': skipped_count,
+            'total': len(subject_names),
+            'message': f'{imported_count} Fächer importiert, {skipped_count} bereits vorhanden'
+        })
+        
+    except webuntis.errors.RemoteError as e:
+        return jsonify({'success': False, 'message': f'Untis-Fehler: {str(e)}'}), 500
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Fehler: {str(e)}'}), 500
+
+
+@api_bp.route('/untis/current-subject', methods=['GET'])
+@login_required
+def get_current_subject_from_untis():
+    """Get the current or last subject from WebUntis timetable"""
+    try:
+        class_id = request.args.get('class_id')
+        
+        if not class_id:
+            return jsonify({'success': False, 'message': 'Klassen-ID fehlt'}), 400
+        
+        # Check permissions
+        if not current_user.is_super_admin and current_user.class_id != int(class_id):
+            return jsonify({'success': False, 'message': 'Keine Berechtigung'}), 403
+        
+        # Get Untis credentials
+        creds = UntisCredential.query.filter_by(class_id=class_id).first()
+        if not creds:
+            return jsonify({'success': False, 'subject': None})
+        
+        # Clean server URL
+        server = creds.server.replace('https://', '').replace('http://', '').strip('/')
+        
+        # Connect to WebUntis
+        s = webuntis.Session(
+            server=server,
+            school=creds.school,
+            username=creds.username,
+            password=creds.get_password(),
+            useragent='L8teStudy'
+        )
+        s.login()
+        
+        # Get class
+        klassen = s.klassen()
+        untis_class = None
+        for k in klassen:
+            if k.name == creds.untis_class_name:
+                untis_class = k
+                break
+        
+        if not untis_class:
+            s.logout()
+            return jsonify({'success': False, 'subject': None})
+        
+        # Get today's timetable
+        today = date.today()
+        timetable_data = s.timetable(klasse=untis_class, start=today, end=today)
+        
+        s.logout()
+        
+        # Find current or last period
+        from datetime import datetime
+        now = datetime.now()
+        current_time = now.time()
+        
+        current_subject = None
+        last_subject = None
+        last_end_time = None
+        
+        for period in timetable_data:
+            if not hasattr(period, 'subjects') or not period.subjects:
+                continue
+            
+            period_start = period.start.time() if hasattr(period.start, 'time') else period.start
+            period_end = period.end.time() if hasattr(period.end, 'time') else period.end
+            
+            # Check if currently in this period
+            if period_start <= current_time <= period_end:
+                current_subject = period.subjects[0].name if period.subjects else None
+                break
+            
+            # Track last completed period
+            if period_end < current_time:
+                if last_end_time is None or period_end > last_end_time:
+                    last_end_time = period_end
+                    last_subject = period.subjects[0].name if period.subjects else None
+        
+        # Return current subject or last subject
+        suggested_subject = current_subject or last_subject
+        
+        return jsonify({
+            'success': True,
+            'subject': suggested_subject,
+            'is_current': current_subject is not None
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'subject': None})

@@ -29,11 +29,11 @@ def migrate_database():
                 if table_name in inspector.get_table_names():
                     columns = [col['name'] for col in inspector.get_columns(table_name)]
                     if column_name not in columns:
-                        print(f"⚠ Column '{column_name}' missing in '{table_name}' table. Adding it...")
+                        print(f"Column '{column_name}' missing in '{table_name}' table. Adding it...")
                         with db.engine.connect() as conn:
                             conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"))
                             conn.commit()
-                        print(f"✓ Column '{column_name}' added successfully to '{table_name}'.")
+                        print(f"Column '{column_name}' added successfully to '{table_name}'.")
                         return True
                 return False
 

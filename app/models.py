@@ -180,3 +180,34 @@ class TaskChatRead(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
     last_read_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+from cryptography.fernet import Fernet
+from flask import current_app
+
+class UntisCredential(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False, unique=True)
+    server = db.Column(db.String(256), nullable=False)
+    school = db.Column(db.String(128), nullable=False)
+    username = db.Column(db.String(128), nullable=False)
+    password = db.Column(db.String(512), nullable=False) # Increased size for encrypted data
+    untis_class_name = db.Column(db.String(64), nullable=False)
+
+    school_class = db.relationship('SchoolClass', backref=db.backref('untis_credentials', uselist=False))
+
+    def set_password(self, password_text):
+        if not password_text:
+            return
+        f = Fernet(current_app.config['UNTIS_FERNET_KEY'])
+        self.password = f.encrypt(password_text.encode()).decode()
+
+    def get_password(self):
+        if not self.password:
+            return ""
+        try:
+            f = Fernet(current_app.config['UNTIS_FERNET_KEY'])
+            return f.decrypt(self.password.encode()).decode()
+        except Exception:
+            # Fallback for old plain text passwords if decryption fails
+            # This is only useful during transition.
+            return self.password

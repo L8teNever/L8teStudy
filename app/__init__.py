@@ -29,6 +29,16 @@ def create_app():
     
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-prod')
+    
+    # Fernet Key for Untis Password Encryption
+    # Must be 32 bytes base64 encoded
+    untis_key = os.environ.get('UNTIS_FERNET_KEY')
+    if not untis_key:
+        # Fallback for dev: derive from SECRET_KEY
+        import base64, hashlib
+        untis_key = base64.urlsafe_b64encode(hashlib.sha256(app.config['SECRET_KEY'].encode()).digest())
+    app.config['UNTIS_FERNET_KEY'] = untis_key
+
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///l8testudy.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     # app.root_path points to 'app/', but static is in '../static' relative to it. 
@@ -92,7 +102,10 @@ def create_app():
             '\'self\'',
             'data:'
         ],
-        'connect-src': '\'self\'',
+        'connect-src': [
+            '\'self\'',
+            'https://unpkg.com'
+        ],
         'frame-ancestors': '\'none\'',  # Prevent clickjacking attacks
         'base-uri': '\'self\'',         # Restrict base tag URLs
         'form-action': '\'self\'',      # Restrict form submissions to same origin

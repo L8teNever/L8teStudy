@@ -11,3 +11,5 @@ flask-talisman
 flask-limiter
 flask-migrate
 tzdata
+webuntis
+cryptography

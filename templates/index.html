@@ -1447,6 +1447,206 @@
                 }
             }
         }
+
+        /* Timetable Styles */
+        .timetable-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .day-section {
+            margin-bottom: 25px;
+        }
+
+        .day-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-sec);
+            margin-bottom: 15px;
+            padding-left: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .period-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .period-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .period-card.cancelled {
+            opacity: 0.5;
+            background: rgba(255, 59, 48, 0.03);
+            border-color: rgba(255, 59, 48, 0.1);
+        }
+
+        .period-card.substitution {
+            border-left: 4px solid #34c759;
+        }
+
+        .period-time {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 65px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .period-time .start {
+            color: var(--text-main);
+        }
+
+        .period-time .end {
+            color: var(--text-sec);
+            font-size: 11px;
+        }
+
+        .period-divider {
+            width: 1px;
+            height: 35px;
+            background: var(--border);
+        }
+
+        .period-info {
+            flex: 1;
+        }
+
+        .period-subject {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+
+        .period-details {
+            font-size: 12px;
+            color: var(--text-sec);
+            display: flex;
+            gap: 12px;
+        }
+
+        .period-room {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .status-badge {
+            font-size: 9px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+        }
+
+        .status-badge.cancelled {
+            background: var(--danger);
+            color: white;
+        }
+
+        .status-badge.substitution {
+            background: #34c759;
+            color: white;
+        }
+
+        .timetable-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 50px 20px;
+            color: var(--text-sec);
+            gap: 15px;
+        }
+
+        .timetable-loading .spinner-icon {
+            animation: spin 1s linear infinite;
+            color: var(--accent);
+        }
+
+        /* Mehr Dropdown Menü (Mobile) */
+        .more-menu {
+            position: fixed;
+            bottom: 115px;
+            right: 20px;
+            width: 200px;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            padding: 10px;
+            display: none;
+            flex-direction: column;
+            z-index: 1001;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .more-menu.active {
+            display: flex;
+        }
+
+        .more-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            border-radius: 16px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .more-menu-item:active {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        [data-theme="dark"] .more-menu-item:active {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .more-menu-item i {
+            width: 20px;
+            color: var(--accent);
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px) scale(0.92);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .more-menu {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 
@@ -1460,6 +1660,8 @@
                     data-lucide="check-circle-2"></i><span>Aufgaben</span></a>
             <a class="nav-link" onclick="navigate('calendar', this, 'Plan')"><i
                     data-lucide="calendar-days"></i><span>Plan</span></a>
+            <a class="nav-link" onclick="navigate('stundenplan', this, 'Stundenplan')"><i
+                    data-lucide="clock-4"></i><span>Stundenplan</span></a>
             <a class="nav-link" onclick="navigate('grades', this, 'Noten')"><i
                     data-lucide="bar-chart-3"></i><span>Noten</span></a>
         </div>
@@ -1480,15 +1682,26 @@
 
     <button class="fab" id="main-fab" onclick="openCreateMenu()"><i data-lucide="plus"></i></button>
 
+    <!-- MEHR DROPDOWN (Nur Mobil - Enthält nur Noten & Stundenplan) -->
+    <div id="more-menu" class="more-menu">
+        <div class="more-menu-item" onclick="navigate('stundenplan', null, 'Stundenplan'); toggleMoreMenu()">
+            <i data-lucide="clock-4"></i><span>Stundenplan</span>
+        </div>
+        <div class="more-menu-item" onclick="navigate('grades', null, 'Noten'); toggleMoreMenu()">
+            <i data-lucide="bar-chart-3"></i><span>Noten</span>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV (Nur Mobil - Max 4 Icons) -->
     <nav class="bottom-nav">
-        <a class="nav-link active" onclick="navigate('home', this, 'Home')"><i
+        <a class="nav-link active" id="nav-home" onclick="navigate('home', this, 'Home')"><i
                 data-lucide="house"></i><span>Home</span></a>
-        <a class="nav-link" onclick="navigate('tasks', this, 'Aufgaben')"><i
+        <a class="nav-link" id="nav-tasks" onclick="navigate('tasks', this, 'Aufgaben')"><i
                 data-lucide="check-circle-2"></i><span>Aufgaben</span></a>
-        <a class="nav-link" onclick="navigate('calendar', this, 'Plan')"><i
+        <a class="nav-link" id="nav-calendar" onclick="navigate('calendar', this, 'Plan')"><i
                 data-lucide="calendar-days"></i><span>Plan</span></a>
-        <a class="nav-link" onclick="navigate('grades', this, 'Noten')"><i
-                data-lucide="bar-chart-3"></i><span>Noten</span></a>
+        <a class="nav-link" id="nav-more" onclick="toggleMoreMenu(event)"><i
+                data-lucide="more-horizontal"></i><span>Mehr</span></a>
     </nav>
 
     <div id="sheet-overlay" class="sheet-overlay" onclick="closeSheet()">
@@ -1586,25 +1799,27 @@
         function updateAppLanguage() {
             // Update Bottom Navigation
             const bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-link span');
-            if (bottomNavLinks.length >= 4) {
+            if (bottomNavLinks.length >= 5) {
                 bottomNavLinks[0].innerText = t('home');
                 bottomNavLinks[1].innerText = t('tasks');
                 bottomNavLinks[2].innerText = t('calendar');
-                bottomNavLinks[3].innerText = t('grades');
+                bottomNavLinks[3].innerText = t('timetable');
+                bottomNavLinks[4].innerText = t('grades');
             }
             // Update Side Navigation
             const sideNavLinks = document.querySelectorAll('.side-nav .nav-link span');
-            if (sideNavLinks.length >= 4) {
+            if (sideNavLinks.length >= 5) {
                 sideNavLinks[0].innerText = t('home');
                 sideNavLinks[1].innerText = t('tasks');
                 sideNavLinks[2].innerText = t('calendar');
-                sideNavLinks[3].innerText = t('grades');
-                if (sideNavLinks.length > 4) sideNavLinks[4].innerText = t('account');
+                sideNavLinks[3].innerText = t('timetable');
+                sideNavLinks[4].innerText = t('grades');
+                if (sideNavLinks.length > 5) sideNavLinks[5].innerText = t('account');
             }
 
             // Update Header if on main view
             const titles = {
-                home: 'home', tasks: 'tasks', calendar: 'calendar', grades: 'grades',
+                home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
                 account: 'account', settings: 'settings', sub_admin: 'admin'
             };
             if (titles[currentView]) {
@@ -1647,11 +1862,25 @@
             navigate(previousView, document.querySelector(`.nav-link[onclick*="'${previousView}'"]`) || document.querySelectorAll('.nav-link')[0], previousView.charAt(0).toUpperCase() + previousView.slice(1));
         }
 
+        function toggleMoreMenu(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('more-menu');
+            menu.classList.toggle('active');
+
+            if (menu.classList.contains('active')) {
+                const closeHandler = () => {
+                    menu.classList.remove('active');
+                    document.removeEventListener('click', closeHandler);
+                };
+                setTimeout(() => document.addEventListener('click', closeHandler), 10);
+            }
+        }
+
         function navigate(view, el, title) {
             if (view === currentView) return;
 
             // Determine Animation Direction
-            const views = ['home', 'tasks', 'calendar', 'grades'];
+            const views = ['home', 'tasks', 'calendar', 'stundenplan', 'grades'];
             const oldIdx = views.indexOf(currentView);
             const newIdx = views.indexOf(view);
 
@@ -1682,7 +1911,7 @@
 
                 // Set Header Title using translation
                 const titleKeys = {
-                    home: 'home', tasks: 'tasks', calendar: 'calendar', grades: 'grades',
+                    home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
                     settings: 'settings', account: 'account'
                 };
                 const translatedTitle = titleKeys[view] ? t(titleKeys[view]) : (view.charAt(0).toUpperCase() + view.slice(1));
@@ -1700,6 +1929,7 @@
                     home: '/home',
                     tasks: '/tasks',
                     calendar: '/calendar',
+                    stundenplan: '/stundenplan',
                     grades: '/grades',
                     settings: '/settings',
                     account: '/account',
@@ -1727,6 +1957,7 @@
                 // Render
                 if (view === 'tasks') renderTasks();
                 else if (view === 'calendar') renderCalendar();
+                else if (view === 'stundenplan') renderStundenplan();
                 else if (view === 'home') renderHome();
                 else if (view === 'grades') renderGrades();
                 else if (view === 'settings') renderSettingsPage();
@@ -1734,8 +1965,15 @@
                 else if (view === 'sub_admin') renderAdminContent();
 
                 const fab = document.getElementById('main-fab');
-                if (view !== 'home' && view !== 'settings' && view !== 'account' && !view.startsWith('sub_')) fab.classList.add('visible');
+                if (view !== 'home' && view !== 'settings' && view !== 'account' && view !== 'stundenplan' && !view.startsWith('sub_')) fab.classList.add('visible');
                 else fab.classList.remove('visible');
+
+                // Mark "Mehr" button as active if on stundenplan or grades (mobile only)
+                const moreBtn = document.getElementById('nav-more');
+                if (moreBtn && ['stundenplan', 'grades'].includes(view)) {
+                    moreBtn.classList.add('active');
+                }
+
                 lucide.createIcons();
                 closeSheet();
 
@@ -1801,6 +2039,7 @@
                 if (event.state.view === 'sub_activity') { renderActivityLog(event.state.class_id, event.state.class_name); return; }
                 if (event.state.view === 'sub_users') { renderUserManagement(event.state.class_id, event.state.class_name); return; }
                 if (event.state.view === 'sub_password') { renderChangePassword(); return; }
+                if (event.state.view === 'stundenplan') { renderStundenplan(); return; }
                 if (event.state.view === 'sub_notifications') { renderNotificationSettings(); return; }
                 if (event.state.view === 'sub_subjects') { renderSubjectManagement(event.state.class_id, event.state.class_name); return; }
                 if (event.state.view === 'sub_classes') { renderSchoolClassManagement(); return; }
@@ -1813,6 +2052,7 @@
                 let title = t('home');
                 if (event.state.view === 'tasks') title = t('tasks');
                 if (event.state.view === 'calendar') title = t('calendar');
+                if (event.state.view === 'stundenplan') title = t('timetable');
                 if (event.state.view === 'grades') title = t('grades');
                 if (event.state.view === 'settings') title = t('settings');
                 navigate(event.state.view, navLink, title);
@@ -2976,6 +3216,203 @@
             `;
         }
 
+        let currentTimetableDate = new Date();
+        // Set to Monday of current week
+        function initTimetableDate() {
+            currentTimetableDate = new Date();
+            const day = currentTimetableDate.getDay();
+            const diff = currentTimetableDate.getDate() - day + (day === 0 ? -6 : 1);
+            currentTimetableDate.setDate(diff);
+        }
+        initTimetableDate();
+
+        async function renderStundenplan() {
+            setPageTitle(t('timetable'));
+            const container = document.getElementById('app-container');
+
+            // Format dates for display
+            const monday = new Date(currentTimetableDate);
+            const friday = new Date(currentTimetableDate);
+            friday.setDate(monday.getDate() + 4);
+
+            const formatDate = (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+
+            container.innerHTML = `
+                <div class="date-selector" style="display:flex; align-items:center; justify-content:center; gap:15px; margin-bottom:30px; background:var(--card-bg); padding:10px 20px; border-radius:100px; width:fit-content; margin-left:auto; margin-right:auto; border:1px solid var(--border); backdrop-filter:var(--glass-blur);">
+                    <button class="ios-btn" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%;" onclick="changeStundenplanWeek(-1)"><i data-lucide="chevron-left" style="width:20px;"></i></button>
+                    <div style="font-weight:700; font-size:16px; color:var(--text-main); min-width:110px; text-align:center;">${formatDate(monday)} - ${formatDate(friday)}</div>
+                    <button class="ios-btn" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%;" onclick="changeStundenplanWeek(1)"><i data-lucide="chevron-right" style="width:20px;"></i></button>
+                </div>
+                <div id="timetable-content" style="animation: fadeIn 0.3s ease;">
+                    <div class="timetable-loading">
+                        <i data-lucide="loader-2" class="spinner-icon" width="40" height="40"></i>
+                        <p>${t('loading')}</p>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+
+            try {
+                const classId = window.currentUser.class_id;
+                const dateStr = monday.toISOString().split('T')[0];
+                const res = await fetch(`/api/untis/schedule?class_id=${classId}&date=${dateStr}`);
+                const data = await res.json();
+
+                if (!data.success) {
+                    document.getElementById('timetable-content').innerHTML = `
+                        <div class="floating-card" style="text-align:center; padding:30px; color:var(--text-sec)">
+                            <i data-lucide="info" width="40" height="40" style="margin-bottom:10px;"></i>
+                            <p>${data.message || 'Kein Stundenplan gefunden.'}</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
+
+                renderTimetableList(data.timetable);
+            } catch (e) {
+                document.getElementById('timetable-content').innerHTML = `<p style="text-align:center; color:var(--danger)">Fehler beim Laden.</p>`;
+            }
+        }
+
+        async function changeStundenplanWeek(weeks) {
+            currentTimetableDate.setDate(currentTimetableDate.getDate() + (weeks * 7));
+            renderStundenplan();
+        }
+
+        function renderTimetableList(periods) {
+            const container = document.getElementById('timetable-content');
+            if (!periods || periods.length === 0) {
+                container.innerHTML = '<div class="floating-card" style="text-align:center; padding:20px; color:var(--text-sec)">Keine Stunden gefunden.</div>';
+                return;
+            }
+
+            const days = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+            const grouped = {};
+            periods.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            periods.forEach(p => {
+                const d = new Date(p.start);
+                const dayNum = d.getDay();
+                const dayIdx = dayNum === 0 ? 6 : dayNum - 1;
+                const dayName = days[dayIdx];
+                if (!grouped[dayName]) grouped[dayName] = [];
+                grouped[dayName].push(p);
+            });
+
+            let html = '<div class="timetable-container">';
+            for (const day of days) {
+                if (!grouped[day]) continue;
+                html += `<div class="day-section"><div class="day-title">${day}</div>`;
+
+                const dayPeriods = grouped[day];
+                const processed = new Set();
+
+                for (let i = 0; i < dayPeriods.length; i++) {
+                    if (processed.has(i)) continue;
+
+                    const p = dayPeriods[i];
+                    const pStart = new Date(p.start).getTime();
+                    const pEnd = new Date(p.end).getTime();
+
+                    // Check if this is cancelled and find substitution at same time
+                    let substitution = null;
+                    let substitutionIdx = -1;
+
+                    if (p.code === "cancelled") {
+                        for (let j = 0; j < dayPeriods.length; j++) {
+                            if (j === i || processed.has(j)) continue;
+                            const other = dayPeriods[j];
+                            const otherStart = new Date(other.start).getTime();
+                            const otherEnd = new Date(other.end).getTime();
+
+                            // Check if times overlap (substitution at same time)
+                            if (other.code === "substitution" && otherStart === pStart && otherEnd === pEnd) {
+                                substitution = other;
+                                substitutionIdx = j;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (substitution) {
+                        // Render side-by-side
+                        processed.add(i);
+                        processed.add(substitutionIdx);
+
+                        const start = new Date(p.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const end = new Date(p.end).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                        html += `
+                            <div class="period-card" style="padding: 15px; margin-bottom: 12px;">
+                                <div class="period-time" style="min-width: 65px;">
+                                    <span class="start">${start}</span>
+                                    <span class="end">${end}</span>
+                                </div>
+                                <div class="period-divider"></div>
+                                <div style="flex: 1; display: flex; gap: 15px; align-items: stretch;">
+                                    <div style="flex: 1; position: relative; padding: 10px; background: rgba(255, 59, 48, 0.05); border-radius: 12px; border: 1px dashed rgba(255, 59, 48, 0.2);">
+                                        <div class="status-badge cancelled" style="top: 5px; right: 5px;">Entfällt</div>
+                                        <div class="period-subject" style="opacity: 0.6; text-decoration: line-through;">${p.subjects.join(', ') || 'Pause'}</div>
+                                        <div class="period-details" style="opacity: 0.5;">
+                                            <span class="period-room">${p.rooms.join(', ') || '-'}</span>
+                                            <span class="period-teacher">${p.teachers.join(', ') || ''}</span>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; color: var(--text-sec); font-size: 20px; font-weight: 700;">→</div>
+                                    <div style="flex: 1; position: relative; padding: 10px; background: rgba(52, 199, 89, 0.05); border-radius: 12px; border: 1px solid rgba(52, 199, 89, 0.2);">
+                                        <div class="status-badge substitution" style="top: 5px; right: 5px;">Vertretung</div>
+                                        <div class="period-subject">${substitution.subjects.join(', ') || 'Pause'}</div>
+                                        <div class="period-details">
+                                            <span class="period-room">${substitution.rooms.join(', ') || '-'}</span>
+                                            <span class="period-teacher">${substitution.teachers.join(', ') || ''}</span>
+                                        </div>
+                                        ${substitution.substText ? `<div style="font-size:10px; color: #34c759; margin-top:4px; font-weight: 600;">${substitution.substText}</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Render normally
+                        processed.add(i);
+
+                        const dStart = new Date(p.start);
+                        const dEnd = new Date(p.end);
+                        const start = dStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const end = dEnd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                        let statusClass = "";
+                        let statusLabel = "";
+                        if (p.code === "cancelled") { statusClass = "cancelled"; statusLabel = "Entfällt"; }
+                        else if (p.code === "substitution") { statusClass = "substitution"; statusLabel = "Vertretung"; }
+
+                        html += `
+                            <div class="period-card ${statusClass}">
+                                ${statusLabel ? `<div class="status-badge ${statusClass}">${statusLabel}</div>` : ''}
+                                <div class="period-time">
+                                    <span class="start">${start}</span>
+                                    <span class="end">${end}</span>
+                                </div>
+                                <div class="period-divider"></div>
+                                <div class="period-info">
+                                    <div class="period-subject">${p.subjects.join(', ') || 'Pause'}</div>
+                                    <div class="period-details">
+                                        <span class="period-room">${p.rooms.join(', ') || '-'}</span>
+                                        <span class="period-teacher">${p.teachers.join(', ') || ''}</span>
+                                    </div>
+                                    ${p.substText ? `<div style="font-size:10px; color:var(--danger); margin-top:4px;">${p.substText}</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
         // Admin Menu
         function renderAdminMenu() {
             previousView = 'settings';
@@ -3015,6 +3452,11 @@
                         <div class="account-item-text">Chat Einstellungen</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    <div class="account-item" onclick="renderUntisConfig()">
+                        <div class="account-item-icon" style="background:#5AC8FA; color:white;"><i data-lucide="clock"></i></div>
+                        <div class="account-item-text">Untis Konfiguration</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
                     ` : ''}
                     ${window.currentUser.class_id ? `
                     <div class="account-item" onclick="renderClassSettings(${window.currentUser.class_id})">
@@ -3039,6 +3481,119 @@
                 ` : ''}
             `;
             lucide.createIcons();
+        }
+
+        async function renderUntisConfig() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_untis_config';
+            setPageTitle('Untis Konfiguration');
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                let url = '/admin/untis';
+                if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
+                window.history.pushState({ view: 'sub_untis_config' }, '', url);
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+
+            const class_id = window.currentUser.class_id;
+            if (!class_id && !window.currentUser.is_super_admin) return alert("Fehlende Berechtigung");
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
+
+            try {
+                // Fetch existing config
+                const res = await fetch('/api/untis/config');
+                const configs = await res.json();
+                const myConfig = configs.find(c => c.class_id == class_id) || {};
+
+                document.getElementById('app-container').innerHTML = `
+                    <div class="floating-card" style="padding: 24px;">
+                        <div id="untis-error-msg" style="color:var(--danger); background:rgba(255,59,48,0.1); padding:10px; border-radius:8px; margin-bottom:15px; font-size:14px; display:none;"></div>
+                        
+                        <div style="background: rgba(0, 113, 227, 0.1); padding: 12px; border-radius: 10px; margin-bottom: 20px; font-size: 13px; color: var(--accent);">
+                            <p style="margin: 0;"><strong>Tipp:</strong> Den <b>Schulnamen</b> findest du in deiner WebUntis-URL hinter <code>?school=...</code>. Er muss exakt so eingegeben werden.</p>
+                        </div>
+
+                        <label style="font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 5px; display: block;">WEBUNTIS SERVER (URL)</label>
+                        <input type="text" id="untis-server-id" class="ios-input" placeholder="e.g. neilo.webuntis.com" value="${myConfig.server || ''}">
+
+                        <label style="font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 5px; display: block;">SCHULNAME</label>
+                        <input type="text" id="untis-school-id" class="ios-input" placeholder="e.g. htbl-vbg" value="${myConfig.school || ''}">
+
+                        <label style="font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 5px; display: block;">BENUTZERNAME</label>
+                        <input type="text" id="untis-user-id" class="ios-input" placeholder="Untis Benutzername" value="${myConfig.username || ''}">
+
+                        <label style="font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 5px; display: block;">PASSWORT</label>
+                        <input type="password" id="untis-pass-id" class="ios-input" placeholder="Untis Passwort">
+
+                        <label style="font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 5px; display: block;">KLASSENNAME IN UNTIS</label>
+                        <input type="text" id="untis-class-id" class="ios-input" placeholder="e.g. 5AHIT" value="${myConfig.untis_class_name || ''}">
+
+                        <button class="ios-btn" onclick="saveUntisConfigAdmin(event, ${class_id})">
+                            Konfiguration Speichern
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">Fehler beim Laden der Konfiguration.</div>`;
+            }
+        }
+
+        async function saveUntisConfigAdmin(ev, classId) {
+            const btn = ev.currentTarget || ev.target;
+            const originalText = btn.innerText;
+            const server = document.getElementById('untis-server-id').value;
+            const school = document.getElementById('untis-school-id').value;
+            const user = document.getElementById('untis-user-id').value;
+            const pass = document.getElementById('untis-pass-id').value;
+            const className = document.getElementById('untis-class-id').value;
+            const errorMsg = document.getElementById('untis-error-msg');
+
+            if (!server || !school || !user || !pass || !className) {
+                errorMsg.innerText = "Alle Felder müssen ausgefüllt sein.";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="spinner-icon" style="width:18px; margin-right:8px;"></i> Speichern...';
+            lucide.createIcons();
+            errorMsg.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/untis/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        class_id: classId,
+                        server,
+                        school,
+                        username: user,
+                        password: pass,
+                        untis_class_name: className
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (window.showToast) showToast("Konfiguration gespeichert", "success");
+                    else alert("Konfiguration gespeichert!");
+                    window.history.back();
+                } else {
+                    errorMsg.innerText = data.message;
+                    errorMsg.style.display = 'block';
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
+            } catch (e) {
+                errorMsg.innerText = "Fehler beim Speichern.";
+                errorMsg.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
         }
 
         async function renderActivityLog(filterClassId = null, filterClassName = null) {
@@ -4326,8 +4881,11 @@
             const isText = content && !content.includes('<img') && !content.includes('<a');
             const previewText = isText ? content : (content.includes('<img') ? 'Bild' : 'Datei');
 
+            const cleanPreviewText = previewText.replace(/'/g, "\\'").replace(/\n/g, " ");
+            const cleanUserName = userName.replace(/'/g, "\\'").replace(/\n/g, " ");
+
             let html = `
-                <div class="message-menu-item" onclick="closeMessageMenu(); replyToMessage(${msgId}, '${userName.replace(/'/g, "\\'")}', '${previewText.replace(/'/g, "\\'")}')">
+                <div class="message-menu-item" onclick="closeMessageMenu(); replyToMessage(${msgId}, '${cleanUserName}', '${cleanPreviewText}')">
                     <i data-lucide="reply"></i>
                     <span>${t('reply') || 'Antworten'}</span>
                 </div>
@@ -5063,8 +5621,8 @@
 
             // Check horizontal dominance and threshold
             if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
-                const views = ['home', 'tasks', 'calendar', 'grades'];
-                const titles = [t('home'), t('tasks'), t('calendar'), t('grades')];
+                const views = ['home', 'tasks', 'calendar', 'stundenplan', 'grades'];
+                const titles = [t('home'), t('tasks'), t('calendar'), t('timetable'), t('grades')];
                 const idx = views.indexOf(currentView);
 
                 if (idx === -1) return;
@@ -5109,6 +5667,7 @@
                 '/home': 'home', '/': 'home',
                 '/tasks': 'tasks',
                 '/calendar': 'calendar',
+                '/stundenplan': 'stundenplan',
                 '/grades': 'grades',
                 '/settings': 'settings',
                 '/account': 'account',
@@ -5125,6 +5684,7 @@
             if (relevantPath === '/' || relevantPath === '/home') renderHome();
             else if (relevantPath === '/tasks') renderTasks();
             else if (relevantPath === '/calendar') renderCalendar();
+            else if (relevantPath === '/stundenplan') renderStundenplan();
             else if (relevantPath === '/grades') renderGrades();
             else if (relevantPath === '/settings') renderSettingsPage();
             else if (relevantPath === '/settings/password') renderChangePassword();
@@ -5150,6 +5710,7 @@
                 const sub = decodeURIComponent(relevantPath.split('/').pop());
                 renderSubjectDetails(sub, '?', '[]');
             }
+            else if (relevantPath === '/admin/untis') renderUntisConfig();
             else renderHome();
         };
         console.log('Main Script Parsed Successfully');
