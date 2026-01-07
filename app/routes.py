@@ -1650,6 +1650,8 @@ def import_subjects_from_untis():
         data = request.get_json()
         class_id = data.get('class_id')
         
+        from .models import UntisCredential, SchoolClass
+        
         if not class_id:
             return jsonify({'success': False, 'message': 'Klassen-ID fehlt'}), 400
         
@@ -1759,6 +1761,8 @@ def get_current_subject_from_untis():
     """Get the current or last subject from WebUntis timetable"""
     try:
         class_id = request.args.get('class_id')
+        
+        from .models import UntisCredential
         
         if not class_id:
             return jsonify({'success': False, 'message': 'Klassen-ID fehlt'}), 400
