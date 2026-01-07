@@ -2107,9 +2107,45 @@
             }
         }
 
-        // We need to override the old closeSheet behavior which might have been just class removal.
-        // Actually, previous closeSheet was: function closeSheet() { document.getElementById('sheet-overlay').classList.remove('active'); }
-        // We will replace usage of `classList.add('active')` with `openSheetOverlay()` in other parts of the code next.
+        // --- Toast System ---
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 100px;
+                left: 50%;
+                transform: translateX(-50%) translateY(20px);
+                background: ${type === 'success' ? '#34C759' : type === 'error' ? '#FF3B30' : 'var(--accent)'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 20px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                z-index: 9999;
+                font-weight: 600;
+                font-size: 14px;
+                opacity: 0;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                pointer-events: none;
+                text-align: center;
+                min-width: 200px;
+            `;
+            toast.innerText = message;
+            document.body.appendChild(toast);
+
+            // Animate In
+            setTimeout(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(-50%) translateY(0)';
+            }, 10);
+
+            // Animate Out
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
 
         /* --- API LOGIC INTEGRATED --- */
         // --- PWA Installation Logic ---
@@ -5408,30 +5444,34 @@
                         </div>
                     </div>`).join('');
 
-                const superAdminAdd = window.currentUser.is_super_admin ? `
-                    <div class="floating-card" style="padding: 20px;">
-                        <h3 style="margin-top:0">${t('new_subject')} (Superadmin)</h3>
-                        <input type="text" id="new-subject-name" class="ios-input" placeholder="${t('subject_placeholder')}">
-                        <p style="font-size:12px; color:var(--text-sec); margin-bottom:10px;">Bitte die Klassen nach der Erstellung über das Stift-Icon zuweisen.</p>
-                        <button class="ios-btn" onclick="addSubject()">${t('add_btn')}</button>
-                    </div>
-                ` : `
+                const classContextId = filterClassId || window.currentUser.class_id;
+                const canImport = classContextId && Number(classContextId) > 0;
+
+                const addCardHtml = `
                     <div class="floating-card" style="padding: 20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                            <h3 style="margin:0">${t('new_subject')}</h3>
-                            <button class="ios-btn btn-sec" style="width:auto; height:32px; padding:0 12px; font-size:12px; margin:0;" onclick="importUntisSubjects(event)">
-                                <i data-lucide="download" style="width:14px; margin-right:5px;"></i> Untis Import
-                            </button>
+                            <h3 style="margin:0">${t('new_subject')} ${window.currentUser.is_super_admin ? '(Superadmin)' : ''}</h3>
+                            ${canImport ? `
+                                <button class="ios-btn btn-sec" style="width:auto; height:36px; padding:0 12px; font-size:12px; margin:0;" onclick="importUntisSubjects(event)">
+                                    <i data-lucide="download" style="width:14px; margin-right:5px;"></i> Untis Import
+                                </button>
+                            ` : ''}
                         </div>
-                        <div style="display:flex; gap:10px;">
-                            <input type="text" id="new-subject-name" class="ios-input" placeholder="${t('subject_placeholder')}" style="margin:0;">
-                            <button class="ios-btn" style="width:auto; padding:0 20px;" onclick="addSubject()">${t('add_btn')}</button>
+                        
+                        <div style="${!window.currentUser.is_super_admin ? 'display:flex; gap:10px;' : ''}">
+                            <input type="text" id="new-subject-name" class="ios-input" placeholder="${t('subject_placeholder')}" style="${!window.currentUser.is_super_admin ? 'margin:0;' : ''}">
+                            ${!window.currentUser.is_super_admin ? `<button class="ios-btn" style="width:auto; padding:0 20px;" onclick="addSubject()">${t('add_btn')}</button>` : ''}
                         </div>
+                        
+                        ${window.currentUser.is_super_admin ? `
+                            <p style="font-size:12px; color:var(--text-sec); margin: 10px 0 15px 0;">Bitte die Klassen nach der Erstellung über das Stift-Icon zuweisen.</p>
+                            <button class="ios-btn" onclick="addSubject()">${t('add_btn')}</button>
+                        ` : ''}
                     </div>
                 `;
 
                 document.getElementById('app-container').innerHTML = `
-                    ${superAdminAdd}
+                    ${addCardHtml}
                     <h3 style="margin:20px 0 10px 5px; font-size:18px;">${t('existing_subjects')}</h3>
                     <div class="floating-card" style="padding:0 24px;">
                         ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_subjects_found')}</div>`}
