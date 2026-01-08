@@ -5110,7 +5110,10 @@
 
                         // If we have an ID, pre-select it
                         if (data.subject.id) {
-                            selectSubject(data.subject.name, data.subject.id);
+                            selectedSubject = data.subject.name;
+                            selectedSubjectId = data.subject.id;
+                            const display = document.getElementById('selected-subject-display');
+                            if (display) display.innerText = data.subject.name;
                         } else {
                             // Only name available (maybe not imported yet)
                             selectedSubject = data.subject.name;

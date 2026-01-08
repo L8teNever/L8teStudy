@@ -1823,8 +1823,19 @@ def get_current_subject_from_untis():
             if not hasattr(period, 'subjects') or not period.subjects:
                 continue
             
-            period_start = period.start.time() if hasattr(period.start, 'time') else period.start
-            period_end = period.end.time() if hasattr(period.end, 'time') else period.end
+            # Helper to safely get naive time from potentially aware datetime
+            def get_naive_time(dt):
+                if hasattr(dt, 'time'):
+                    # If it has timezone info, convert to local first (conceptually) or just drop it if we assume local
+                    # But if we assume standard WebUntis usage, it's often naive local. 
+                    # If aware, we should be careful. 
+                    # Assuming basic naive comparison is desired as per project scope.
+                    # But let's strip tzinfo just in case to avoid type errors
+                    return dt.time()
+                return dt
+            
+            period_start = get_naive_time(period.start)
+            period_end = get_naive_time(period.end)
             
             # Check if currently in this period
             if period_start <= current_time <= period_end:
