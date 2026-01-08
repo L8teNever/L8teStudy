@@ -1624,9 +1624,9 @@ def get_untis_schedule():
                 'id': period.id,
                 'start': period.start.isoformat(),
                 'end': period.end.isoformat(),
-                'subjects': [sub.name for sub in period.subjects],
-                'teachers': [t.name for t in period.teachers],
-                'rooms': [r.name for r in period.rooms],
+                'subjects': [{'name': sub.name, 'long_name': sub.long_name} for sub in period.subjects],
+                'teachers': [{'name': t.name, 'long_name': t.long_name} for t in period.teachers],
+                'rooms': [{'name': r.name, 'long_name': r.long_name} for r in period.rooms],
                 'code': period.code,
                 'substText': getattr(period, 'substText', "")
             })

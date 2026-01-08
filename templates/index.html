@@ -394,6 +394,11 @@
             transition: opacity 0.2s;
         }
 
+        .past-event {
+            opacity: 0.5;
+            filter: grayscale(0.8);
+        }
+
         .list-item:last-child {
             border-bottom: none;
         }
@@ -1511,6 +1516,38 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
         }
 
+        .period-card.past {
+            opacity: 0.5 !important;
+            filter: grayscale(0.8);
+        }
+
+        .period-card.current {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.1);
+        }
+
+        .time-marker {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--danger);
+            z-index: 5;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .time-marker::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            position: absolute;
+            left: -4px;
+        }
+
         .period-card.cancelled {
             opacity: 0.5;
             background: rgba(255, 59, 48, 0.03);
@@ -2163,6 +2200,12 @@
             }
         }
 
+        function openSheet(html) {
+            document.getElementById('sheet-content').innerHTML = html;
+            openSheetOverlay();
+            lucide.createIcons();
+        }
+
         // Modified closeSheet to handle history
         let isModalClosing = false;
         function closeSheet() {
@@ -2676,11 +2719,27 @@
         }
 
         function renderEventList(events) {
-            const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const sortedEvents = events.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                const isPastA = dateA < today;
+                const isPastB = dateB < today;
+
+                if (isPastA !== isPastB) {
+                    return isPastA ? 1 : -1; // Past events go to the bottom
+                }
+                // Both are either past or future/today, sort ascending by date
+                return dateA - dateB;
+            });
+
             const listHtml = sortedEvents.map(e => {
+                const isPast = new Date(e.date) < today;
                 const visuals = getEventVisuals(e.title);
                 return `
-                <div class="list-item" style="padding: 18px 0;" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
+                <div class="list-item ${isPast ? 'past-event' : ''}" style="padding: 18px 0;" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id})">
                     <div class="account-item-icon" style="margin-right: 16px; width: 40px; height: 40px; border-radius: 12px; background: ${visuals.bg}; color: ${visuals.color}; flex-shrink:0;">
                         <i data-lucide="${visuals.icon}" style="width:20px; height:20px;"></i>
                     </div>
@@ -2749,14 +2808,17 @@
                 const dateStr = new Date(viewDate.getFullYear(), viewDate.getMonth(), day, 12).toISOString().split('T')[0];
                 openCreateMenu('event', '', null, dateStr);
             } else {
-                let listHtml = events.map(e => `
-                     <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id}, '[]', ${e.subject_id || 'null'})">
+                let listHtml = events.map(e => {
+                    const isPast = new Date(e.date) < new Date().setHours(0, 0, 0, 0);
+                    return `
+                     <div class="list-item ${isPast ? 'past-event' : ''}" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id}, '[]', ${e.subject_id || 'null'})">
                          <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: var(--accent);">
                             <i data-lucide="calendar" style="width:18px; height:18px;"></i>
                          </div>
                          <div class="item-content"><div class="item-title">${e.title}</div><div class="item-sub">${new Date(e.date).toLocaleDateString(locale)}</div></div>
                          <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                     </div>`).join('');
+                     </div>`;
+                }).join('');
 
                 document.getElementById('sheet-content').innerHTML = `
                     <div class="sheet-header">
@@ -3438,9 +3500,25 @@
 
         let currentDayTabIdx = -1;
 
+        let cachedPeriods = [];
+        let timetableRefreshInterval = null;
+
         function renderTimetableList(periods) {
+            cachedPeriods = periods;
             const container = document.getElementById('timetable-content');
             const tabsContainer = document.getElementById('timetable-tabs-container');
+
+            // Clear existing interval if any
+            if (timetableRefreshInterval) clearInterval(timetableRefreshInterval);
+            // Set new one to update every minute
+            timetableRefreshInterval = setInterval(() => {
+                if (currentView === 'stundenplan') {
+                    renderTimetableList(cachedPeriods);
+                } else {
+                    clearInterval(timetableRefreshInterval);
+                }
+            }, 60000);
+
             if (!periods || periods.length === 0) {
                 container.innerHTML = '<div class="floating-card" style="text-align:center; padding:20px; color:var(--text-sec)">Keine Stunden gefunden.</div>';
                 if (tabsContainer) tabsContainer.innerHTML = '';
@@ -3487,19 +3565,38 @@
             }
 
             let html = '<div class="timetable-container">';
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+
             for (const day of days) {
                 if (!grouped[day]) continue;
-                html += `<div class="day-section ${days.indexOf(day) === currentDayTabIdx ? 'active' : ''}" id="day-sec-${days.indexOf(day)}">`;
+
+                // Determine if this section belongs to a past day, today, or future day
+                const firstPeriodDate = new Date(grouped[day][0].start).toISOString().split('T')[0];
+                const isToday = firstPeriodDate === todayStr;
+                const isPastDay = firstPeriodDate < todayStr;
+
+                html += `<div class="day-section ${days.indexOf(day) === currentDayTabIdx ? 'active' : ''}" id="day-sec-${days.indexOf(day)}" style="position:relative;">`;
 
                 const dayPeriods = grouped[day];
                 const processed = new Set();
+                let markerInserted = false;
 
                 for (let i = 0; i < dayPeriods.length; i++) {
                     if (processed.has(i)) continue;
 
                     const p = dayPeriods[i];
-                    const pStart = new Date(p.start).getTime();
-                    const pEnd = new Date(p.end).getTime();
+                    const pStart = new Date(p.start);
+                    const pEnd = new Date(p.end);
+                    const isPastPeriod = isPastDay || (isToday && now > pEnd);
+                    const isCurrentPeriod = isToday && now >= pStart && now <= pEnd;
+
+                    // If it's today and we haven't inserted the marker yet
+                    // and 'now' is BEFORE this period starts, it means we are in a break before this period
+                    if (isToday && !markerInserted && now < pStart) {
+                        html += `<div class="time-marker" style="margin: 10px 0; position:relative; transform:none; left:0; right:0;"></div>`;
+                        markerInserted = true;
+                    }
 
                     // Check if this is cancelled and find substitution at same time
                     let substitution = null;
@@ -3512,7 +3609,7 @@
                             const otherStart = new Date(other.start).getTime();
                             const otherEnd = new Date(other.end).getTime();
 
-                            if (other.code === "substitution" && otherStart === pStart && otherEnd === pEnd) {
+                            if (other.code === "substitution" && otherStart === pStart.getTime() && otherEnd === pEnd.getTime()) {
                                 substitution = other;
                                 substitutionIdx = j;
                                 break;
@@ -3520,73 +3617,86 @@
                         }
                     }
 
+                    const cardClass = `${isPastPeriod ? 'past' : ''} ${isCurrentPeriod ? 'current' : ''}`;
+
                     if (substitution) {
                         processed.add(i);
                         processed.add(substitutionIdx);
 
-                        const start = new Date(p.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                        const end = new Date(p.end).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const startT = pStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const endT = pEnd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                        const subNames = substitution.subjects.map(s => s.long_name || s.name).join(', ');
+                        const oldSubNames = p.subjects.map(s => s.long_name || s.name).join(', ');
 
                         html += `
-                            <div class="period-card" style="padding: 15px; margin-bottom: 12px;">
+                            <div class="period-card ${cardClass}" style="padding: 15px; margin-bottom: 12px;" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(substitution))}')">
                                 <div class="period-time" style="min-width: 65px;">
-                                    <span class="start">${start}</span>
-                                    <span class="end">${end}</span>
+                                    <span class="start">${startT}</span>
+                                    <span class="end">${endT}</span>
                                 </div>
                                 <div class="period-divider"></div>
                                 <div style="flex: 1; display: flex; gap: 15px; align-items: stretch;">
                                     <div style="flex: 1; position: relative; padding: 10px; background: rgba(255, 59, 48, 0.05); border-radius: 12px; border: 1px dashed rgba(255, 59, 48, 0.2);">
                                         <div class="status-badge cancelled" style="top: 5px; right: 5px;">Entfällt</div>
-                                        <div class="period-subject" style="opacity: 0.6; text-decoration: line-through;">${p.subjects.join(', ') || 'Pause'}</div>
+                                        <div class="period-subject" style="opacity: 0.6; text-decoration: line-through;">${oldSubNames || 'Pause'}</div>
                                         <div class="period-details" style="opacity: 0.5;">
-                                            <span class="period-room">${p.rooms.join(', ') || '-'}</span>
-                                            <span class="period-teacher">${p.teachers.join(', ') || ''}</span>
+                                            <span class="period-room">${p.rooms.map(r => r.name).join(', ') || '-'}</span>
+                                            <span class="period-teacher">${p.teachers.map(t => t.name).join(', ') || ''}</span>
                                         </div>
                                     </div>
                                     <div style="display: flex; align-items: center; color: var(--text-sec); font-size: 20px; font-weight: 700;">→</div>
                                     <div style="flex: 1; position: relative; padding: 10px; background: rgba(52, 199, 89, 0.05); border-radius: 12px; border: 1px solid rgba(52, 199, 89, 0.2);">
                                         <div class="status-badge substitution" style="top: 5px; right: 5px;">Vertretung</div>
-                                        <div class="period-subject">${substitution.subjects.join(', ') || 'Pause'}</div>
+                                        <div class="period-subject">${subNames || 'Pause'}</div>
                                         <div class="period-details">
-                                            <span class="period-room">${substitution.rooms.join(', ') || '-'}</span>
-                                            <span class="period-teacher">${substitution.teachers.join(', ') || ''}</span>
+                                            <span class="period-room">${substitution.rooms.map(r => r.name).join(', ') || '-'}</span>
+                                            <span class="period-teacher">${substitution.teachers.map(t => t.name).join(', ') || ''}</span>
                                         </div>
                                         ${substitution.substText ? `<div style="font-size:10px; color: #34c759; margin-top:4px; font-weight: 600;">${substitution.substText}</div>` : ''}
                                     </div>
                                 </div>
+                                ${isCurrentPeriod ? `<div class="time-marker" style="top: ${((now - pStart) / (pEnd - pStart) * 100).toFixed(0)}%"></div>` : ''}
                             </div>
                         `;
+                        if (isCurrentPeriod) markerInserted = true;
                     } else {
                         processed.add(i);
-                        const dStart = new Date(p.start);
-                        const dEnd = new Date(p.end);
-                        const start = dStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                        const end = dEnd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const startT = pStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const endT = pEnd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
                         let statusClass = "";
                         let statusLabel = "";
                         if (p.code === "cancelled") { statusClass = "cancelled"; statusLabel = "Entfällt"; }
                         else if (p.code === "substitution") { statusClass = "substitution"; statusLabel = "Vertretung"; }
 
+                        const subNames = p.subjects.map(s => s.long_name || s.name).join(', ');
+
                         html += `
-                            <div class="period-card ${statusClass}">
+                            <div class="period-card ${statusClass} ${cardClass}" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(p))}')">
                                 ${statusLabel ? `<div class="status-badge ${statusClass}">${statusLabel}</div>` : ''}
                                 <div class="period-time">
-                                    <span class="start">${start}</span>
-                                    <span class="end">${end}</span>
+                                    <span class="start">${startT}</span>
+                                    <span class="end">${endT}</span>
                                 </div>
                                 <div class="period-divider"></div>
                                 <div class="period-info">
-                                    <div class="period-subject">${p.subjects.join(', ') || 'Pause'}</div>
+                                    <div class="period-subject">${subNames || 'Pause'}</div>
                                     <div class="period-details">
-                                        <span class="period-room">${p.rooms.join(', ') || '-'}</span>
-                                        <span class="period-teacher">${p.teachers.join(', ') || ''}</span>
+                                        <span class="period-room">${p.rooms.map(r => r.name).join(', ') || '-'}</span>
+                                        <span class="period-teacher">${p.teachers.map(t => t.name).join(', ') || ''}</span>
                                     </div>
                                     ${p.substText ? `<div style="font-size:10px; color:var(--danger); margin-top:4px;">${p.substText}</div>` : ''}
                                 </div>
+                                ${isCurrentPeriod ? `<div class="time-marker" style="top: ${((now - pStart) / (pEnd - pStart) * 100).toFixed(0)}%"></div>` : ''}
                             </div>
                         `;
+                        if (isCurrentPeriod) markerInserted = true;
                     }
+                }
+                // If it's today and still no marker, it's after the last period
+                if (isToday && !markerInserted) {
+                    html += `<div class="time-marker" style="margin: 10px 0; position:relative; transform:none; left:0; right:0;"></div>`;
                 }
                 html += '</div>';
             }
@@ -3597,6 +3707,74 @@
             // Scroll to current tab if possible
             const activeTab = tabsContainer.querySelector('.timetable-tab.active');
             if (activeTab) activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+
+        function openPeriodDetails(pJson) {
+            const p = JSON.parse(decodeURIComponent(pJson));
+            const subjects = p.subjects || [];
+            const teachers = p.teachers || [];
+            const rooms = p.rooms || [];
+
+            const title = subjects.map(s => s.long_name || s.name).join(', ') || 'Pause';
+            const shortName = subjects.map(s => s.name).join(', ');
+
+            let html = `
+                <div class="floating-card" style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 5px 0; font-size: 20px;">${title}</h3>
+                    ${shortName && shortName !== title ? `<p style="margin: 0; color: var(--text-sec); font-size: 14px; font-weight: 600;">${shortName}</p>` : ''}
+                </div>
+
+                <div class="floating-card" style="padding: 0 20px;">
+                    <div class="list-item" style="padding: 18px 0; border-bottom: 1px solid var(--border);">
+                        <div class="account-item-icon" style="background: rgba(0, 113, 227, 0.1); color: var(--accent); width: 32px; height: 32px;">
+                            <i data-lucide="map-pin" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div class="item-content">
+                            <div class="item-title" style="font-size: 13px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em;">Raum</div>
+                            <div class="item-sub" style="color: var(--text-main); font-size: 16px; font-weight: 600;">
+                                ${rooms.length > 0 ? rooms.map(r => `${r.long_name} (${r.name})`).join('<br>') : '-'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-item" style="padding: 18px 0; border-bottom: 1px solid var(--border);">
+                        <div class="account-item-icon" style="background: rgba(52, 199, 89, 0.1); color: #34c759; width: 32px; height: 32px;">
+                            <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div class="item-content">
+                            <div class="item-title" style="font-size: 13px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em;">Lehrer</div>
+                            <div class="item-sub" style="color: var(--text-main); font-size: 16px; font-weight: 600;">
+                                ${teachers.length > 0 ? teachers.map(t => `${t.long_name} (${t.name})`).join('<br>') : '-'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-item" style="padding: 18px 0;">
+                        <div class="account-item-icon" style="background: rgba(255, 149, 0, 0.1); color: #ff9500; width: 32px; height: 32px;">
+                            <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div class="item-content">
+                            <div class="item-title" style="font-size: 13px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em;">Zeit</div>
+                            <div class="item-sub" style="color: var(--text-main); font-size: 16px; font-weight: 600;">
+                                ${new Date(p.start).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - ${new Date(p.end).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (p.substText) {
+                html += `
+                    <div class="floating-card" style="margin-top: 20px; border-left: 4px solid var(--danger); background: rgba(255, 59, 48, 0.05);">
+                        <h4 style="margin: 0 0 8px 0; color: var(--danger); font-size: 15px; display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="info" style="width: 18px;"></i> Vertretungs-Information
+                        </h4>
+                        <p style="margin: 0; font-size: 14px; color: var(--text-main); line-height: 1.5;">${p.substText}</p>
+                    </div>
+                `;
+            }
+
+            openSheet(html);
         }
 
         function switchTimetableDay(idx) {
