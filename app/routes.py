@@ -1681,7 +1681,7 @@ def import_subjects_from_untis():
         klassen = s.klassen()
         untis_class = None
         for k in klassen:
-            if k.name == creds.untis_class_name:
+            if k.name.lower() == creds.untis_class_name.lower():
                 untis_class = k
                 break
         
@@ -1796,7 +1796,7 @@ def get_current_subject_from_untis():
         klassen = s.klassen()
         untis_class = None
         for k in klassen:
-            if k.name == creds.untis_class_name:
+            if k.name.lower() == creds.untis_class_name.lower():
                 untis_class = k
                 break
         

@@ -3590,6 +3590,7 @@
                     const pEnd = new Date(p.end);
                     const isPastPeriod = isPastDay || (isToday && now > pEnd);
                     const isCurrentPeriod = isToday && now >= pStart && now <= pEnd;
+                    const cardClass = `${isPastPeriod ? 'past' : ''} ${isCurrentPeriod ? 'current' : ''}`;
 
                     // If it's today and we haven't inserted the marker yet
                     // and 'now' is BEFORE this period starts, it means we are in a break before this period
@@ -3631,10 +3632,8 @@
                         const newRooms = newP.rooms.map(r => r.name).join(', ');
                         const newTeachers = newP.teachers.map(t => t.name).join(', ');
 
-                        const cardClass = `${isPastPeriod ? 'past' : ''} ${isCurrentPeriod ? 'current' : ''}`;
-
                         html += `
-                            <div class="period-card ${cardClass}" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(newP))}')">
+                            <div class="period-card substitution ${cardClass}" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(newP))}')">
                                 <div class="status-badge substitution">Vertretung</div>
                                 <div class="period-time">
                                     <span class="start">${startT}</span>
