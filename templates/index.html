@@ -3598,63 +3598,64 @@
                         markerInserted = true;
                     }
 
-                    // Check if this is cancelled and find substitution at same time
-                    let substitution = null;
-                    let substitutionIdx = -1;
-
-                    if (p.code === "cancelled") {
-                        for (let j = 0; j < dayPeriods.length; j++) {
-                            if (j === i || processed.has(j)) continue;
-                            const other = dayPeriods[j];
-                            const otherStart = new Date(other.start).getTime();
-                            const otherEnd = new Date(other.end).getTime();
-
-                            if (other.code === "substitution" && otherStart === pStart.getTime() && otherEnd === pEnd.getTime()) {
-                                substitution = other;
-                                substitutionIdx = j;
-                                break;
-                            }
+                    // Broaden search: any other period at exactly the same time?
+                    let otherPeriod = null;
+                    let otherIdx = -1;
+                    for (let j = 0; j < dayPeriods.length; j++) {
+                        if (j === i || processed.has(j)) continue;
+                        const other = dayPeriods[j];
+                        if (new Date(other.start).getTime() === pStart.getTime() &&
+                            new Date(other.end).getTime() === pEnd.getTime()) {
+                            otherPeriod = other;
+                            otherIdx = j;
+                            break;
                         }
                     }
 
-                    const cardClass = `${isPastPeriod ? 'past' : ''} ${isCurrentPeriod ? 'current' : ''}`;
-
-                    if (substitution) {
+                    if (otherPeriod) {
                         processed.add(i);
-                        processed.add(substitutionIdx);
+                        processed.add(otherIdx);
+
+                        // Determine which is old/cancelled and which is new/substitution
+                        let oldP = p, newP = otherPeriod;
+                        if (p.code === "substitution" || otherPeriod.code === "cancelled") {
+                            oldP = otherPeriod; newP = p;
+                        }
 
                         const startT = pStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
                         const endT = pEnd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
-                        const subNames = substitution.subjects.map(s => s.long_name || s.name).join(', ');
-                        const oldSubNames = p.subjects.map(s => s.long_name || s.name).join(', ');
+                        const oldSubNames = oldP.subjects.map(s => s.long_name || s.name).join(', ');
+                        const newSubNames = newP.subjects.map(s => s.long_name || s.name).join(', ');
+                        const oldRooms = oldP.rooms.map(r => r.name).join(', ');
+                        const newRooms = newP.rooms.map(r => r.name).join(', ');
+                        const newTeachers = newP.teachers.map(t => t.name).join(', ');
+
+                        const cardClass = `${isPastPeriod ? 'past' : ''} ${isCurrentPeriod ? 'current' : ''}`;
 
                         html += `
-                            <div class="period-card ${cardClass}" style="padding: 15px; margin-bottom: 12px;" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(substitution))}')">
-                                <div class="period-time" style="min-width: 65px;">
+                            <div class="period-card ${cardClass}" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(newP))}')">
+                                <div class="status-badge substitution">Vertretung</div>
+                                <div class="period-time">
                                     <span class="start">${startT}</span>
                                     <span class="end">${endT}</span>
                                 </div>
                                 <div class="period-divider"></div>
-                                <div style="flex: 1; display: flex; gap: 15px; align-items: stretch;">
-                                    <div style="flex: 1; position: relative; padding: 10px; background: rgba(255, 59, 48, 0.05); border-radius: 12px; border: 1px dashed rgba(255, 59, 48, 0.2);">
-                                        <div class="status-badge cancelled" style="top: 5px; right: 5px;">Entfällt</div>
-                                        <div class="period-subject" style="opacity: 0.6; text-decoration: line-through;">${oldSubNames || 'Pause'}</div>
-                                        <div class="period-details" style="opacity: 0.5;">
-                                            <span class="period-room">${p.rooms.map(r => r.name).join(', ') || '-'}</span>
-                                            <span class="period-teacher">${p.teachers.map(t => t.name).join(', ') || ''}</span>
-                                        </div>
+                                <div class="period-info">
+                                    <div class="period-subject">
+                                        <span style="opacity: 0.5; text-decoration: line-through; font-size: 0.9em;">${oldSubNames || 'Pause'}</span>
+                                        <span style="margin: 0 8px; color: var(--text-sec); font-weight: 400;">→</span>
+                                        <span>${newSubNames || 'Pause'}</span>
                                     </div>
-                                    <div style="display: flex; align-items: center; color: var(--text-sec); font-size: 20px; font-weight: 700;">→</div>
-                                    <div style="flex: 1; position: relative; padding: 10px; background: rgba(52, 199, 89, 0.05); border-radius: 12px; border: 1px solid rgba(52, 199, 89, 0.2);">
-                                        <div class="status-badge substitution" style="top: 5px; right: 5px;">Vertretung</div>
-                                        <div class="period-subject">${subNames || 'Pause'}</div>
-                                        <div class="period-details">
-                                            <span class="period-room">${substitution.rooms.map(r => r.name).join(', ') || '-'}</span>
-                                            <span class="period-teacher">${substitution.teachers.map(t => t.name).join(', ') || ''}</span>
-                                        </div>
-                                        ${substitution.substText ? `<div style="font-size:10px; color: #34c759; margin-top:4px; font-weight: 600;">${substitution.substText}</div>` : ''}
+                                    <div class="period-details">
+                                        <span class="period-room">
+                                            <span style="opacity: 0.6; text-decoration: line-through; font-size: 0.9em;">${oldRooms || '-'}</span>
+                                            <span style="margin: 0 4px; font-weight: 400;">→</span>
+                                            ${newRooms || '-'}
+                                        </span>
+                                        <span class="period-teacher">${newTeachers}</span>
                                     </div>
+                                    ${newP.substText ? `<div style="font-size:10px; color:var(--accent); margin-top:4px; font-weight: 600;">${newP.substText}</div>` : ''}
                                 </div>
                                 ${isCurrentPeriod ? `<div class="time-marker" style="top: ${((now - pStart) / (pEnd - pStart) * 100).toFixed(0)}%"></div>` : ''}
                             </div>
@@ -6043,78 +6044,6 @@
 
 
 
-        /* --- SWIPE NAVIGATION --- */
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        // Touch
-        document.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-
-        document.addEventListener('touchend', (e) => {
-            handleSwipe(touchStartX, touchStartY, e.changedTouches[0].screenX, e.changedTouches[0].screenY, e.target);
-        }, { passive: true });
-
-        // Mouse (for desktop testing)
-        let mouseStartX = 0;
-        let mouseStartY = 0;
-        let isMouseDown = false;
-
-        document.addEventListener('mousedown', (e) => {
-            isMouseDown = true;
-            mouseStartX = e.clientX; // Mouse uses clientX, Touch uses screenX usually but consistency matters. Let's use clientX for mouse.
-            mouseStartY = e.clientY;
-        });
-
-        document.addEventListener('mouseup', (e) => {
-            if (!isMouseDown) return;
-            isMouseDown = false;
-            handleSwipe(mouseStartX, mouseStartY, e.clientX, e.clientY, e.target);
-        });
-
-        function handleSwipe(startX, startY, endX, endY, target) {
-            // Prevent if sheet is open or just closed
-            if (document.getElementById('sheet-overlay').classList.contains('active') || isModalClosing) return;
-
-            // Check scrollable
-            let el = target;
-            while (el && el !== document.body) {
-                if (el.scrollWidth > el.clientWidth) {
-                    const style = window.getComputedStyle(el);
-                    if (style.overflowX === 'auto' || style.overflowX === 'scroll') return;
-                }
-                el = el.parentElement;
-            }
-
-            const diffX = endX - startX;
-            const diffY = endY - startY;
-            const threshold = 50; // Lower threshold
-
-            // Check horizontal dominance and threshold
-            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
-                const views = ['home', 'tasks', 'calendar', 'stundenplan', 'grades'];
-                const titles = [t('home'), t('tasks'), t('calendar'), t('timetable'), t('grades')];
-                const idx = views.indexOf(currentView);
-
-                if (idx === -1) return;
-
-                let nextIdx = -1;
-                if (diffX < 0) {
-                    // Swipe Left -> Next
-                    if (idx < views.length - 1) nextIdx = idx + 1;
-                } else {
-                    // Swipe Right -> Previous
-                    if (idx > 0) nextIdx = idx - 1;
-                }
-
-                if (nextIdx !== -1) {
-                    // Navigate
-                    navigate(views[nextIdx], null, titles[nextIdx]);
-                }
-            }
-        }
 
         window.onload = () => {
             const path = window.location.pathname;
