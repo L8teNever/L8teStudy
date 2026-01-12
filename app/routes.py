@@ -1,12 +1,22 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app, send_file, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, PushSubscription, Subject, db, TaskMessage, TaskChatRead, GlobalSetting
+from .models import (
+    User, Task, TaskImage, Event, Grade, NotificationSetting, 
+    PushSubscription, Subject, TaskMessage, TaskChatRead, 
+    GlobalSetting, SchoolClass, TaskCompletion, UserRole,
+    subject_classes, db
+)
 from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
 import os
+import json
+from io import BytesIO
 from datetime import datetime, date, timedelta
-from flask import send_from_directory
 import webuntis
+try:
+    import markdown as md_lib
+except ImportError:
+    md_lib = None
 from . import login_manager, limiter, csrf
 
 main_bp = Blueprint('main', __name__)
@@ -149,30 +159,92 @@ def catch_all(path):
 # --- Auth Routes ---
 @main_bp.route('/privacy')
 def privacy_policy():
-    default_text = """# Datenschutz & Sicherheit - L8teStudy
+    default_text = """# Datenschutzerklärung für L8teStudy
 
-L8teStudy ist eine lokal gehostete Anwendung. Alle Daten verbleiben auf Ihrem eigenen Server.
+## 1. Datenschutz auf einen Blick
 
-## 1. Datenerhebung und -speicherung
-Alle von Ihnen eingegebenen Daten (Benutzername, Aufgaben, Termine, Noten, Bilder) werden ausschließlich in einer lokalen Datenbank auf Ihrem Server gespeichert.
+### Allgemeine Hinweise
+Die folgenden Hinweise geben einen einfachen Überblick darüber, was mit Ihren personenbezogenen Daten passiert, wenn Sie diese Anwendung nutzen. Personenbezogene Daten sind alle Daten, mit denen Sie persönlich identifiziert werden können.
 
-## 2. Keine Datenweitergabe
-Es findet keine automatische Übertragung von Daten an externe Server statt (keine Cloud, kein Tracking, keine Analytics).
+### Datenerfassung in dieser Anwendung
+Die Datenverarbeitung in dieser Anwendung erfolgt durch den Betreiber der Instanz. L8teStudy ist eine **selbstgehostete Anwendung**. Das bedeutet, dass alle Daten auf dem Server verbleiben, auf dem die Anwendung installiert wurde. Es findet keine Übermittlung an die Entwickler von L8teStudy statt.
 
-## 3. WebUntis Integration
-Sollten Sie die WebUntis-Synchronisierung nutzen, werden Ihre Zugangsdaten (verschlüsselt) lokal gespeichert und nur zur Kommunikation mit dem offiziellen WebUntis-Server Ihrer Schule verwendet.
+## 2. Allgemeine Hinweise und Pflichtinformationen
 
-## 4. Cookies
-Die Anwendung nutzt lediglich technisch notwendige Session-Cookies zur Authentifizierung und zur Speicherung Ihrer Design-Einstellungen (Dunkelmodus).
+### Datenschutz
+Der Betreiber dieser Anwendung nimmt den Schutz Ihrer persönlichen Daten sehr ernst. Wir behandeln Ihre personenbezogenen Daten vertraulich und entsprechend den gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung.
+
+### Hinweis zur verantwortlichen Stelle
+Die verantwortliche Stelle für die Datenverarbeitung ist die Person oder Organisation (z.B. Ihre Schule), die diese Instanz von L8teStudy betreibt.
+
+## 3. Datenerfassung in L8teStudy
+
+### Authentifizierung & Benutzerprofil
+Für die Nutzung der App ist die Erstellung eines Benutzerkontos erforderlich. Dabei werden folgende Daten gespeichert:
+*   Benutzername
+*   Passwort (gehasht und verschlüsselt)
+*   Zugehörige Schulklasse
+
+### Nutzungsdaten (Aufgaben, Noten, Termine)
+Alle von Ihnen eingegebenen Daten wie Hausaufgaben, Prüfungstermine, Noten und persönliche To-Dos werden ausschließlich in der lokalen Datenbank der Instanz gespeichert. Diese Daten dienen allein dem Zweck der persönlichen Organisation Ihres Schulalltags.
+
+### WebUntis Integration
+Sofern Sie die WebUntis-Synchronisierung aktivieren, werden Ihre WebUntis-Zugangsdaten (verschlüsselt) in der lokalen Datenbank gespeichert. Die App kommuniziert direkt mit dem offiziellen WebUntis-Server Ihrer Schule, um Stundenpläne und Vertretungsdaten abzurufen.
+
+### Cookies & Lokale Speicherung
+Diese Anwendung verwendet technisch notwendige Cookies und den LocalStorage Ihres Browsers, um:
+1.  Sie angemeldet zu halten (Sitzungs-Management).
+2.  Ihre Design-Einstellungen (z.B. Darkmode) zu speichern.
+Diese Daten sind für den Betrieb der App zwingend erforderlich.
+
+## 4. Hosting und Datensicherheit
+
+### Lokales Hosting
+Die Anwendung läuft auf der Infrastruktur des Betreibers. Es findet keine Cloud-Speicherung auf externen Systemen statt.
+
+### SSL- bzw. TLS-Verschlüsselung
+Diese Seite nutzt aus Sicherheitsgründen und zum Schutz der Übertragung vertraulicher Inhalte eine SSL-bzw. TLS-Verschlüsselung.
+
+## 5. Ihre Rechte
+
+Sie haben jederzeit das Recht, unentgeltlich Auskunft über Herkunft, Empfänger und Zweck Ihrer gespeicherten personenbezogenen Daten zu erhalten. Sie haben außerdem ein Recht, die Berichtigung oder Löschung dieser Daten zu verlangen. Hierzu sowie zu weiteren Fragen zum Thema Datenschutz können Sie sich jederzeit an den Administrator Ihrer L8teStudy-Instanz wenden.
 """
     content = GlobalSetting.get('privacy_policy', default_text)
-    return render_template('legal.html', title='Datenschutzerklärung', content=content)
+    
+    if md_lib:
+        html_content = md_lib.markdown(content)
+    else:
+        # Simple manual conversion if library is missing
+        import re
+        html = content
+        html = re.sub(r'^# (.*)$', r'<h1>\1</h1>', html, flags=re.M)
+        html = re.sub(r'^## (.*)$', r'<h2>\1</h2>', html, flags=re.M)
+        html = re.sub(r'^### (.*)$', r'<h3>\1</h3>', html, flags=re.M)
+        html = re.sub(r'^\* (.*)$', r'<li>\1</li>', html, flags=re.M)
+        html = html.replace('\n', '<br>')
+        html_content = html
+        
+    return render_template('legal.html', title='Datenschutzerklärung', content=html_content)
 
 @main_bp.route('/imprint')
 def imprint():
     default_text = "Hinterlegen Sie hier Ihr Impressum im Admin-Bereich."
     content = GlobalSetting.get('imprint', default_text)
-    return render_template('legal.html', title='Impressum', content=content)
+    
+    if md_lib:
+        html_content = md_lib.markdown(content)
+    else:
+        # Simple manual conversion if library is missing
+        import re
+        html = content
+        html = re.sub(r'^# (.*)$', r'<h1>\1</h1>', html, flags=re.M)
+        html = re.sub(r'^## (.*)$', r'<h2>\1</h2>', html, flags=re.M)
+        html = re.sub(r'^### (.*)$', r'<h3>\1</h3>', html, flags=re.M)
+        html = re.sub(r'^\* (.*)$', r'<li>\1</li>', html, flags=re.M)
+        html = html.replace('\n', '<br>')
+        html_content = html
+        
+    return render_template('legal.html', title='Impressum', content=html_content)
 
 login_manager.login_view = 'auth.login_page'
 @auth_bp.route('/login', methods=['POST'])
@@ -1114,6 +1186,140 @@ def update_user(id):
         
     db.session.commit()
     return jsonify({'success': True})
+
+@api_bp.route('/admin/backup', methods=['GET'])
+@login_required
+def export_backup():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    def serialize(obj):
+        data = {}
+        for col in obj.__table__.columns:
+            val = getattr(obj, col.name)
+            if isinstance(val, (datetime, date)):
+                data[col.name] = val.isoformat()
+            else:
+                data[col.name] = val
+        return data
+
+    backup_data = {
+        'version': '1.0',
+        'timestamp': datetime.utcnow().isoformat(),
+        'school_classes': [serialize(c) for c in SchoolClass.query.all()],
+        'users': [serialize(u) for u in User.query.all()],
+        'subjects': [serialize(s) for s in Subject.query.all()],
+        'subject_classes': [{'subject_id': a.subject_id, 'class_id': a.class_id} for a in db.session.query(subject_classes).all()],
+        'tasks': [serialize(t) for t in Task.query.all()],
+        'task_completions': [serialize(tc) for tc in TaskCompletion.query.all()],
+        'events': [serialize(e) for e in Event.query.all()],
+        'grades': [serialize(g) for g in Grade.query.all()],
+        'global_settings': [serialize(gs) for gs in GlobalSetting.query.all()],
+        'notification_settings': [serialize(ns) for ns in NotificationSetting.query.all()],
+        'task_messages': [serialize(tm) for tm in TaskMessage.query.all()],
+        'task_chat_reads': [serialize(tcr) for tcr in TaskChatRead.query.all()]
+    }
+
+    buffer = BytesIO()
+    buffer.write(json.dumps(backup_data, indent=4).encode('utf-8'))
+    buffer.seek(0)
+    
+    filename = f"l8testudy_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/json')
+
+@api_bp.route('/admin/restore', methods=['POST'])
+@login_required
+def import_restore():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'No file uploaded'}), 400
+    
+    file = request.files['file']
+    try:
+        data = json.load(file)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Invalid JSON: {str(e)}'}), 400
+
+    try:
+        # Clear existing data in correct order to avoid FK issues
+        db.session.query(TaskChatRead).delete()
+        db.session.query(TaskMessage).delete()
+        db.session.query(TaskCompletion).delete()
+        db.session.query(Grade).delete()
+        db.session.query(TaskImage).delete()
+        db.session.query(Task).delete()
+        db.session.query(Event).delete()
+        db.session.query(NotificationSetting).delete()
+        db.session.query(PushSubscription).delete()
+        db.session.execute(subject_classes.delete())
+        db.session.query(User).delete()
+        db.session.query(Subject).delete()
+        db.session.query(SchoolClass).delete()
+        db.session.query(GlobalSetting).delete()
+        db.session.commit()
+
+        # Helper to parse dates
+        def parse_val(val):
+            if isinstance(val, str) and (len(val) >= 10):
+                try: return datetime.fromisoformat(val)
+                except: pass
+            return val
+
+        # Restore sequence
+        for d in data.get('school_classes', []):
+            sc = SchoolClass()
+            for k, v in d.items(): setattr(sc, k, parse_val(v))
+            db.session.add(sc)
+        db.session.flush()
+
+        for d in data.get('users', []):
+            u = User()
+            for k, v in d.items(): setattr(u, k, parse_val(v))
+            db.session.add(u)
+        db.session.flush()
+
+        for d in data.get('subjects', []):
+            s = Subject()
+            for k, v in d.items(): setattr(s, k, parse_val(v))
+            db.session.add(s)
+        db.session.flush()
+
+        for d in data.get('subject_classes', []):
+            db.session.execute(subject_classes.insert().values(subject_id=d['subject_id'], class_id=d['class_id']))
+
+        # Remaining models
+        for d in data.get('tasks', []):
+            t = Task(); [setattr(t, k, parse_val(v)) for k, v in d.items()]
+            db.session.add(t)
+        for d in data.get('task_completions', []):
+            tc = TaskCompletion(); [setattr(tc, k, parse_val(v)) for k, v in d.items()]
+            db.session.add(tc)
+        for d in data.get('events', []):
+            e = Event(); [setattr(e, k, parse_val(v)) for k, v in d.items()]
+            db.session.add(e)
+        for d in data.get('grades', []):
+            g = Grade(); [setattr(g, k, parse_val(v)) for k, v in d.items()]
+            db.session.add(g)
+        for d in data.get('global_settings', []):
+            gs = GlobalSetting(); [setattr(gs, k, parse_val(v)) for k, v in d.items()]
+            db.session.add(gs)
+        for d in data.get('notification_settings', []):
+            ns = NotificationSetting(); [setattr(ns, k, parse_val(v)) for k, v in d.items()]
+            db.session.add(ns)
+        for d in data.get('task_messages', []):
+            tm = TaskMessage(); [setattr(tm, k, parse_val(v)) for k, v in d.items()]
+            db.session.add(tm)
+        for d in data.get('task_chat_reads', []):
+            tcr = TaskChatRead(); [setattr(tcr, k, parse_val(v)) for k, v in d.items()]
+            db.session.add(tcr)
+
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Restore failed: {str(e)}'}), 500
 
 @api_bp.route('/admin/users/<int:id>', methods=['DELETE'])
 @login_required

@@ -2161,6 +2161,7 @@
                 if (event.state.view === 'sub_class_settings') { renderClassSettings(event.state.id); return; }
                 if (event.state.view === 'sub_super_admin') { renderSuperAdminDashboard(); return; }
                 if (event.state.view === 'sub_shared_content') { renderSharedContentManagement(); return; }
+                if (event.state.view === 'sub_legal_settings') { renderLegalSettings(); return; }
 
                 const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
                 let title = t('home');
@@ -2990,7 +2991,7 @@
                          <div class="account-item-text">${t('admin')}</div>
                          <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                      </div>` : ''}
-                     <div class="account-item" onclick="window.location.href='https://github.com/L8te/L8teStudy/issues'">
+                     <div class="account-item" onclick="window.location.href='https://github.com/L8teNever/L8teStudy/issues'">
                          <div class="account-item-icon" style="background:#34C759; color:white;"><i data-lucide="bug"></i></div>
                          <div class="account-item-text">${t('reportbug')}</div>
                          <i data-lucide="external-link" style="width:18px; color:var(--text-sec)"></i>
@@ -3825,7 +3826,7 @@
             }
             window.isPoppingState = false;
 
-            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+            document.getElementById('header-back-btn').onclick = () => navigate('settings', null, t('settings'));
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
@@ -3864,27 +3865,6 @@
                     </div>
                     ` : ''}
                 </div>
-
-                ${window.currentUser.is_super_admin ? `
-                <div class="floating-card">
-                    <div class="account-item" onclick="renderSuperAdminDashboard()">
-                        <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="shield-check"></i></div>
-                        <div class="account-item-text">
-                            <div>Superadmin Access</div>
-                            <div style="font-size:12px; color:var(--text-sec);">${t('superadmin_desc')}</div>
-                        </div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                    <div class="account-item" onclick="renderLegalSettings()">
-                        <div class="account-item-icon" style="background:#5856D6; color:white;"><i data-lucide="file-text"></i></div>
-                        <div class="account-item-text">
-                            <div>${t('privacy')} & ${t('imprint')}</div>
-                            <div style="font-size:12px; color:var(--text-sec);">Globale Texte bearbeiten</div>
-                        </div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
-                    </div>
-                </div>
-                ` : ''}
             `;
             lucide.createIcons();
         }
@@ -4545,7 +4525,7 @@
             }
             window.isPoppingState = false;
 
-            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+            document.getElementById('header-back-btn').onclick = () => renderAdminMenu();
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card" style="padding: 20px;">
@@ -4565,6 +4545,11 @@
                             <div class="account-item-text">Rechtliches & Datenschutz</div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    <div class="account-item" onclick="renderBackupManagement()" style="padding:12px 0;">
+                            <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="database"></i></div>
+                            <div class="account-item-text">${t('backup')}</div>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
                 </div>
             `;
             lucide.createIcons();
@@ -4581,7 +4566,7 @@
             }
             window.isPoppingState = false;
 
-            document.getElementById('header-back-btn').onclick = () => window.history.back();
+            document.getElementById('header-back-btn').onclick = () => renderSuperAdminDashboard();
 
             document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px;">${t('loading')}</div>`;
 
@@ -4618,9 +4603,73 @@
                 const data = await res.json();
                 if (data.success) {
                     showToast("Einstellungen gespeichert", "success");
-                    window.history.back();
+                    renderSuperAdminDashboard();
                 } else {
                     alert("Fehler beim Speichern");
+                }
+            } catch (e) { alert("Verbindungsfehler"); }
+        }
+
+        async function renderBackupManagement() {
+            previousView = 'sub_super_admin';
+            currentView = 'sub_backup_mgmt';
+            setPageTitle(t('backup'));
+            document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => renderSuperAdminDashboard();
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_backup_mgmt' }, '', '/superadmin/backup');
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('app-container').innerHTML = `
+                <div class="floating-card">
+                    <h3 style="margin-top:0">${t('backup')}</h3>
+                    <p style="color:var(--text-sec); font-size:14px; margin-bottom:20px;">${t('backup_desc')}</p>
+                    <button class="ios-btn" onclick="downloadBackup()">
+                        <i data-lucide="download" style="width:18px; vertical-align:middle; margin-right:8px;"></i>${t('export_data')}
+                    </button>
+                    
+                    <hr style="border:none; border-top:1px solid var(--border); margin:30px 0;">
+                    
+                    <h3>Wiederherstellung</h3>
+                    <p style="color:var(--text-sec); font-size:14px; margin-bottom:20px;">${t('restore_desc')}</p>
+                    <input type="file" id="restore-file" style="display:none" onchange="handleRestoreUpload(this)">
+                    <button class="ios-btn" style="background:var(--danger)" onclick="document.getElementById('restore-file').click()">
+                        <i data-lucide="upload" style="width:18px; vertical-align:middle; margin-right:8px;"></i>${t('import_data')}
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        async function downloadBackup() {
+            try {
+                window.location.href = '/api/admin/backup';
+            } catch (e) { showToast("Fehler beim Download", "danger"); }
+        }
+
+        async function handleRestoreUpload(input) {
+            if (!input.files || !input.files[0]) return;
+            if (!confirm(t('restore_desc'))) return;
+
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showToast(t('starting_restore'), "info");
+
+            try {
+                const res = await fetch('/api/admin/restore', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(t('restore_success'), "success");
+                    setTimeout(() => window.location.href = '/', 2000);
+                } else {
+                    alert(data.message || "Fehler beim Restore");
                 }
             } catch (e) { alert("Verbindungsfehler"); }
         }

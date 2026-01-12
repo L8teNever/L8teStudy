@@ -246,7 +246,13 @@ const translations = {
         mark_as_done: "Als erledigt markieren",
         mark_as_open: "Als offen markieren",
         privacy: "Datenschutz",
-        imprint: "Impressum"
+        imprint: "Impressum",
+        export_data: "Daten exportieren",
+        import_data: "Daten importieren",
+        backup_desc: "Alle Datenbankinhalte als JSON-Datei sichern.",
+        restore_desc: "ACHTUNG: Überschreibt alle aktuellen Daten!",
+        starting_restore: "Wiederherstellung läuft...",
+        restore_success: "Daten wiederhergestellt. App wird neu geladen."
     },
     en: {
         home: "Home",
@@ -495,6 +501,12 @@ const translations = {
         mark_as_done: "Mark as Completed",
         mark_as_open: "Mark as Pending",
         privacy: "Privacy Policy",
-        imprint: "Imprint"
+        imprint: "Imprint",
+        export_data: "Export Data",
+        import_data: "Import Data",
+        backup_desc: "Backup all database content as a JSON file.",
+        restore_desc: "WARNING: Overwrites all current data!",
+        starting_restore: "Restoring data...",
+        restore_success: "Data restored. App will reload."
     }
 };
