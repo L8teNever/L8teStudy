@@ -149,12 +149,29 @@ def catch_all(path):
 # --- Auth Routes ---
 @main_bp.route('/privacy')
 def privacy_policy():
-    content = GlobalSetting.get('privacy_policy', 'Datenschutzerklärung wurde noch nicht hinterlegt.')
+    default_text = """# Datenschutz & Sicherheit - L8teStudy
+
+L8teStudy ist eine lokal gehostete Anwendung. Alle Daten verbleiben auf Ihrem eigenen Server.
+
+## 1. Datenerhebung und -speicherung
+Alle von Ihnen eingegebenen Daten (Benutzername, Aufgaben, Termine, Noten, Bilder) werden ausschließlich in einer lokalen Datenbank auf Ihrem Server gespeichert.
+
+## 2. Keine Datenweitergabe
+Es findet keine automatische Übertragung von Daten an externe Server statt (keine Cloud, kein Tracking, keine Analytics).
+
+## 3. WebUntis Integration
+Sollten Sie die WebUntis-Synchronisierung nutzen, werden Ihre Zugangsdaten (verschlüsselt) lokal gespeichert und nur zur Kommunikation mit dem offiziellen WebUntis-Server Ihrer Schule verwendet.
+
+## 4. Cookies
+Die Anwendung nutzt lediglich technisch notwendige Session-Cookies zur Authentifizierung und zur Speicherung Ihrer Design-Einstellungen (Dunkelmodus).
+"""
+    content = GlobalSetting.get('privacy_policy', default_text)
     return render_template('legal.html', title='Datenschutzerklärung', content=content)
 
 @main_bp.route('/imprint')
 def imprint():
-    content = GlobalSetting.get('imprint', 'Impressum wurde noch nicht hinterlegt.')
+    default_text = "Hinterlegen Sie hier Ihr Impressum im Admin-Bereich."
+    content = GlobalSetting.get('imprint', default_text)
     return render_template('legal.html', title='Impressum', content=content)
 
 login_manager.login_view = 'auth.login_page'
@@ -1122,9 +1139,27 @@ def get_global_settings():
     if not current_user.is_super_admin:
         return jsonify({'success': False}), 403
     
+    privacy_default = """# Datenschutz & Sicherheit - L8teStudy
+
+L8teStudy ist eine lokal gehostete Anwendung. Alle Daten verbleiben auf Ihrem eigenen Server.
+
+## 1. Datenerhebung und -speicherung
+Alle von Ihnen eingegebenen Daten (Benutzername, Aufgaben, Termine, Noten, Bilder) werden ausschließlich in einer lokalen Datenbank auf Ihrem Server gespeichert.
+
+## 2. Keine Datenweitergabe
+Es findet keine automatische Übertragung von Daten an externe Server statt (keine Cloud, kein Tracking, keine Analytics).
+
+## 3. WebUntis Integration
+Sollten Sie die WebUntis-Synchronisierung nutzen, werden Ihre Zugangsdaten (verschlüsselt) lokal gespeichert und nur zur Kommunikation mit dem offiziellen WebUntis-Server Ihrer Schule verwendet.
+
+## 4. Cookies
+Die Anwendung nutzt lediglich technisch notwendige Session-Cookies zur Authentifizierung und zur Speicherung Ihrer Design-Einstellungen (Dunkelmodus).
+"""
+    imprint_default = "Hinterlegen Sie hier Ihr Impressum im Admin-Bereich."
+    
     return jsonify({
-        'privacy_policy': GlobalSetting.get('privacy_policy', ''),
-        'imprint': GlobalSetting.get('imprint', '')
+        'privacy_policy': GlobalSetting.get('privacy_policy', privacy_default),
+        'imprint': GlobalSetting.get('imprint', imprint_default)
     })
 
 @api_bp.route('/admin/settings/global', methods=['POST'])
