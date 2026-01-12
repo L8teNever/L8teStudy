@@ -3830,6 +3830,13 @@
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
+                    ${window.currentUser.is_super_admin ? `
+                    <div class="account-item" onclick="renderSuperAdminDashboard()">
+                        <div class="account-item-icon" style="background:#FF3B30; color:white;"><i data-lucide="shield-check"></i></div>
+                        <div class="account-item-text">${t('superadmin_dashboard')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    ` : ''}
                     <div class="account-item" onclick="renderUserManagement()">
                         <div class="account-item-icon" style="background:var(--accent); color:white;"><i data-lucide="users"></i></div>
                         <div class="account-item-text">${t('manage_users')}</div>
