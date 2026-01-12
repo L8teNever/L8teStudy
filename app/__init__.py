@@ -186,7 +186,7 @@ def create_app():
 
     def update_version_file():
         version_file = os.path.join(app.root_path, '..', 'version.txt')
-        version = "1.1.18" # Default fallback
+        version = "2.0.0" # Default fallback
         
         try:
             commit_count = subprocess.check_output(['git', 'rev-list', '--count', 'HEAD'], 
