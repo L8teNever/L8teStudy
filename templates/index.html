@@ -3003,6 +3003,19 @@
                  </div>
 
                  <div class="floating-card">
+                     <div class="account-item" onclick="window.open('/privacy', '_blank')">
+                         <div class="account-item-icon" style="background:#8E8E93; color:white;"><i data-lucide="shield-check"></i></div>
+                         <div class="account-item-text">${t('privacy')}</div>
+                         <i data-lucide="external-link" style="width:18px; color:var(--text-sec)"></i>
+                     </div>
+                     <div class="account-item" style="border-bottom:none" onclick="window.open('/imprint', '_blank')">
+                         <div class="account-item-icon" style="background:#8E8E93; color:white;"><i data-lucide="info"></i></div>
+                         <div class="account-item-text">${t('imprint')}</div>
+                         <i data-lucide="external-link" style="width:18px; color:var(--text-sec)"></i>
+                     </div>
+                 </div>
+
+                 <div class="floating-card">
                      <div class="account-item" style="color:var(--danger);" onclick="window.location.href='/logout'">
                          <div class="account-item-icon" style="background:rgba(255, 59, 48, 0.1); color:var(--danger);"><i data-lucide="log-out"></i></div>
                          <div class="account-item-text">${t('logout')}</div>
@@ -3744,7 +3757,7 @@
                         <div class="item-content">
                             <div class="item-title" style="font-size: 13px; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em;">Lehrer</div>
                             <div class="item-sub" style="color: var(--text-main); font-size: 16px; font-weight: 600;">
-                                ${teachers.length > 0 ? teachers.map(t => `${t.long_name} (${t.name})`).join('<br>') : '-'}
+                                ${teachers.length > 0 ? teachers.map(t => t.name).join('<br>') : '-'}
                             </div>
                         </div>
                     </div>
@@ -4539,14 +4552,69 @@
                             <div class="account-item-text">${t('global_subjects_sharing')}</div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
-                    <div class="account-item" onclick="renderSharedContentManagement()" style="padding:12px 0;">
-                            <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="share-2"></i></div>
-                            <div class="account-item-text">${t('shared_content')}</div>
+                    <div class="account-item" onclick="renderLegalSettings()" style="padding:12px 0;">
+                            <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="shield-check"></i></div>
+                            <div class="account-item-text">Rechtliches & Datenschutz</div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                 </div>
             `;
             lucide.createIcons();
+        }
+
+        async function renderLegalSettings() {
+            previousView = 'sub_super_admin';
+            currentView = 'sub_legal_settings';
+            setPageTitle('Rechtliches');
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_legal_settings' }, '', '/superadmin/legal');
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('header-back-btn').onclick = () => window.history.back();
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px;">${t('loading')}</div>`;
+
+            try {
+                const res = await fetch('/api/admin/settings/global');
+                const data = await res.json();
+
+                document.getElementById('app-container').innerHTML = `
+                    <div class="floating-card">
+                        <h4 style="margin:0 0 10px 0;">${t('privacy')}</h4>
+                        <textarea id="edit-privacy" class="ios-input" style="min-height:300px; font-family:monospace; font-size:12px;">${data.privacy_policy || ''}</textarea>
+                        
+                        <h4 style="margin:20px 0 10px 0;">${t('imprint')}</h4>
+                        <textarea id="edit-imprint" class="ios-input" style="min-height:200px; font-family:monospace; font-size:12px;">${data.imprint || ''}</textarea>
+                        
+                        <button class="ios-btn" onclick="saveLegalSettings()">${t('save')}</button>
+                    </div>
+                `;
+            } catch (e) {
+                alert("Fehler beim Laden");
+            }
+        }
+
+        async function saveLegalSettings() {
+            const privacy = document.getElementById('edit-privacy').value;
+            const imprint = document.getElementById('edit-imprint').value;
+
+            try {
+                const res = await fetch('/api/admin/settings/global', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ privacy_policy: privacy, imprint: imprint })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Einstellungen gespeichert", "success");
+                    window.history.back();
+                } else {
+                    alert("Fehler beim Speichern");
+                }
+            } catch (e) { alert("Verbindungsfehler"); }
         }
 
         async function saveNewUser() {

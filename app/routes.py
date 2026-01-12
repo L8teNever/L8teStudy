@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, PushSubscription, Subject, db, TaskMessage, TaskChatRead
+from .models import User, Task, TaskImage, Event, Grade, NotificationSetting, PushSubscription, Subject, db, TaskMessage, TaskChatRead, GlobalSetting
 from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
 import os
@@ -147,6 +147,17 @@ def catch_all(path):
     return render_template('index.html', user=current_user)
 
 # --- Auth Routes ---
+@main_bp.route('/privacy')
+def privacy_policy():
+    content = GlobalSetting.get('privacy_policy', 'Datenschutzerklärung wurde noch nicht hinterlegt.')
+    return render_template('legal.html', title='Datenschutzerklärung', content=content)
+
+@main_bp.route('/imprint')
+def imprint():
+    content = GlobalSetting.get('imprint', 'Impressum wurde noch nicht hinterlegt.')
+    return render_template('legal.html', title='Impressum', content=content)
+
+login_manager.login_view = 'auth.login_page'
 @auth_bp.route('/login', methods=['POST'])
 @csrf.exempt
 @limiter.limit("5 per minute")
@@ -1103,6 +1114,31 @@ def delete_user(id):
         return jsonify({'success': False, 'message': 'Cannot delete self'}), 400
     db.session.delete(user)
     db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/admin/settings/global', methods=['GET'])
+@login_required
+def get_global_settings():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False}), 403
+    
+    return jsonify({
+        'privacy_policy': GlobalSetting.get('privacy_policy', ''),
+        'imprint': GlobalSetting.get('imprint', '')
+    })
+
+@api_bp.route('/admin/settings/global', methods=['POST'])
+@login_required
+def update_global_settings():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False}), 403
+    
+    data = request.json
+    if 'privacy_policy' in data:
+        GlobalSetting.set('privacy_policy', data['privacy_policy'])
+    if 'imprint' in data:
+        GlobalSetting.set('imprint', data['imprint'])
+    
     return jsonify({'success': True})
 
 # --- Notification Routes ---

@@ -181,6 +181,25 @@ class TaskChatRead(db.Model):
     task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
     last_read_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class GlobalSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(64), unique=True, nullable=False)
+    value = db.Column(db.Text)
+
+    @staticmethod
+    def get(key, default=None):
+        setting = GlobalSetting.query.filter_by(key=key).first()
+        return setting.value if setting else default
+
+    @staticmethod
+    def set(key, value):
+        setting = GlobalSetting.query.filter_by(key=key).first()
+        if not setting:
+            setting = GlobalSetting(key=key)
+            db.session.add(setting)
+        setting.value = value
+        db.session.commit()
+
 from cryptography.fernet import Fernet
 from flask import current_app
 

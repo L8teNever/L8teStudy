@@ -244,7 +244,9 @@ const translations = {
         chat_filter_all: "Alle",
         chat_filter_media: "Medien",
         mark_as_done: "Als erledigt markieren",
-        mark_as_open: "Als offen markieren"
+        mark_as_open: "Als offen markieren",
+        privacy: "Datenschutz",
+        imprint: "Impressum"
     },
     en: {
         home: "Home",
@@ -491,6 +493,8 @@ const translations = {
         chat_filter_all: "All",
         chat_filter_media: "Media",
         mark_as_done: "Mark as Completed",
-        mark_as_open: "Mark as Pending"
+        mark_as_open: "Mark as Pending",
+        privacy: "Privacy Policy",
+        imprint: "Imprint"
     }
 };

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L8teStudy - {{ title }}</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --text-main: #1d1d1f;
+            --text-sec: #86868b;
+            --accent: #0071e3;
+            --glass-blur: blur(25px);
+            --border: rgba(255, 255, 255, 0.4);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-gradient: linear-gradient(135deg, #000000 0%, #1c1c1e 100%);
+                --card-bg: rgba(28, 28, 30, 0.6);
+                --text-main: #f5f5f7;
+                --border: rgba(255, 255, 255, 0.08);
+            }
+        }
+
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+        }
+
+        h1 { margin-top: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+        h2 { margin-top: 30px; font-size: 20px; font-weight: 700; color: var(--accent); }
+        h3 { font-size: 18px; font-weight: 600; }
+        
+        .content { white-space: pre-wrap; margin-top: 20px; }
+        
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 30px;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 600px) {
+            .container { padding: 25px; border-radius: 0; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="javascript:history.back()" class="back-btn">
+            ← Zurück
+        </a>
+        <h1>{{ title }}</h1>
+        <div class="content">{{ content | safe }}</div>
+        
+        <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-sec); text-align: center;">
+            &copy; {{ now.year if now else '2024' }} L8teStudy
+        </div>
+    </div>
+</body>
+</html>
