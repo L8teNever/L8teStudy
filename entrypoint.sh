@@ -16,10 +16,8 @@ if [ ! -f /data/l8testudy.db ]; then
     echo "Database not found. It will be created on first run..."
 fi
 
-# Initialize database tables explicitly before starting workers
-echo "Running database migrations..."
-python migrate_db.py
-python migrate_subjects.py
+# Database initialization is handled by app/__init__.py
+# Tables are created automatically on first run
 
 # Start the application
 # The database tables will be created automatically by app/__init__.py
