@@ -5,6 +5,20 @@ Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+
+## [2.0.4] - 2026-01-16
+
+### 🎉 Hinzugefügt
+
+- **Gewichtungs-Eingabefeld für Noten**: Beim Erstellen oder Bearbeiten von Noten kann jetzt die Gewichtung (z.B. 1.0 = 100%, 0.5 = 50%, 2.0 = 200%) angegeben werden
+- **Gewichtete Durchschnittsberechnung**: Der Notendurchschnitt wird jetzt korrekt gewichtet berechnet basierend auf den individuellen Gewichtungen
+- **Gewichts-Anzeige**: Das Gewicht wird in der Notenliste und in der Details-Ansicht angezeigt
+
+### 🔄 Geändert
+
+- **Backend**: `update_grade()` Route akzeptiert jetzt das `weight` Feld
+- **Frontend**: Formular für Noten enthält jetzt ein Gewichtungs-Eingabefeld mit Standardwert 1.0
+
 ## [2.0.0] - 2026-01-12
 
 ### 🎉 Hinzugefügt

@@ -991,6 +991,8 @@ def update_grade(id):
             grade.subject = data['subject']
         if 'value' in data:
             grade.value = float(data['value'])
+        if 'weight' in data:
+            grade.weight = float(data['weight'])
         if 'title' in data:
             grade.title = data['title']
         if 'date' in data:

@@ -2911,7 +2911,7 @@
             const locale = lang === 'en' ? 'en-US' : 'de-DE';
             const gradesArr = JSON.parse(gradesJson);
             const listHtml = gradesArr.map(g => `
-                <div class="list-item" style="padding: 16px 0;" onclick="openDetails('grade', '${g.title || t('grade')}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id})">
+                <div class="list-item" style="padding: 16px 0;" onclick="openDetails('grade', '${g.title || t('grade')}', '${g.subject}', '${g.date}', '${g.value}', '${g.description || ''}', ${g.id}, '[]', null, ${g.weight})">
                     <div class="item-content">
                         <div class="item-title" style="font-weight:600;">${g.title || t('grade')}</div>
                         <div class="item-sub">${new Date(g.date).toLocaleDateString(locale)} • ${t('weight')}: ${g.weight}x</div>
@@ -4917,7 +4917,7 @@
 
 
 
-        function openDetails(type, title, subject, date, value = null, desc = '', id = null, imagesJson = '[]', subjectId = null) {
+        function openDetails(type, title, subject, date, value = null, desc = '', id = null, imagesJson = '[]', subjectId = null, weight = 1.0) {
             const hasDesc = desc && desc.trim() !== '' && desc !== 'null' && desc !== 'undefined';
             let images = [];
             try { images = JSON.parse(imagesJson); } catch (e) { console.error(e); }
@@ -4939,7 +4939,7 @@
                             </button>
                          ` : ''}
                         <div style="display:flex; gap:10px;">
-                            <button class="ios-btn btn-sec" style="flex: 1; margin-bottom: 0;" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date}', '${value || ''}', '${desc.replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${subjectId || 'null'})">${t('edit')}</button>
+                            <button class="ios-btn btn-sec" style="flex: 1; margin-bottom: 0;" onclick="openCreateMenu('${type}', '${title.replace(/'/g, "\\'")}', '${subject || ''}', '${date}', '${value || ''}', '${desc.replace(/\r?\n/g, '\\n').replace(/'/g, "\\'")}', ${id}, '${imagesJson.replace(/'/g, "\\'").replace(/"/g, '&quot;')}', ${subjectId || 'null'}, ${type === 'grade' ? (weight || 1.0) : 'null'})">${t('edit')}</button>
                             ${type === 'task' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteTask(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
                             ${type === 'event' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteEvent(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
                             ${type === 'grade' ? `<button class="ios-btn btn-small btn-danger-light" style="width: auto; margin-bottom: 0;" onclick="deleteGrade(${id})"><i data-lucide="trash-2" style="width:18px"></i></button>` : ''}
@@ -4969,6 +4969,7 @@
                         ${subject ? `<span>${subject}</span><span style="opacity:0.3">•</span>` : ''}
                         <span>${new Date(date).toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                         ${value ? `<span style="opacity:0.3">•</span><span style="color:var(--accent); font-weight:700;">${t('grade_value')}: ${value}</span>` : ''}
+                        ${type === 'grade' && weight ? `<span style="opacity:0.3">•</span><span style="color:var(--text-sec);">${t('weight')}: ${weight}x</span>` : ''}
                     </div>
                 </div>
 
@@ -5090,7 +5091,7 @@
             } catch (e) { console.error(e); }
         }
 
-        function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]', editSubjectId = null) {
+        function openCreateMenu(editType = null, editTitle = '', editSubject = null, editDate = null, editValue = null, editDesc = '', id = null, existingImagesJson = '[]', editSubjectId = null, editWeight = null) {
             taskFiles = []; // Reset file selection
             if (currentView === 'sub_users') {
                 openCreateUserMenu();
@@ -5126,6 +5127,7 @@
             const titleVal = editTitle === 'undefined' ? '' : editTitle;
             const descVal = editDesc === 'undefined' ? '' : editDesc;
             const valVal = editValue === 'null' || editValue === 'undefined' ? '' : editValue;
+            const weightVal = editWeight === 'null' || editWeight === 'undefined' || editWeight === null ? '1.0' : editWeight;
 
             let existingImagesHtml = '';
             // Render existing images if editing
@@ -5192,7 +5194,10 @@
                         </div>
                     </div>
                 ` : ''}
-                ${type === 'grade' ? `<input type="number" id="input-value" step="0.1" class="ios-input" placeholder="${t('grade_value')}" value="${valVal}">` : ''}
+                ${type === 'grade' ? `
+                    <input type="number" id="input-value" step="0.1" class="ios-input" placeholder="${t('grade_value')}" value="${valVal}">
+                    <input type="number" id="input-weight" step="0.1" min="0.1" class="ios-input" placeholder="Gewichtung (z.B. 1.0 = 100%, 0.5 = 50%)" value="${weightVal}">
+                ` : ''}
                 <div class="custom-picker-trigger" onclick="toggleOptionList('calendar-picker-view'); updateCalendarGrid();"><span id="selected-date-display">${selectedDate.toLocaleDateString(window.currentUser?.language === 'en' ? 'en-US' : 'de-DE')}</span><i data-lucide="calendar" style="width:18px"></i></div>
                 <div class="picker-options" id="calendar-picker-view" style="padding:15px">
                     <div class="calendar-header"><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(-1)"><i data-lucide="chevron-left"></i></div><span id="calendar-month-year" style="font-weight:600"></span><div style="padding:10px" onclick="event.stopPropagation(); changeMonth(1)"><i data-lucide="chevron-right"></i></div></div>
@@ -5378,6 +5383,7 @@
         async function saveGrade(updateId = null) {
             const title = document.getElementById('input-title').value;
             const value = document.getElementById('input-value').value;
+            const weight = document.getElementById('input-weight').value;
             const year = selectedDate.getFullYear();
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const d = String(selectedDate.getDate()).padStart(2, '0');
@@ -5396,7 +5402,7 @@
                 const res = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'), date })
+                    body: JSON.stringify({ title: title || 'Klausur', subject: selectedSubject, value: value.replace(',', '.'), weight: weight ? parseFloat(weight.replace(',', '.')) : 1.0, date })
                 });
                 const data = await res.json();
 
