@@ -1672,6 +1672,26 @@
             color: white;
         }
 
+        .status-badge.new {
+            background: #FF9500;
+            color: white;
+        }
+
+        .status-badge.changed {
+            background: #5AC8FA;
+            color: white;
+        }
+
+        .period-card.new-lesson {
+            border-left: 4px solid #FF9500;
+            background: rgba(255, 149, 0, 0.03);
+        }
+
+        .period-card.room-change {
+            border-left: 4px solid #5AC8FA;
+            background: rgba(90, 200, 250, 0.03);
+        }
+
         .timetable-loading {
             display: flex;
             flex-direction: column;
@@ -3613,6 +3633,7 @@
                         markerInserted = true;
                     }
 
+
                     // Broaden search: any other period at exactly the same time?
                     let otherPeriod = null;
                     let otherIdx = -1;
@@ -3644,29 +3665,66 @@
                         const newSubNames = newP.subjects.map(s => s.long_name || s.name).join(', ');
                         const oldRooms = oldP.rooms.map(r => r.name).join(', ');
                         const newRooms = newP.rooms.map(r => r.name).join(', ');
+                        const oldTeachers = oldP.teachers.map(t => t.name).join(', ');
                         const newTeachers = newP.teachers.map(t => t.name).join(', ');
 
+                        // Detect type of change
+                        const subjectChanged = oldSubNames !== newSubNames;
+                        const roomChanged = oldRooms !== newRooms;
+                        const teacherChanged = oldTeachers !== newTeachers;
+
+                        let changeType = 'substitution';
+                        let changeLabel = 'Vertretung';
+
+                        if (!subjectChanged && (roomChanged || teacherChanged)) {
+                            // Only room/teacher changed, not the subject
+                            changeType = 'changed';
+                            if (roomChanged && teacherChanged) {
+                                changeLabel = 'Raum & Lehrer geändert';
+                            } else if (roomChanged) {
+                                changeLabel = 'Raum geändert';
+                            } else {
+                                changeLabel = 'Lehrer geändert';
+                            }
+                        }
+
                         html += `
-                            <div class="period-card substitution ${cardClass}" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(newP))}')">
-                                <div class="status-badge substitution">Vertretung</div>
+                            <div class="period-card ${changeType === 'changed' ? 'room-change' : 'substitution'} ${cardClass}" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(newP))}')">
+                                <div class="status-badge ${changeType}">${changeLabel}</div>
                                 <div class="period-time">
                                     <span class="start">${startT}</span>
                                     <span class="end">${endT}</span>
                                 </div>
                                 <div class="period-divider"></div>
                                 <div class="period-info">
-                                    <div class="period-subject">
-                                        <span style="opacity: 0.5; text-decoration: line-through; font-size: 0.9em;">${oldSubNames || 'Pause'}</span>
-                                        <span style="margin: 0 8px; color: var(--text-sec); font-weight: 400;">→</span>
-                                        <span>${newSubNames || 'Pause'}</span>
-                                    </div>
+                                    ${subjectChanged ? `
+                                        <div class="period-subject">
+                                            <span style="opacity: 0.5; text-decoration: line-through; font-size: 0.9em;">${oldSubNames || 'Pause'}</span>
+                                            <span style="margin: 0 8px; color: var(--text-sec); font-weight: 400;">→</span>
+                                            <span>${newSubNames || 'Pause'}</span>
+                                        </div>
+                                    ` : `
+                                        <div class="period-subject">${newSubNames || 'Pause'}</div>
+                                    `}
                                     <div class="period-details">
-                                        <span class="period-room">
-                                            <span style="opacity: 0.6; text-decoration: line-through; font-size: 0.9em;">${oldRooms || '-'}</span>
-                                            <span style="margin: 0 4px; font-weight: 400;">→</span>
-                                            ${newRooms || '-'}
-                                        </span>
-                                        <span class="period-teacher">${newTeachers}</span>
+                                        ${roomChanged ? `
+                                            <span class="period-room">
+                                                <span style="opacity: 0.6; text-decoration: line-through; font-size: 0.9em;">${oldRooms || '-'}</span>
+                                                <span style="margin: 0 4px; font-weight: 400;">→</span>
+                                                <span style="color: var(--accent); font-weight: 600;">${newRooms || '-'}</span>
+                                            </span>
+                                        ` : `
+                                            <span class="period-room">${newRooms || '-'}</span>
+                                        `}
+                                        ${teacherChanged ? `
+                                            <span class="period-teacher">
+                                                <span style="opacity: 0.6; text-decoration: line-through; font-size: 0.9em;">${oldTeachers || '-'}</span>
+                                                <span style="margin: 0 4px; font-weight: 400;">→</span>
+                                                <span style="color: var(--accent); font-weight: 600;">${newTeachers || '-'}</span>
+                                            </span>
+                                        ` : `
+                                            <span class="period-teacher">${newTeachers}</span>
+                                        `}
                                     </div>
                                     ${newP.substText ? `<div style="font-size:10px; color:var(--accent); margin-top:4px; font-weight: 600;">${newP.substText}</div>` : ''}
                                 </div>
@@ -3681,13 +3739,22 @@
 
                         let statusClass = "";
                         let statusLabel = "";
-                        if (p.code === "cancelled") { statusClass = "cancelled"; statusLabel = "Entfällt"; }
-                        else if (p.code === "substitution") { statusClass = "substitution"; statusLabel = "Vertretung"; }
+                        let cardExtraClass = "";
+
+                        if (p.code === "cancelled") {
+                            statusClass = "cancelled";
+                            statusLabel = "Entfällt";
+                        } else if (p.code === "substitution") {
+                            // This is a NEW lesson (substitution without a cancelled counterpart)
+                            statusClass = "new";
+                            statusLabel = "Neu";
+                            cardExtraClass = "new-lesson";
+                        }
 
                         const subNames = p.subjects.map(s => s.long_name || s.name).join(', ');
 
                         html += `
-                            <div class="period-card ${statusClass} ${cardClass}" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(p))}')">
+                            <div class="period-card ${statusClass} ${cardExtraClass} ${cardClass}" onclick="openPeriodDetails('${encodeURIComponent(JSON.stringify(p))}')">
                                 ${statusLabel ? `<div class="status-badge ${statusClass}">${statusLabel}</div>` : ''}
                                 <div class="period-time">
                                     <span class="start">${startT}</span>
@@ -3700,7 +3767,7 @@
                                         <span class="period-room">${p.rooms.map(r => r.name).join(', ') || '-'}</span>
                                         <span class="period-teacher">${p.teachers.map(t => t.name).join(', ') || ''}</span>
                                     </div>
-                                    ${p.substText ? `<div style="font-size:10px; color:var(--danger); margin-top:4px;">${p.substText}</div>` : ''}
+                                    ${p.substText ? `<div style="font-size:10px; color:${statusClass === 'new' ? 'var(--accent)' : 'var(--danger)'}; margin-top:4px; font-weight: 600;">${p.substText}</div>` : ''}
                                 </div>
                                 ${isCurrentPeriod ? `<div class="time-marker" style="top: ${((now - pStart) / (pEnd - pStart) * 100).toFixed(0)}%"></div>` : ''}
                             </div>
