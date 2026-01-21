@@ -2346,12 +2346,14 @@
                     </div>
                 </div>
                 
-                <div class="floating-card" style="margin-bottom: 20px; padding: 12px 16px;">
-                    <div class="search-container active" style="width:100%; box-shadow:none; border:none; background:var(--tab-bg); height: 40px; min-height: 40px;">
-                        <div class="search-icon-box" style="min-width: 40px; height: 40px;"><i data-lucide="search" style="width:18px"></i></div>
-                        <input type="text" id="drive-search-input" class="search-input" style="opacity:1; transform:none; font-size: 15px;" placeholder="${t('search_drive')}" onkeyup="handleDriveSearch(event)">
+                ${tab === 'files' ? `
+                    <div class="floating-card" style="margin-bottom: 20px; padding: 12px 16px;">
+                        <div class="search-container active" style="width:100%; box-shadow:none; border:none; background:var(--tab-bg); height: 40px; min-height: 40px;">
+                            <div class="search-icon-box" style="min-width: 40px; height: 40px;"><i data-lucide="search" style="width:18px"></i></div>
+                            <input type="text" id="drive-search-input" class="search-input" style="opacity:1; transform:none; font-size: 15px;" placeholder="${t('search_drive')}" onkeyup="handleDriveSearch(event)">
+                        </div>
                     </div>
-                </div>
+                ` : ''}
 
                 <div id="drive-content-container">
                     <div style="text-align:center; padding:40px; color:var(--text-sec)">
@@ -2493,24 +2495,36 @@
                     return a.localeCompare(b);
                 });
 
-                // Build HTML with subject sections
+                // Build HTML with collapsible subject folders
                 let html = '';
                 sortedSubjects.forEach((subjectName, idx) => {
                     const subjectFiles = filesBySubject[subjectName];
                     const fileCount = subjectFiles.length;
+                    const subjectId = `subject-${subjectName.replace(/[^a-zA-Z0-9]/g, '-')}`;
 
-                    // Subject header
+                    // Collapsible subject folder card
                     html += `
-                        <div class="item-sub" style="margin: ${idx === 0 ? '10px' : '25px'} 0 10px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; display:flex; align-items:center; gap:8px;">
-                            <i data-lucide="folder" style="width:14px; height:14px;"></i>
-                            <span>${subjectName}</span>
-                            <span style="opacity:0.6; font-weight:400;">(${fileCount})</span>
+                        <div class="floating-card slide-in-bottom" style="padding: 16px; margin-bottom: 12px; cursor:pointer; animation-delay: ${idx * 0.05}s; animation-fill-mode: both;" onclick="toggleSubjectFolder('${subjectId}')">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:rgba(0,113,227,0.05); color:var(--accent);">
+                                        <i data-lucide="folder" id="icon-${subjectId}"></i>
+                                    </div>
+                                    <div>
+                                        <div class="item-title">${subjectName}</div>
+                                        <div class="item-sub">${fileCount} ${fileCount === 1 ? 'Datei' : 'Dateien'}</div>
+                                    </div>
+                                </div>
+                                <i data-lucide="chevron-down" id="chevron-${subjectId}" style="width:20px; color:var(--text-sec); transition: transform 0.3s;"></i>
+                            </div>
                         </div>
+                        
+                        <div id="${subjectId}" style="display:none; margin-bottom: 20px;">
                     `;
 
                     // Files in this subject
                     html += subjectFiles.map(f => `
-                        <div class="list-item slide-in-bottom" style="animation-delay: ${Math.random() * 0.1}s; animation-fill-mode: both;" onclick="viewDriveFile(${f.id}, '${f.filename.replace(/'/g, "\\'")}')">
+                        <div class="list-item" style="margin-left: 0px;" onclick="viewDriveFile(${f.id}, '${f.filename.replace(/'/g, "\\'")}')">
                             <div class="account-item-icon"><i data-lucide="file-text"></i></div>
                             <div class="item-content">
                                 <div class="item-title">${f.filename}</div>
@@ -2525,6 +2539,8 @@
                             </div>
                         </div>
                     `).join('');
+
+                    html += `</div>`;
                 });
 
                 container.innerHTML = html;
@@ -2532,6 +2548,23 @@
             } catch (e) {
                 container.innerHTML = `<p class="item-sub" style="text-align:center;">${t('error_loading')}</p>`;
             }
+        }
+
+        function toggleSubjectFolder(subjectId) {
+            const folder = document.getElementById(subjectId);
+            const chevron = document.getElementById(`chevron-${subjectId}`);
+            const icon = document.getElementById(`icon-${subjectId}`);
+
+            if (folder.style.display === 'none') {
+                folder.style.display = 'block';
+                chevron.style.transform = 'rotate(180deg)';
+                icon.setAttribute('data-lucide', 'folder-open');
+            } else {
+                folder.style.display = 'none';
+                chevron.style.transform = 'rotate(0deg)';
+                icon.setAttribute('data-lucide', 'folder');
+            }
+            lucide.createIcons();
         }
 
         async function handleDriveSearch(e) {
@@ -2545,29 +2578,47 @@
             }
 
             const container = document.getElementById('drive-content-container');
-            // Don't clear immediately to avoid flickering for fast typists, maybe just show a small loader
+
+            // Show loading state
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px; color:var(--text-sec)">
+                    <div class="spinner-icon"><i data-lucide="loader-2" class="spin"></i></div>
+                    Suche nach "${query}"...
+                </div>
+            `;
+            lucide.createIcons();
 
             try {
+                console.log('Searching for:', query);
                 const res = await fetch(`/api/drive/search?q=${encodeURIComponent(query)}`);
+
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    console.error('Search failed:', res.status, errorText);
+                    container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub" style="color:var(--danger)">Suchfehler: ${res.status}</p></div>`;
+                    return;
+                }
+
                 const results = await res.json();
+                console.log('Search results:', results);
 
                 if (currentView !== 'drive') return;
 
-                if (results.length === 0) {
-                    container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_results')}</p></div>`;
+                if (!results || results.length === 0) {
+                    container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Keine Ergebnisse für "${query}"</p></div>`;
                     return;
                 }
 
                 container.innerHTML = results.map(file => `
-                    <div class="list-item" onclick="viewDriveFile(${file.id || file.file_id}, '${file.filename}')">
+                    <div class="list-item" onclick="viewDriveFile(${file.id || file.file_id}, '${(file.filename || '').replace(/'/g, "\\'")}')">
                         <div class="account-item-icon" style="background:rgba(0,113,227,0.1); color:var(--accent);"><i data-lucide="file-search"></i></div>
                         <div class="item-content">
-                            <div class="item-title">${file.filename}</div>
+                            <div class="item-title">${file.filename || 'Unbekannt'}</div>
                             <div class="item-sub">
-                                <span style="color:var(--accent)">${file.subject_name || t('unknown')}</span> 
-                                ${file.parent_folder_name ? `• <span style="color:var(--text-sec)">${file.parent_folder_name}</span>` : ''} • 
+                                <span style="color:var(--accent)">${file.subject_name || 'Unbekannt'}</span> 
+                                ${file.parent_folder_name ? `• <span style="color:var(--text-sec)">${file.parent_folder_name}</span>` : ''} •
                                 <span style="color:var(--text-main); font-style:italic;">"${file.snippet || '...'}"</span>
-                                <div style="font-size:10px; margin-top:2px;">${t('found_in')} ${file.folder_name || ''} von ${file.owner_username || ''}</div>
+                                <div style="font-size:10px; margin-top:2px;">Gefunden in ${file.folder_name || '?'} von ${file.owner_username || '?'}</div>
                             </div>
                         </div>
                         <div class="sheet-close-btn" style="width:36px; height:36px; background:var(--tab-bg);" onclick="event.stopPropagation(); downloadDriveFile(${file.id || file.file_id})">
@@ -2577,7 +2628,8 @@
                 `).join('');
                 lucide.createIcons();
             } catch (e) {
-                console.error(e);
+                console.error('Search error:', e);
+                container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub" style="color:var(--danger)">Fehler: ${e.message}</p></div>`;
             }
         }
 
