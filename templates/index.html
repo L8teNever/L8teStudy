@@ -2330,6 +2330,7 @@
 
         /* --- DRIVE INTEGRATION --- */
         let activeDriveTab = 'folders';
+        let driveFolderCache = {}; // Cache for folder exploration
 
         async function renderDrive(tab = 'folders') {
             currentView = 'drive';
@@ -2398,7 +2399,7 @@
                 if (roots.length > 0) {
                     html += `<div class="item-sub" style="margin: 20px 0 10px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px;">Quellen (${roots.length})</div>`;
                     html += roots.map(f => `
-                        <div class="floating-card" style="padding: 16px; margin-bottom: 12px; cursor:pointer;" onclick="browseRootFolder(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')">
+                        <div class="floating-card slide-in-bottom" style="padding: 16px; margin-bottom: 12px; cursor:pointer; animation-fill-mode: both; animation-delay: ${Math.random() * 0.1}s" onclick="browseRootFolder(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <div style="display:flex; align-items:center; gap:12px;">
                                     <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:rgba(0,113,227,0.05); color:var(--accent);">
@@ -2556,6 +2557,9 @@
             currentView = 'drive_folder';
 
             const container = document.getElementById('drive-content-container');
+            const cacheKey = `${id}-${googleFolderId || 'root'}`;
+
+            // Render Skeleton / Header immediately
             container.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; padding:0 5px;">
                     <button class="btn-chat-open" style="width:32px; height:32px; padding:0; border-radius:8px;" onclick="window.history.back()">
@@ -2573,15 +2577,24 @@
             lucide.createIcons();
 
             try {
-                // Load subfolders and subjects in parallel
-                const query = googleFolderId ? `?folder_id=${googleFolderId}` : '';
-                const [subRes, subjectsRes] = await Promise.all([
-                    fetch(`/api/drive/folders/${id}/children${query}`),
-                    fetch('/api/subjects')
-                ]);
+                let children, subjects;
 
-                const children = await subRes.json();
-                const subjects = await subjectsRes.json();
+                // Check Cache
+                if (driveFolderCache[cacheKey]) {
+                    children = driveFolderCache[cacheKey].children;
+                    subjects = driveFolderCache[cacheKey].subjects;
+                } else {
+                    const query = googleFolderId ? `?folder_id=${googleFolderId}` : '';
+                    const [subRes, subjectsRes] = await Promise.all([
+                        fetch(`/api/drive/folders/${id}/children${query}`),
+                        fetch('/api/subjects')
+                    ]);
+                    children = await subRes.json();
+                    subjects = await subjectsRes.json();
+
+                    // Simple cache
+                    driveFolderCache[cacheKey] = { children, subjects };
+                }
 
                 const list = document.getElementById('subfolder-list');
                 if (children.length === 0) {
@@ -2589,13 +2602,13 @@
                     return;
                 }
 
-                list.innerHTML = children.map(c => {
+                list.innerHTML = children.map((c, idx) => {
                     const subjectOptions = subjects.map(s =>
                         `<option value="${s.id}">${s.name}</option>`
                     ).join('');
 
                     return `
-                    <div class="floating-card" style="padding: 16px; margin-bottom: 12px; cursor:pointer;" onclick="browseRootFolder(${id}, '${c.name.replace(/'/g, "\\'")}', true, '${c.id}')">
+                    <div class="floating-card slide-in-bottom" style="padding: 16px; margin-bottom: 12px; cursor:pointer; animation-fill-mode: both; animation-delay: ${Math.min(idx * 0.05, 0.5)}s" onclick="browseRootFolder(${id}, '${c.name.replace(/'/g, "\\'")}', true, '${c.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:${c.is_synced ? '0' : '12px'};">
                             <div style="display:flex; align-items:center; gap:12px;">
                                 <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:${c.is_synced ? 'rgba(52,199,89,0.1)' : 'rgba(0,113,227,0.05)'}; color:${c.is_synced ? 'var(--success)' : 'var(--text-sec)'}">
@@ -2645,7 +2658,7 @@
                     body: JSON.stringify({
                         folder_id: subGoogleId,
                         enabled: enabled,
-                        privacy_level: 'private', // Default to private when enabling
+                        privacy_level: 'public', // Default to public when enabling
                         subject_id: subjectId
                     })
                 });
