@@ -273,6 +273,18 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Schema migration (role) error: {e}")
 
+        # Schema Update: Add class_id to user if missing (fix for USER error)
+        try:
+            if 'user' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('user')]
+                if 'class_id' not in cols:
+                    app.logger.info("Migrating: Adding class_id to user")
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE user ADD COLUMN class_id INTEGER REFERENCES school_class(id)"))
+                        conn.commit()
+        except Exception as e:
+            app.logger.error(f"Schema migration (class_id) error: {e}")
+
         # Schema Update: Add parent_id to task_message if missing
         try:
             if 'task_message' in inspector.get_table_names():
@@ -296,6 +308,24 @@ def create_app():
                         conn.commit()
         except Exception as e:
             app.logger.error(f"Schema migration (notify_chat_message) error: {e}")
+
+        # Schema Update: Drive Folder Enhancements (is_root, parent_id, privacy_level)
+        try:
+            if 'drive_folder' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('drive_folder')]
+                with db.engine.connect() as conn:
+                    if 'is_root' not in cols:
+                        app.logger.info("Migrating: Adding is_root to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN is_root BOOLEAN DEFAULT 0"))
+                    if 'parent_id' not in cols:
+                        app.logger.info("Migrating: Adding parent_id to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN parent_id INTEGER REFERENCES drive_folder(id)"))
+                    if 'privacy_level' not in cols:
+                        app.logger.info("Migrating: Adding privacy_level to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN privacy_level VARCHAR(20) DEFAULT 'private'"))
+                    conn.commit()
+        except Exception as e:
+            app.logger.error(f"Schema migration (drive_folder) error: {e}")
 
     # Initialize Scheduler
     scheduler.init_app(app)
