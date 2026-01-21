@@ -273,17 +273,29 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Schema migration (role) error: {e}")
 
-        # Schema Update: Add class_id to user if missing (fix for USER error)
+        # Schema Update: Comprehensive User Table Update (fix for missing columns)
         try:
             if 'user' in inspector.get_table_names():
                 cols = [c['name'] for c in inspector.get_columns('user')]
-                if 'class_id' not in cols:
-                    app.logger.info("Migrating: Adding class_id to user")
-                    with db.engine.connect() as conn:
+                with db.engine.connect() as conn:
+                    if 'class_id' not in cols:
+                        app.logger.info("Migrating: Adding class_id to user")
                         conn.execute(text("ALTER TABLE user ADD COLUMN class_id INTEGER REFERENCES school_class(id)"))
-                        conn.commit()
+                    if 'dark_mode' not in cols:
+                        app.logger.info("Migrating: Adding dark_mode to user")
+                        conn.execute(text("ALTER TABLE user ADD COLUMN dark_mode BOOLEAN DEFAULT 0"))
+                    if 'language' not in cols:
+                        app.logger.info("Migrating: Adding language to user")
+                        conn.execute(text("ALTER TABLE user ADD COLUMN language VARCHAR(5) DEFAULT 'de'"))
+                    if 'needs_password_change' not in cols:
+                        app.logger.info("Migrating: Adding needs_password_change to user")
+                        conn.execute(text("ALTER TABLE user ADD COLUMN needs_password_change BOOLEAN DEFAULT 1"))
+                    if 'has_seen_tutorial' not in cols:
+                        app.logger.info("Migrating: Adding has_seen_tutorial to user")
+                        conn.execute(text("ALTER TABLE user ADD COLUMN has_seen_tutorial BOOLEAN DEFAULT 0"))
+                    conn.commit()
         except Exception as e:
-            app.logger.error(f"Schema migration (class_id) error: {e}")
+            app.logger.error(f"User schema migration error: {e}")
 
         # Schema Update: Add parent_id to task_message if missing
         try:
@@ -309,7 +321,7 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Schema migration (notify_chat_message) error: {e}")
 
-        # Schema Update: Drive Folder Enhancements (is_root, parent_id, privacy_level)
+        # Schema Update: Drive Folder Enhancements (is_root, parent_id, privacy_level, sync columns)
         try:
             if 'drive_folder' in inspector.get_table_names():
                 cols = [c['name'] for c in inspector.get_columns('drive_folder')]
@@ -323,9 +335,54 @@ def create_app():
                     if 'privacy_level' not in cols:
                         app.logger.info("Migrating: Adding privacy_level to drive_folder")
                         conn.execute(text("ALTER TABLE drive_folder ADD COLUMN privacy_level VARCHAR(20) DEFAULT 'private'"))
+                    if 'sync_enabled' not in cols:
+                        app.logger.info("Migrating: Adding sync_enabled to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN sync_enabled BOOLEAN DEFAULT 1"))
+                    if 'last_sync_at' not in cols:
+                        app.logger.info("Migrating: Adding last_sync_at to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN last_sync_at DATETIME"))
+                    if 'sync_status' not in cols:
+                        app.logger.info("Migrating: Adding sync_status to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN sync_status VARCHAR(50) DEFAULT 'pending'"))
+                    if 'sync_error' not in cols:
+                        app.logger.info("Migrating: Adding sync_error to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN sync_error TEXT"))
                     conn.commit()
         except Exception as e:
-            app.logger.error(f"Schema migration (drive_folder) error: {e}")
+            app.logger.error(f"Drive folder schema migration error: {e}")
+
+        # Schema Update: Drive File Enhancements (subject_id, auto_mapped, ocr)
+        try:
+            if 'drive_file' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('drive_file')]
+                with db.engine.connect() as conn:
+                    if 'subject_id' not in cols:
+                        app.logger.info("Migrating: Adding subject_id to drive_file")
+                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN subject_id INTEGER REFERENCES subject(id)"))
+                    if 'auto_mapped' not in cols:
+                        app.logger.info("Migrating: Adding auto_mapped to drive_file")
+                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN auto_mapped BOOLEAN DEFAULT 0"))
+                    if 'ocr_completed' not in cols:
+                        app.logger.info("Migrating: Adding ocr_completed to drive_file")
+                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN ocr_completed BOOLEAN DEFAULT 0"))
+                    if 'ocr_error' not in cols:
+                        app.logger.info("Migrating: Adding ocr_error to drive_file")
+                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN ocr_error TEXT"))
+                    conn.commit()
+        except Exception as e:
+            app.logger.error(f"Drive file schema migration error: {e}")
+
+        # Schema Update: Drive File Content Enhancement (page_count)
+        try:
+            if 'drive_file_content' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('drive_file_content')]
+                if 'page_count' not in cols:
+                    app.logger.info("Migrating: Adding page_count to drive_file_content")
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE drive_file_content ADD COLUMN page_count INTEGER DEFAULT 0"))
+                        conn.commit()
+        except Exception as e:
+            app.logger.error(f"Drive file content schema migration error: {e}")
 
     # Initialize Scheduler
     scheduler.init_app(app)
