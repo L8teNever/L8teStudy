@@ -2463,17 +2463,20 @@
                 }
 
                 container.innerHTML = files.map(f => `
-                    <div class="list-item" onclick="downloadDriveFile(${f.id})">
+                    <div class="list-item" onclick="viewDriveFile(${f.id}, '${f.filename}')">
                         <div class="account-item-icon"><i data-lucide="file-text"></i></div>
                         <div class="item-content">
                             <div class="item-title">${f.filename}</div>
                             <div class="item-sub">
                                 <span style="color:var(--accent)">${f.subject_name || t('unknown')}</span> 
-                                ${f.parent_folder_name ? `• <span style="color:var(--text-sec)">${f.parent_folder_name}</span>` : ''} • 
+                                ${f.parent_folder_name ? `• <span style="color:var(--text-sec)">${f.parent_folder_name}</span>` : ''} 
+                                ${f.owner_username ? `• <span style="font-weight:500;">Von: ${f.owner_username}</span>` : ''} • 
                                 ${(f.file_size / 1024 / 1024).toFixed(1)} MB
                             </div>
                         </div>
-                        <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
+                        <div class="sheet-close-btn" style="width:36px; height:36px; background:var(--tab-bg);" onclick="event.stopPropagation(); downloadDriveFile(${f.id})">
+                             <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
+                        </div>
                     </div>
                 `).join('');
                 lucide.createIcons();
@@ -2507,7 +2510,7 @@
                 }
 
                 container.innerHTML = results.map(file => `
-                    <div class="list-item" onclick="downloadDriveFile(${file.id || file.file_id})">
+                    <div class="list-item" onclick="viewDriveFile(${file.id || file.file_id}, '${file.filename}')">
                         <div class="account-item-icon" style="background:rgba(0,113,227,0.1); color:var(--accent);"><i data-lucide="file-search"></i></div>
                         <div class="item-content">
                             <div class="item-title">${file.filename}</div>
@@ -2515,10 +2518,12 @@
                                 <span style="color:var(--accent)">${file.subject_name || t('unknown')}</span> 
                                 ${file.parent_folder_name ? `• <span style="color:var(--text-sec)">${file.parent_folder_name}</span>` : ''} • 
                                 <span style="color:var(--text-main); font-style:italic;">"${file.snippet || '...'}"</span>
-                                <div style="font-size:10px; margin-top:2px;">${t('found_in')} ${file.folder_name || ''} ${file.owner_name ? t('by') + ' ' + file.owner_name : ''}</div>
+                                <div style="font-size:10px; margin-top:2px;">${t('found_in')} ${file.folder_name || ''} von ${file.owner_username || ''}</div>
                             </div>
                         </div>
-                        <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
+                        <div class="sheet-close-btn" style="width:36px; height:36px; background:var(--tab-bg);" onclick="event.stopPropagation(); downloadDriveFile(${file.id || file.file_id})">
+                            <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
+                        </div>
                     </div>
                 `).join('');
                 lucide.createIcons();
@@ -2857,8 +2862,34 @@
             } catch (e) { showToast(t('error_adding'), 'error'); }
         }
 
+        function viewDriveFile(id, filename) {
+            const html = `
+                <div class="sheet-header">
+                    <div style="flex:1; min-width:0; margin-right:15px;">
+                        <div class="item-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${filename}</div>
+                    </div>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+                </div>
+                <div style="height: calc(90vh - 100px); width:100%; border-radius:12px; overflow:hidden; background:var(--tab-bg); position:relative;">
+                    <iframe src="/api/drive/files/${id}/download?inline=true" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
+                </div>
+                <div style="margin-top:15px; display:flex; gap:10px;">
+                    <button class="ios-btn" style="flex:1;" onclick="downloadDriveFile(${id})">
+                        <i data-lucide="download" style="width:16px; margin-right:8px;"></i> Download
+                    </button>
+                    <button class="ios-btn" style="flex:1; background:var(--tab-bg); color:var(--text-main);" onclick="closeSheet()">Schließen</button>
+                </div>
+            `;
+            openSheet(html);
+        }
+
         function downloadDriveFile(id) {
-            window.open(`/api/drive/files/${id}/download`, '_blank');
+            const a = document.createElement('a');
+            a.href = `/api/drive/files/${id}/download`;
+            a.download = '';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
         async function renderHome() {

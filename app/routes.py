@@ -2825,10 +2825,11 @@ def download_drive_file(id):
         )
         
         # Send file
+        inline = request.args.get('inline', 'false').lower() == 'true'
         return send_file(
             BytesIO(decrypted_bytes),
             mimetype=file.mime_type,
-            as_attachment=True,
+            as_attachment=not inline,
             download_name=file.filename
         )
         

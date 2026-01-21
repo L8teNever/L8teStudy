@@ -134,8 +134,10 @@ class DriveSearchService:
         search_query = self._build_search_query(query, subject_id, user_id, limit, offset)
         
         try:
+            # Prepare query for FTS5 (support prefix search)
+            fts_query = f'"{query}" *'
             results = db.session.execute(text(search_query), {
-                'query': query,
+                'query': fts_query,
                 'current_user_id': self.current_user_id,
                 'limit': limit,
                 'offset': offset
@@ -150,7 +152,7 @@ class DriveSearchService:
                     'snippet': row[2],
                     'rank': row[3],
                     'user_id': row[4],
-                    'username': row[5],
+                    'owner_username': row[5],
                     'subject_id': row[6],
                     'subject_name': row[7],
                     'file_size': row[8],
