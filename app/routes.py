@@ -2662,6 +2662,54 @@ def update_drive_folder(id):
             if existing and existing.id != folder.id:
                  return jsonify({'success': False, 'message': 'Dieser Benutzer hat diesen Ordner bereits verknüpft'}), 400
 
+            # Re-encrypt files if user changes
+            if folder.user_id != new_user_id:
+                old_user_id = folder.user_id
+                try:
+                    from .drive_encryption import get_drive_encryption_manager
+                    encryption_manager = get_drive_encryption_manager()
+                    
+                    # Iterate through all files and re-encrypt
+                    # Note: folder.files is dynamic lazy loader
+                    files = folder.files.all() if hasattr(folder.files, 'all') else folder.files
+                    
+                    for file in files:
+                        try:
+                            # 1. Decrypt with OLD metadata
+                            old_metadata = {
+                                'file_id': file.file_id,
+                                'filename': file.filename,
+                                'user_id': old_user_id,
+                                'folder_id': folder.folder_id,
+                                'file_hash': file.file_hash
+                            }
+                            
+                            plaintext = encryption_manager.decrypt_file_to_memory(
+                                file.encrypted_path,
+                                metadata=old_metadata
+                            )
+                            
+                            # 2. Encrypt with NEW metadata
+                            new_metadata = {
+                                'file_id': file.file_id,
+                                'filename': file.filename,
+                                'user_id': new_user_id,
+                                'folder_id': folder.folder_id,
+                                'file_hash': file.file_hash
+                            }
+                            
+                            # Overwrite file with new encryption
+                            encryption_manager.encrypt_and_store_bytes(
+                                plaintext,
+                                file.file_id,
+                                metadata=new_metadata
+                            )
+                        except Exception as e:
+                            current_app.logger.error(f"Failed to re-encrypt file {file.id}: {e}")
+                            # Continue with other files... 
+                except Exception as e:
+                     current_app.logger.error(f"Major error during folder transfer: {e}")
+
             folder.user_id = new_user_id
         
         db.session.commit()
