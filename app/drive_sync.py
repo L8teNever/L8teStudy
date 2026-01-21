@@ -183,8 +183,10 @@ class DriveSyncService:
             if ocr_success:
                 text = self.ocr_service.clean_text(text)
             
-            subject_id = None
+            subject_id = folder.subject_id # Default to folder's subject if set
             auto_mapped = False
+            
+            # Try to auto-detect from filename if folder subject isn't set OR to see if we can be more specific
             if folder.user_id:
                 mapper = SubjectMapper(class_id=None, user_id=folder.user_id)
                 subject = mapper.map_folder_to_subject(file_name, auto_create=True)
@@ -231,7 +233,8 @@ class DriveSyncService:
         folder_id: str,
         privacy_level: str = 'private',
         is_root: bool = False,
-        parent_id: Optional[int] = None
+        parent_id: Optional[int] = None,
+        subject_id: Optional[int] = None
     ) -> DriveFolder:
         """
         Fügt einen neuen Ordner hinzu
@@ -255,7 +258,9 @@ class DriveSyncService:
         ).first()
         
         if existing:
-            # If it exists, update it if needed or just return it
+            if subject_id:
+                existing.subject_id = subject_id
+                db.session.commit()
             return existing
         
         # Create folder
@@ -267,7 +272,8 @@ class DriveSyncService:
             sync_enabled=not is_root, # Roots usually don't sync files directly
             sync_status='pending',
             is_root=is_root,
-            parent_id=parent_id
+            parent_id=parent_id,
+            subject_id=subject_id
         )
         
         db.session.add(folder)

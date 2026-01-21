@@ -259,6 +259,7 @@ class DriveFolder(db.Model):
     privacy_level = db.Column(db.String(20), default='private')  # 'private' or 'public'
     is_root = db.Column(db.Boolean, default=False)  # Admin-added root source
     parent_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
     sync_enabled = db.Column(db.Boolean, default=True)
     last_sync_at = db.Column(db.DateTime, nullable=True)
     sync_status = db.Column(db.String(50), default='pending')
@@ -267,6 +268,7 @@ class DriveFolder(db.Model):
     
     # Relationships
     user = db.relationship('User', backref='drive_folders')
+    subject = db.relationship('Subject', backref='drive_folders')
     files = db.relationship('DriveFile', backref='folder', lazy='dynamic', cascade='all, delete-orphan')
     subfolders = db.relationship('DriveFolder', backref=db.backref('parent', remote_side=[id]), lazy='dynamic')
     

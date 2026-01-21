@@ -2420,11 +2420,15 @@ def get_drive_folders():
         
         results = []
         for folder in folders:
+            # Determine subject name: folder.subject.name > folder.folder_name
+            actual_subject_name = folder.subject.name if folder.subject else folder.folder_name
+            
             results.append({
                 'id': folder.id,
                 'folder_id': folder.folder_id,
                 'folder_name': folder.folder_name,
-                'subject_name': folder.subject_name if hasattr(folder, 'subject_name') else folder.folder_name,
+                'subject_id': folder.subject_id,
+                'subject_name': actual_subject_name,
                 'privacy_level': folder.privacy_level,
                 'sync_enabled': folder.sync_enabled,
                 'sync_status': folder.sync_status,
@@ -2489,6 +2493,7 @@ def toggle_drive_subfolder(id):
         sub_folder_id = data.get('folder_id') # Google ID
         enabled = data.get('enabled', True)
         privacy = data.get('privacy_level', 'private')
+        subject_id = data.get('subject_id')
         
         from .drive_sync import get_drive_sync_service
         sync_service = get_drive_sync_service()
@@ -2500,7 +2505,8 @@ def toggle_drive_subfolder(id):
                 folder_id=sub_folder_id,
                 privacy_level=privacy,
                 is_root=False,
-                parent_id=root_folder.id
+                parent_id=root_folder.id,
+                subject_id=subject_id
             )
             return jsonify({'success': True, 'id': new_folder.id})
         else:
@@ -2625,9 +2631,12 @@ def update_drive_folder(id):
         
         if 'sync_enabled' in data:
             folder.sync_enabled = bool(data['sync_enabled'])
-        
+            
         if 'folder_name' in data:
             folder.folder_name = data['folder_name']
+            
+        if 'subject_id' in data:
+            folder.subject_id = data['subject_id']
         
         db.session.commit()
         
@@ -2805,7 +2814,8 @@ def download_drive_file(id):
             'file_id': file.file_id,
             'filename': file.filename,
             'user_id': folder.user_id,
-            'folder_id': folder.folder_id
+            'folder_id': folder.folder_id,
+            'file_hash': file.file_hash
         }
         
         decrypted_bytes = encryption_manager.decrypt_file_to_memory(

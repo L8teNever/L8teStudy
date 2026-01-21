@@ -335,6 +335,9 @@ def create_app():
                     if 'privacy_level' not in cols:
                         app.logger.info("Migrating: Adding privacy_level to drive_folder")
                         conn.execute(text("ALTER TABLE drive_folder ADD COLUMN privacy_level VARCHAR(20) DEFAULT 'private'"))
+                    if 'subject_id' not in cols:
+                        app.logger.info("Migrating: Adding subject_id to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN subject_id INTEGER REFERENCES subject(id)"))
                     if 'sync_enabled' not in cols:
                         app.logger.info("Migrating: Adding sync_enabled to drive_folder")
                         conn.execute(text("ALTER TABLE drive_folder ADD COLUMN sync_enabled BOOLEAN DEFAULT 1"))

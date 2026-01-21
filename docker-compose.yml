@@ -6,26 +6,22 @@ services:
       - 10.66.66.1:5000:5000
     volumes:
       - ./data:/data
+    env_file:
+      - .env
     environment:
       DATABASE_URL: sqlite:////data/l8testudy.db
-      SECRET_KEY: ein-sichersdfes-passwort-hier-einfuegen
       FLASK_ENV: production
-      
-      # Google Drive Integration
-      # ANLEITUNG: Kopiere den Inhalt deiner JSON-Datei hier unter 'GOOGLE_SERVICE_ACCOUNT_INFO:' 
-      # Achte darauf, dass der Inhalt eingerückt ist (genau wie diese Zeile)!
-      GOOGLE_SERVICE_ACCOUNT_INFO: |
-        {}
-
-      # Verschlüsselung
-      DRIVE_ENCRYPTION_KEY: qv6aHbyp1j1xHpLVE87DIax+x/4YvD54rlh3SbZGTjg=
+      # Google Drive Integration (referencing variables from .env)
+      GOOGLE_SERVICE_ACCOUNT_INFO: ${GOOGLE_SERVICE_ACCOUNT_INFO}
+      DRIVE_ENCRYPTION_KEY: ${DRIVE_ENCRYPTION_KEY}
+      SECRET_KEY: ${SECRET_KEY}
       ENCRYPTED_FILES_PATH: /data/encrypted_files
-      
-      # Sonstiges
+      # Upload
       UPLOAD_FOLDER: /data/uploads
       MAX_CONTENT_LENGTH: 104857600
       TZ: Europe/Berlin
-
+      # Gunicorn Timeout Fix (for slow DB migrations)
+      GUNICORN_CMD_ARGS: "--timeout 120 --workers 2"
     restart: always
 
 networks: {}
