@@ -2347,7 +2347,7 @@
                     </div>
                 </div>
                 
-                <button class="fab visible" onclick="openAddFolderSheet()"><i data-lucide="plus"></i></button>
+                ${window.currentUser.is_admin || window.currentUser.is_super_admin ? `<button class="fab visible" onclick="openAddFolderSheet()"><i data-lucide="plus"></i></button>` : ''}
             `;
             lucide.createIcons();
 
@@ -2378,7 +2378,7 @@
                 }
 
                 container.innerHTML = folders.map(f => `
-                    <div class="floating-card" style="padding: 20px; margin-bottom: 15px;">
+                    <div class="floating-card" style="padding: 20px; margin-bottom: 15px; cursor:pointer;" onclick="openEditFolderSheet(${JSON.stringify(f).replace(/"/g, '&quot;')})">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 15px;">
                             <div style="display:flex; align-items:center; gap:12px;">
                                 <div class="account-item-icon" style="margin:0; width:44px; height:44px; background:rgba(0,113,227,0.1); color:var(--accent);">
@@ -2386,20 +2386,21 @@
                                 </div>
                                 <div>
                                     <div class="item-title">${f.subject_name || t('unknown')}</div>
-                                    <div class="item-sub">${f.privacy_level === 'public' ? t('public') : t('private')}</div>
+                                    <div class="item-sub">${f.privacy_level === 'public' ? t('public') : t('private')} ${f.owner_name ? ' • ' + f.owner_name : ''}</div>
                                 </div>
                             </div>
-                            <div style="display:flex; gap:5px;">
+                            <div style="display:flex; gap:5px;" onclick="event.stopPropagation()">
                                 <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px;" onclick="syncFolder(${f.id}, this)">
                                     <i data-lucide="refresh-cw" style="width:16px;"></i>
                                 </button>
+                                ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `
                                 <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px; background:rgba(255,59,48,0.1); color:var(--danger); box-shadow:none;" onclick="deleteFolder(${f.id})">
                                     <i data-lucide="trash-2" style="width:16px;"></i>
-                                </button>
+                                </button>` : ''}
                             </div>
                         </div>
                         <div style="font-size: 12px; color: var(--text-sec); display:flex; justify-content:space-between;">
-                            <span>${t('last_sync')}: ${f.last_sync ? new Date(f.last_sync).toLocaleString() : 'Nie'}</span>
+                            <span>${t('last_sync')}: ${f.last_sync_at ? new Date(f.last_sync_at).toLocaleString() : 'Nie'}</span>
                             <span>${f.file_count || 0} ${t('files')}</span>
                         </div>
                     </div>
@@ -2523,15 +2524,36 @@
             } catch (e) { showToast(t('error_deleting'), 'error'); }
         }
 
-        function openAddFolderSheet() {
+        async function openAddFolderSheet() {
             window.selectedDrivePrivacy = 'private';
+            window.selectedDriveUserId = window.currentUserId;
+
+            let usersHtml = '';
+            if (window.currentUser.is_admin || window.currentUser.is_super_admin) {
+                try {
+                    const res = await fetch('/api/drive/admin/users');
+                    const users = await res.json();
+                    usersHtml = `
+                        <div class="custom-picker-trigger" onclick="toggleOptionList('drive-user-list')" style="margin-top:10px;">
+                            <span style="font-weight:600;">${t('user')}</span>
+                            <span id="selected-drive-user-display" style="color:var(--accent)">${window.currentUser.name}</span>
+                        </div>
+                        <div id="drive-user-list" class="picker-options">
+                            ${users.map(u => `<div class="picker-option" onclick="selectDriveUser(${u.id}, '${u.username}')">${u.username}</div>`).join('')}
+                        </div>
+                    `;
+                } catch (e) { console.error(e); }
+            }
+
             const html = `
                 <div class="sheet-header"><h3>${t('add_folder')}</h3><div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div></div>
                 <div style="padding-bottom: 20px;">
-                    <p class="item-sub" style="margin-bottom:20px;">Gib die Google Drive Ordner-ID ein. Der Ordner muss für den Service-Account (L8teStudy) freigegeben sein.</p>
+                    <p class="item-sub" style="margin-bottom:20px;">Gib die Google Drive Ordner-ID ein. Der Ordner muss für den Service-Account freigegeben sein.</p>
                     <input type="text" id="new-folder-id" class="ios-input" placeholder="${t('folder_id')} (z.B. 1a2b3c...)">
                     
-                    <div class="custom-picker-trigger" onclick="toggleOptionList('privacy-list')">
+                    ${usersHtml}
+
+                    <div class="custom-picker-trigger" onclick="toggleOptionList('privacy-list')" style="margin-top:10px;">
                         <span style="font-weight:600;">${t('privacy_level')}</span>
                         <span id="selected-privacy-display" style="color:var(--accent)">${t('private')}</span>
                     </div>
@@ -2552,6 +2574,61 @@
             openSheet(html);
         }
 
+        function selectDriveUser(id, name) {
+            window.selectedDriveUserId = id;
+            document.getElementById('selected-drive-user-display').innerText = name;
+            toggleOptionList('drive-user-list');
+        }
+
+        function openEditFolderSheet(folder) {
+            window.selectedDrivePrivacy = folder.privacy_level;
+            const html = `
+                <div class="sheet-header"><h3>${folder.subject_name || t('folder')}</h3><div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div></div>
+                <div style="padding-bottom: 20px;">
+                    <p class="item-sub" style="margin-bottom:20px;">Hier kannst du die Sichtbarkeit dieses Ordners für deine Klasse anpassen.</p>
+                    
+                    <div class="custom-picker-trigger" onclick="toggleOptionList('edit-privacy-list')">
+                        <span style="font-weight:600;">${t('privacy_level')}</span>
+                        <span id="selected-edit-privacy-display" style="color:var(--accent)">${t(folder.privacy_level)}</span>
+                    </div>
+                    <div id="edit-privacy-list" class="picker-options">
+                        <div class="picker-option" onclick="selectEditDrivePrivacy('private', '${t('private')}')">
+                            <i data-lucide="lock" style="width:18px;"></i> ${t('private')}
+                        </div>
+                        <div class="picker-option" onclick="selectEditDrivePrivacy('public', '${t('public')}')">
+                            <i data-lucide="users" style="width:18px;"></i> ${t('public')}
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:20px;">
+                        <button class="ios-btn" onclick="updateDriveFolderPrivacy(${folder.id})">${t('save')}</button>
+                    </div>
+                </div>
+            `;
+            openSheet(html);
+        }
+
+        function selectEditDrivePrivacy(val, label) {
+            window.selectedDrivePrivacy = val;
+            document.getElementById('selected-edit-privacy-display').innerText = label;
+            toggleOptionList('edit-privacy-list');
+        }
+
+        async function updateDriveFolderPrivacy(id) {
+            try {
+                const res = await fetch(`/api/drive/folders/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ privacy_level: window.selectedDrivePrivacy })
+                });
+                if (res.ok) {
+                    showToast(t('save_success'), 'success');
+                    closeSheet();
+                    renderDriveFolders();
+                }
+            } catch (e) { showToast(t('error_save'), 'error'); }
+        }
+
         function selectDrivePrivacy(val, label) {
             window.selectedDrivePrivacy = val;
             document.getElementById('selected-privacy-display').innerText = label;
@@ -2568,7 +2645,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         folder_id: folderId,
-                        privacy_level: window.selectedDrivePrivacy
+                        privacy_level: window.selectedDrivePrivacy,
+                        user_id: window.selectedDriveUserId
                     })
                 });
                 const data = await res.json();

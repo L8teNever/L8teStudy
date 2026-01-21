@@ -2405,11 +2405,18 @@ def resolve_subject_mapping():
 @api_bp.route('/drive/folders', methods=['GET'])
 @login_required
 def get_drive_folders():
-    """Get all Drive folders for the current user"""
+    """Get relevant Drive folders based on role"""
     try:
-        from .models import DriveFolder
+        from .models import DriveFolder, User
         
-        folders = DriveFolder.query.filter_by(user_id=current_user.id).all()
+        # Admins see all folders in their class, regular users only their own
+        if current_user.is_admin or current_user.is_super_admin:
+            if current_user.is_super_admin:
+                folders = DriveFolder.query.all()
+            else:
+                folders = DriveFolder.query.join(User).filter(User.class_id == current_user.class_id).all()
+        else:
+            folders = DriveFolder.query.filter_by(user_id=current_user.id).all()
         
         results = []
         for folder in folders:
@@ -2417,13 +2424,14 @@ def get_drive_folders():
                 'id': folder.id,
                 'folder_id': folder.folder_id,
                 'folder_name': folder.folder_name,
+                'subject_name': folder.subject_name if hasattr(folder, 'subject_name') else folder.folder_name,
                 'privacy_level': folder.privacy_level,
                 'sync_enabled': folder.sync_enabled,
                 'sync_status': folder.sync_status,
                 'sync_error': folder.sync_error,
                 'last_sync_at': folder.last_sync_at.isoformat() if folder.last_sync_at else None,
                 'file_count': folder.files.count(),
-                'created_at': folder.created_at.isoformat() if folder.created_at else None
+                'owner_name': folder.user.username if folder.user else 'System'
             })
         
         return jsonify(results)
@@ -2433,10 +2441,37 @@ def get_drive_folders():
         return jsonify({'error': str(e)}), 500
 
 
+@api_bp.route('/drive/admin/users', methods=['GET'])
+@login_required
+def get_drive_admin_users():
+    """Get all users for Drive folder assignment (Admin only)"""
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'error': 'Admin only'}), 403
+        
+    try:
+        from .models import User
+        # Filter by class if not super admin
+        query = User.query
+        if not current_user.is_super_admin:
+            query = query.filter_by(class_id=current_user.class_id)
+            
+        users = query.all()
+        return jsonify([{
+            'id': u.id,
+            'username': u.username,
+            'display_name': u.display_name if hasattr(u, 'display_name') else u.username
+        } for u in users])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @api_bp.route('/drive/folders', methods=['POST'])
 @login_required
 def add_drive_folder():
-    """Add a new Drive folder"""
+    """Add a new Drive folder (Admin only)"""
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Nur Administratoren können neue Ordner hinzufügen'}), 403
+        
     try:
         data = request.get_json()
         
@@ -2445,22 +2480,27 @@ def add_drive_folder():
         
         folder_id = data['folder_id'].strip()
         privacy_level = data.get('privacy_level', 'private')
+        target_user_id = data.get('user_id', current_user.id)
         
         if privacy_level not in ['private', 'public']:
             return jsonify({'success': False, 'message': 'Invalid privacy_level'}), 400
+            
+        # Optional: Check if target user is in the same class (if not super admin)
+        if not current_user.is_super_admin:
+            from .models import User
+            target_user = User.query.get(target_user_id)
+            if not target_user or target_user.class_id != current_user.class_id:
+                return jsonify({'success': False, 'message': 'Ungültiger Benutzer oder falsche Klasse'}), 400
         
         # Add folder using sync service
         from .drive_sync import get_drive_sync_service
         
         sync_service = get_drive_sync_service()
         folder = sync_service.add_folder(
-            user_id=current_user.id,
+            user_id=target_user_id,
             folder_id=folder_id,
             privacy_level=privacy_level
         )
-        
-        # Trigger initial sync in background (optional)
-        # For now, return success immediately
         
         return jsonify({
             'success': True,
@@ -2469,7 +2509,8 @@ def add_drive_folder():
                 'folder_id': folder.folder_id,
                 'folder_name': folder.folder_name,
                 'privacy_level': folder.privacy_level,
-                'sync_status': folder.sync_status
+                'sync_status': folder.sync_status,
+                'user_id': folder.user_id
             }
         })
         
@@ -2487,8 +2528,13 @@ def update_drive_folder(id):
         
         folder = DriveFolder.query.get_or_404(id)
         
-        # Check ownership
-        if folder.user_id != current_user.id and not current_user.is_super_admin:
+        # Check permissions
+        can_edit = folder.user_id == current_user.id or current_user.is_super_admin
+        if not can_edit and current_user.is_admin:
+            if folder.user and folder.user.class_id == current_user.class_id:
+                can_edit = True
+                
+        if not can_edit:
             return jsonify({'success': False, 'message': 'Not authorized'}), 403
         
         data = request.get_json()
@@ -2523,8 +2569,13 @@ def delete_drive_folder(id):
         
         folder = DriveFolder.query.get_or_404(id)
         
-        # Check ownership
-        if folder.user_id != current_user.id and not current_user.is_super_admin:
+        # Check permissions
+        can_delete = folder.user_id == current_user.id or current_user.is_super_admin
+        if not can_delete and current_user.is_admin:
+            if folder.user and folder.user.class_id == current_user.class_id:
+                can_delete = True
+                
+        if not can_delete:
             return jsonify({'success': False, 'message': 'Not authorized'}), 403
         
         # Delete encrypted files from disk
@@ -2558,8 +2609,13 @@ def sync_drive_folder(id):
         
         folder = DriveFolder.query.get_or_404(id)
         
-        # Check ownership
-        if folder.user_id != current_user.id and not current_user.is_super_admin:
+        # Check permissions
+        can_sync = folder.user_id == current_user.id or current_user.is_super_admin
+        if not can_sync and current_user.is_admin:
+            if folder.user and folder.user.class_id == current_user.class_id:
+                can_sync = True
+                
+        if not can_sync:
             return jsonify({'success': False, 'message': 'Not authorized'}), 403
         
         # Trigger sync
