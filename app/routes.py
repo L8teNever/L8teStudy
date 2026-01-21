@@ -2419,10 +2419,24 @@ def get_drive_folders():
             else:
                 folders = DriveFolder.query.join(User).filter(User.class_id == current_user.class_id).all()
         else:
-            # Personal Drive View: Only own folders or explicitly public/shared ones?
-            # Currently L8teStudy logic seems to be: Drive Tab = Your synced folders.
-            # Files Tab = All accessible files (yours + public).
-            folders = DriveFolder.query.filter_by(user_id=current_user.id).all()
+            # Personal Drive View: Show own folders + public folders from class
+            # This includes both root folders and activated subfolders
+            from sqlalchemy import or_
+            
+            if current_user.class_id:
+                # Get own folders OR public folders from same class
+                folders = DriveFolder.query.join(User).filter(
+                    or_(
+                        DriveFolder.user_id == current_user.id,
+                        db.and_(
+                            User.class_id == current_user.class_id,
+                            DriveFolder.privacy_level == 'public'
+                        )
+                    )
+                ).all()
+            else:
+                # No class: only own folders
+                folders = DriveFolder.query.filter_by(user_id=current_user.id).all()
         
         results = []
         for folder in folders:

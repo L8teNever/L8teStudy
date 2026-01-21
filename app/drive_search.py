@@ -112,45 +112,146 @@ class DriveSearchService:
         offset: int = 0
     ) -> List[Dict]:
         """
-        Sucht in Drive-Dateien (Inhalt, Dateiname und Fach)
+        Sucht in Drive-Dateien (Inhalt, Dateiname, Fach, Username)
         """
         if not query or len(query.strip()) < 2:
             return []
         
-        # Ensure FTS table exists
-        self.ensure_fts_table()
-        
-        # Build query
-        search_query = self._build_search_query(query, subject_id, user_id, limit, offset)
-        
         try:
-            # Prepare query for FTS5 (support prefix search)
-            fts_query = f'"{query}" *'
+            # Ensure FTS table exists
+            self.ensure_fts_table()
+            
+            # Build privacy filter
+            privacy_filter = ""
+            if self.current_user_id:
+                privacy_filter = "AND (dfolder.user_id = :current_user_id OR dfolder.privacy_level = 'public')"
+            else:
+                privacy_filter = "AND dfolder.privacy_level = 'public'"
+            
+            # Build subject filter
+            subject_filter = ""
+            if subject_id:
+                subject_filter = f"AND df.subject_id = {subject_id}"
+            
+            # Build user filter
+            user_filter = ""
+            if user_id:
+                user_filter = f"AND dfolder.user_id = {user_id}"
+            
+            # Prepare search parameters
             like_query = f'%{query}%'
             
-            results = db.session.execute(text(search_query), {
-                'query': fts_query,
+            # Try FTS search first
+            fts_results = []
+            try:
+                fts_sql = f"""
+                    SELECT DISTINCT
+                        df.id,
+                        df.filename,
+                        COALESCE(snippet(drive_file_content_fts, 0, '<mark>', '</mark>', '...', 32), '...') as snippet,
+                        bm25(drive_file_content_fts) as rank,
+                        u.id as user_id,
+                        u.username,
+                        s.id as subject_id,
+                        s.name as subject_name,
+                        df.file_size,
+                        COALESCE(dfc.page_count, 0) as page_count,
+                        df.created_at,
+                        df.parent_folder_name,
+                        dfolder.folder_name
+                    FROM drive_file_content_fts fts
+                    JOIN drive_file_content dfc ON fts.rowid = dfc.id
+                    JOIN drive_file df ON dfc.drive_file_id = df.id
+                    JOIN drive_folder dfolder ON df.drive_folder_id = dfolder.id
+                    JOIN user u ON dfolder.user_id = u.id
+                    LEFT JOIN subject s ON df.subject_id = s.id
+                    WHERE fts MATCH :fts_query
+                    {privacy_filter}
+                    {subject_filter}
+                    {user_filter}
+                    ORDER BY rank
+                    LIMIT :limit
+                """
+                
+                fts_query_param = f'"{query}"*'
+                fts_results = db.session.execute(text(fts_sql), {
+                    'fts_query': fts_query_param,
+                    'current_user_id': self.current_user_id,
+                    'limit': limit
+                }).fetchall()
+            except Exception as fts_error:
+                current_app.logger.warning(f"FTS search failed, falling back to LIKE: {fts_error}")
+            
+            # Metadata search (filename, subject, username)
+            meta_sql = f"""
+                SELECT DISTINCT
+                    df.id,
+                    df.filename,
+                    'Treffer im Titel/Fach/User' as snippet,
+                    -10.0 as rank,
+                    u.id as user_id,
+                    u.username,
+                    s.id as subject_id,
+                    s.name as subject_name,
+                    df.file_size,
+                    COALESCE(dfc.page_count, 0) as page_count,
+                    df.created_at,
+                    df.parent_folder_name,
+                    dfolder.folder_name
+                FROM drive_file df
+                JOIN drive_folder dfolder ON df.drive_folder_id = dfolder.id
+                JOIN user u ON dfolder.user_id = u.id
+                LEFT JOIN subject s ON df.subject_id = s.id
+                LEFT JOIN drive_file_content dfc ON df.id = dfc.drive_file_id
+                WHERE (
+                    df.filename LIKE :like_query 
+                    OR s.name LIKE :like_query 
+                    OR u.username LIKE :like_query
+                )
+                {privacy_filter}
+                {subject_filter}
+                {user_filter}
+                LIMIT :limit
+            """
+            
+            meta_results = db.session.execute(text(meta_sql), {
                 'like_query': like_query,
                 'current_user_id': self.current_user_id,
-                'limit': limit,
-                'offset': offset
+                'limit': limit
             }).fetchall()
+            
+            # Combine results and deduplicate by file ID
+            seen_ids = set()
+            combined_results = []
+            
+            # Add FTS results first (higher priority)
+            for row in fts_results:
+                if row[0] not in seen_ids:
+                    seen_ids.add(row[0])
+                    combined_results.append(row)
+            
+            # Add metadata results
+            for row in meta_results:
+                if row[0] not in seen_ids:
+                    seen_ids.add(row[0])
+                    combined_results.append(row)
             
             # Format results
             formatted_results = []
-            for row in results:
+            for row in combined_results[:limit]:
                 formatted_results.append({
+                    'id': row[0],
                     'file_id': row[0],
                     'filename': row[1],
                     'snippet': row[2],
-                    'rank': row[3],
+                    'rank': float(row[3]) if row[3] is not None else 0.0,
                     'user_id': row[4],
                     'owner_username': row[5],
                     'subject_id': row[6],
                     'subject_name': row[7],
                     'file_size': row[8],
                     'page_count': row[9],
-                    'created_at': row[10],
+                    'created_at': row[10].isoformat() if row[10] else None,
                     'parent_folder_name': row[11],
                     'folder_name': row[12]
                 })
@@ -158,7 +259,9 @@ class DriveSearchService:
             return formatted_results
             
         except Exception as e:
-            current_app.logger.error(f"Search failed: {e}")
+            current_app.logger.error(f"Search failed completely: {e}")
+            import traceback
+            current_app.logger.error(traceback.format_exc())
             return []
     
     def _build_search_query(
@@ -170,89 +273,9 @@ class DriveSearchService:
         offset: int
     ) -> str:
         """
-        Baut die SQL-Suchanfrage (Hybrid: FTS + Metadaten)
+        Legacy method - kept for compatibility
         """
-        # Common Joins for Metadata Query
-        base_joins = """
-            FROM drive_file df
-            JOIN drive_folder dfolder ON df.drive_folder_id = dfolder.id
-            JOIN user u ON dfolder.user_id = u.id
-            LEFT JOIN subject s ON df.subject_id = s.id
-            LEFT JOIN drive_file_content dfc ON df.id = dfc.drive_file_id
-        """
-        
-        # Privacy Condition
-        privacy_cond = "1=1"
-        if self.current_user_id:
-            privacy_cond = "(dfolder.user_id = :current_user_id OR dfolder.privacy_level = 'public')"
-        else:
-            privacy_cond = "dfolder.privacy_level = 'public'"
-            
-        # Extra Filters
-        extra_filters = ""
-        if subject_id: extra_filters += f" AND df.subject_id = {subject_id}"
-        if user_id: extra_filters += f" AND dfolder.user_id = {user_id}"
-
-        # 1. FTS Query (Content Match)
-        fts_part = f"""
-            SELECT 
-                df.id,
-                df.filename,
-                snippet(drive_file_content_fts, 0, '<mark>', '</mark>', '...', 32) as snippet,
-                bm25(drive_file_content_fts) as rank,
-                u.id as user_id,
-                u.username,
-                s.id as subject_id,
-                s.name as subject_name,
-                df.file_size,
-                dfc.page_count,
-                df.created_at,
-                df.parent_folder_name,
-                dfolder.folder_name
-            FROM drive_file_content_fts fts
-            JOIN drive_file_content dfc ON fts.rowid = dfc.id
-            JOIN drive_file df ON dfc.drive_file_id = df.id
-            JOIN drive_folder dfolder ON df.drive_folder_id = dfolder.id
-            JOIN user u ON dfolder.user_id = u.id
-            LEFT JOIN subject s ON df.subject_id = s.id
-            WHERE fts MATCH :query
-            AND {privacy_cond} {extra_filters}
-        """
-
-        # 2. Metadata Query (Filename OR Subject OR Username Match)
-        meta_part = f"""
-            SELECT 
-                df.id,
-                df.filename,
-                'Treffer im Titel/Fach/User' as snippet,
-                -10.0 as rank,
-                u.id as user_id,
-                u.username,
-                s.id as subject_id,
-                s.name as subject_name,
-                df.file_size,
-                dfc.page_count,
-                df.created_at,
-                df.parent_folder_name,
-                dfolder.folder_name
-            {base_joins}
-            WHERE (df.filename LIKE :like_query OR s.name LIKE :like_query OR u.username LIKE :like_query)
-            AND {privacy_cond} {extra_filters}
-        """
-        
-        # Combine and deduplicate
-        sql = f"""
-            SELECT * FROM (
-                {fts_part}
-                UNION ALL
-                {meta_part}
-            ) combined
-            GROUP BY id
-            ORDER BY rank ASC
-            LIMIT :limit OFFSET :offset
-        """
-        
-        return sql
+        return ""
     
     def get_suggestions(self, query: str, limit: int = 10) -> List[str]:
         """

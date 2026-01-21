@@ -2462,6 +2462,7 @@
             }
         }
 
+
         async function renderDriveFiles() {
             const container = document.getElementById('drive-content-container');
             try {
@@ -2475,23 +2476,58 @@
                     return;
                 }
 
-                container.innerHTML = files.map(f => `
-                    <div class="list-item" onclick="viewDriveFile(${f.id}, '${f.filename.replace(/'/g, "\\'")}')">
-                        <div class="account-item-icon"><i data-lucide="file-text"></i></div>
-                        <div class="item-content">
-                            <div class="item-title">${f.filename}</div>
-                            <div class="item-sub">
-                                <span style="color:var(--accent)">${f.subject_name || t('unknown')}</span> 
-                                ${f.parent_folder_name ? `• <span style="color:var(--text-sec)">${f.parent_folder_name}</span>` : ''} 
-                                ${f.owner_username ? `• <span style="font-weight:500;">Von: ${f.owner_username}</span>` : ''} • 
-                                ${(f.file_size / 1024 / 1024).toFixed(1)} MB
+                // Group files by subject
+                const filesBySubject = {};
+                files.forEach(f => {
+                    const subjectName = f.subject_name || 'Sonstiges';
+                    if (!filesBySubject[subjectName]) {
+                        filesBySubject[subjectName] = [];
+                    }
+                    filesBySubject[subjectName].push(f);
+                });
+
+                // Sort subjects alphabetically, but keep "Sonstiges" at the end
+                const sortedSubjects = Object.keys(filesBySubject).sort((a, b) => {
+                    if (a === 'Sonstiges') return 1;
+                    if (b === 'Sonstiges') return -1;
+                    return a.localeCompare(b);
+                });
+
+                // Build HTML with subject sections
+                let html = '';
+                sortedSubjects.forEach((subjectName, idx) => {
+                    const subjectFiles = filesBySubject[subjectName];
+                    const fileCount = subjectFiles.length;
+
+                    // Subject header
+                    html += `
+                        <div class="item-sub" style="margin: ${idx === 0 ? '10px' : '25px'} 0 10px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; display:flex; align-items:center; gap:8px;">
+                            <i data-lucide="folder" style="width:14px; height:14px;"></i>
+                            <span>${subjectName}</span>
+                            <span style="opacity:0.6; font-weight:400;">(${fileCount})</span>
+                        </div>
+                    `;
+
+                    // Files in this subject
+                    html += subjectFiles.map(f => `
+                        <div class="list-item slide-in-bottom" style="animation-delay: ${Math.random() * 0.1}s; animation-fill-mode: both;" onclick="viewDriveFile(${f.id}, '${f.filename.replace(/'/g, "\\'")}')">
+                            <div class="account-item-icon"><i data-lucide="file-text"></i></div>
+                            <div class="item-content">
+                                <div class="item-title">${f.filename}</div>
+                                <div class="item-sub">
+                                    ${f.parent_folder_name ? `<span style="color:var(--text-sec)">${f.parent_folder_name}</span> • ` : ''} 
+                                    ${f.owner_username ? `<span style="font-weight:500;">Von: ${f.owner_username}</span> • ` : ''}
+                                    ${(f.file_size / 1024 / 1024).toFixed(1)} MB
+                                </div>
+                            </div>
+                            <div class="sheet-close-btn" style="width:36px; height:36px; background:var(--tab-bg);" onclick="event.stopPropagation(); downloadDriveFile(${f.id})">
+                                 <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
                             </div>
                         </div>
-                        <div class="sheet-close-btn" style="width:36px; height:36px; background:var(--tab-bg);" onclick="event.stopPropagation(); downloadDriveFile(${f.id})">
-                             <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
-                        </div>
-                    </div>
-                `).join('');
+                    `).join('');
+                });
+
+                container.innerHTML = html;
                 lucide.createIcons();
             } catch (e) {
                 container.innerHTML = `<p class="item-sub" style="text-align:center;">${t('error_loading')}</p>`;
@@ -7069,7 +7105,27 @@
             }
             else if (relevantPath === '/admin/untis') renderUntisConfig();
             else if (relevantPath === '/admin/drive') renderDriveManagement();
-            else if (relevantPath === '/drive') renderDrive();
+            else if (relevantPath.startsWith('/drive')) {
+                if (relevantPath.startsWith('/drive/folder/')) {
+                    const parts = relevantPath.split('/');
+                    const folderId = parts[3];
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const googleId = urlParams.get('fid');
+
+                    renderDrive('folders').then(async () => {
+                        try {
+                            const res = await fetch('/api/drive/folders');
+                            const folders = await res.json();
+                            const f = folders.find(x => x.id == folderId);
+                            if (f) {
+                                browseRootFolder(folderId, f.folder_name, false, googleId);
+                            }
+                        } catch (e) { console.error("Restore drive state failed", e); }
+                    });
+                } else {
+                    renderDrive();
+                }
+            }
             else renderHome();
         };
         console.log('Main Script Parsed Successfully');
