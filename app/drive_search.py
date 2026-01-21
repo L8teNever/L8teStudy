@@ -112,17 +112,7 @@ class DriveSearchService:
         offset: int = 0
     ) -> List[Dict]:
         """
-        Sucht in Drive-Dateien
-        
-        Args:
-            query: Suchbegriff
-            subject_id: Optional - Filter nach Fach
-            user_id: Optional - Filter nach Benutzer
-            limit: Maximale Anzahl Ergebnisse
-            offset: Offset für Pagination
-        
-        Returns:
-            Liste von Suchergebnissen
+        Sucht in Drive-Dateien (Inhalt, Dateiname und Fach)
         """
         if not query or len(query.strip()) < 2:
             return []
@@ -136,8 +126,11 @@ class DriveSearchService:
         try:
             # Prepare query for FTS5 (support prefix search)
             fts_query = f'"{query}" *'
+            like_query = f'%{query}%'
+            
             results = db.session.execute(text(search_query), {
                 'query': fts_query,
+                'like_query': like_query,
                 'current_user_id': self.current_user_id,
                 'limit': limit,
                 'offset': offset
@@ -177,20 +170,31 @@ class DriveSearchService:
         offset: int
     ) -> str:
         """
-        Baut die SQL-Suchanfrage
-        
-        Args:
-            query: Suchbegriff
-            subject_id: Optional - Fach-Filter
-            user_id: Optional - Benutzer-Filter
-            limit: Limit
-            offset: Offset
-        
-        Returns:
-            SQL-Query als String
+        Baut die SQL-Suchanfrage (Hybrid: FTS + Metadaten)
         """
-        # Base query with FTS5
-        sql = """
+        # Common Joins for Metadata Query
+        base_joins = """
+            FROM drive_file df
+            JOIN drive_folder dfolder ON df.drive_folder_id = dfolder.id
+            JOIN user u ON dfolder.user_id = u.id
+            LEFT JOIN subject s ON df.subject_id = s.id
+            LEFT JOIN drive_file_content dfc ON df.id = dfc.drive_file_id
+        """
+        
+        # Privacy Condition
+        privacy_cond = "1=1"
+        if self.current_user_id:
+            privacy_cond = "(dfolder.user_id = :current_user_id OR dfolder.privacy_level = 'public')"
+        else:
+            privacy_cond = "dfolder.privacy_level = 'public'"
+            
+        # Extra Filters
+        extra_filters = ""
+        if subject_id: extra_filters += f" AND df.subject_id = {subject_id}"
+        if user_id: extra_filters += f" AND dfolder.user_id = {user_id}"
+
+        # 1. FTS Query (Content Match)
+        fts_part = f"""
             SELECT 
                 df.id,
                 df.filename,
@@ -212,33 +216,41 @@ class DriveSearchService:
             JOIN user u ON dfolder.user_id = u.id
             LEFT JOIN subject s ON df.subject_id = s.id
             WHERE fts MATCH :query
+            AND {privacy_cond} {extra_filters}
+        """
+
+        # 2. Metadata Query (Filename OR Subject Match)
+        meta_part = f"""
+            SELECT 
+                df.id,
+                df.filename,
+                'Treffer im Titel/Fach' as snippet,
+                -10.0 as rank,
+                u.id as user_id,
+                u.username,
+                s.id as subject_id,
+                s.name as subject_name,
+                df.file_size,
+                dfc.page_count,
+                df.created_at,
+                df.parent_folder_name,
+                dfolder.folder_name
+            {base_joins}
+            WHERE (df.filename LIKE :like_query OR s.name LIKE :like_query)
+            AND {privacy_cond} {extra_filters}
         """
         
-        # Privacy filter
-        if self.current_user_id:
-            sql += """
-                AND (
-                    dfolder.user_id = :current_user_id
-                    OR dfolder.privacy_level = 'public'
-                )
-            """
-        else:
-            # If no user, only show public
-            sql += " AND dfolder.privacy_level = 'public'"
-        
-        # Subject filter
-        if subject_id:
-            sql += f" AND df.subject_id = {subject_id}"
-        
-        # User filter
-        if user_id:
-            sql += f" AND dfolder.user_id = {user_id}"
-        
-        # Order by relevance
-        sql += " ORDER BY rank"
-        
-        # Limit and offset
-        sql += f" LIMIT :limit OFFSET :offset"
+        # Combine and deduplicate
+        sql = f"""
+            SELECT * FROM (
+                {fts_part}
+                UNION ALL
+                {meta_part}
+            ) combined
+            GROUP BY id
+            ORDER BY rank ASC
+            LIMIT :limit OFFSET :offset
+        """
         
         return sql
     

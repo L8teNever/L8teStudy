@@ -2409,13 +2409,19 @@ def get_drive_folders():
     try:
         from .models import DriveFolder, User
         
-        # Admins see all folders in their class, regular users only their own
-        if current_user.is_admin or current_user.is_super_admin:
+        # Check if requesting admin view (for Admin Panel)
+        is_admin_view = request.args.get('admin_view', 'false').lower() == 'true'
+        
+        if is_admin_view and (current_user.is_admin or current_user.is_super_admin):
+            # Admin Panel View: See all relevant folders
             if current_user.is_super_admin:
                 folders = DriveFolder.query.all()
             else:
                 folders = DriveFolder.query.join(User).filter(User.class_id == current_user.class_id).all()
         else:
+            # Personal Drive View: Only own folders or explicitly public/shared ones?
+            # Currently L8teStudy logic seems to be: Drive Tab = Your synced folders.
+            # Files Tab = All accessible files (yours + public).
             folders = DriveFolder.query.filter_by(user_id=current_user.id).all()
         
         results = []
