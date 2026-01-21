@@ -244,6 +244,18 @@ class GoogleDriveClient:
         """
         return self.list_files(folder_id, mime_type='application/pdf')
 
+    def list_subfolders(self, folder_id: str) -> List[Dict]:
+        """
+        List only subfolders in a folder
+        
+        Args:
+            folder_id: Google Drive folder ID
+        
+        Returns:
+            List of subfolder metadata
+        """
+        return self.list_files(folder_id, mime_type='application/vnd.google-apps.folder')
+
 
 # Utility function for easy access
 def get_drive_client() -> GoogleDriveClient:

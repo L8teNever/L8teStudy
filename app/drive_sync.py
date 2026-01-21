@@ -72,8 +72,10 @@ class DriveSyncService:
             'errors': []
         }
         
-        # Get all enabled folders
-        folders = DriveFolder.query.filter_by(sync_enabled=True).all()
+        # Get all enabled folders that are NOT roots (roots are just containers)
+        # OR: sync roots too if they have no subfolder targets?
+        # Let's say: only sync folders that are NOT roots (user-activated targets)
+        folders = DriveFolder.query.filter_by(sync_enabled=True, is_root=False).all()
         stats['total_folders'] = len(folders)
         
         for folder in folders:
@@ -92,19 +94,10 @@ class DriveSyncService:
                 current_app.logger.error(f"Failed to sync folder {folder.id}: {e}")
         
         return stats
-    
+
     def sync_folder(self, folder_db_id: int) -> dict:
         """
         Synchronisiert einen einzelnen Ordner
-        
-        Args:
-            folder_db_id: Database ID des DriveFolder
-        
-        Returns:
-            Dictionary mit Sync-Statistiken
-        
-        Raises:
-            DriveSyncError: Bei Sync-Fehlern
         """
         self._init_services()
         
@@ -123,15 +116,12 @@ class DriveSyncService:
         }
         
         try:
-            # Update folder status
             folder.sync_status = 'syncing'
             folder.sync_error = None
             db.session.commit()
             
-            # List files in Google Drive folder
             drive_files = self.drive_client.list_pdf_files(folder.folder_id)
             
-            # Process each file
             for drive_file in drive_files:
                 try:
                     result = self._process_file(folder, drive_file)
@@ -147,17 +137,11 @@ class DriveSyncService:
                         'file_name': drive_file.get('name'),
                         'error': str(e)
                     })
-                    current_app.logger.error(
-                        f"Failed to process file {drive_file.get('name')}: {e}"
-                    )
             
-            # Update folder status
             folder.sync_status = 'completed'
             folder.last_sync_at = datetime.utcnow()
-            
             if stats['errors']:
                 folder.sync_error = f"{len(stats['errors'])} files failed"
-            
             db.session.commit()
             
         except Exception as e:
@@ -171,79 +155,44 @@ class DriveSyncService:
     def _process_file(self, folder: DriveFolder, drive_file: dict) -> str:
         """
         Verarbeitet eine einzelne Datei
-        
-        Args:
-            folder: DriveFolder Objekt
-            drive_file: Google Drive file metadata
-        
-        Returns:
-            'new', 'updated', or 'skipped'
         """
         file_id = drive_file['id']
         file_name = drive_file['name']
         file_size = int(drive_file.get('size', 0))
         mime_type = drive_file.get('mimeType', 'application/pdf')
         
-        # Check if file already exists
         existing_file = DriveFile.query.filter_by(
             drive_folder_id=folder.id,
             file_id=file_id
         ).first()
         
-        # Download file to temp location
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
             temp_path = temp_file.name
         
         try:
-            # Download from Google Drive
             self.drive_client.download_file_to_path(file_id, temp_path)
-            
-            # Calculate hash
             file_hash = self.encryption_manager.calculate_file_hash(temp_path)
             
-            # Check if file changed
             if existing_file and existing_file.file_hash == file_hash:
                 return 'skipped'
             
-            # Encrypt and store
-            metadata = {
-                'file_id': file_id,
-                'filename': file_name,
-                'user_id': folder.user_id,
-                'folder_id': folder.folder_id
-            }
+            metadata = {'file_id': file_id, 'filename': file_name, 'user_id': folder.user_id, 'folder_id': folder.folder_id}
+            encrypted_path, _, _ = self.encryption_manager.encrypt_and_store_file(temp_path, file_id, metadata)
             
-            encrypted_path, _, _ = self.encryption_manager.encrypt_and_store_file(
-                temp_path,
-                file_id,
-                metadata
-            )
-            
-            # Extract text with OCR
             text, page_count, ocr_success = self.ocr_service.process_pdf_file(temp_path)
-            
             if ocr_success:
                 text = self.ocr_service.clean_text(text)
             
-            # Map to subject
             subject_id = None
             auto_mapped = False
-            
             if folder.user_id:
-                mapper = SubjectMapper(
-                    class_id=None,  # Will be determined from user
-                    user_id=folder.user_id
-                )
-                
-                # Try to extract subject from filename or parent folder
+                mapper = SubjectMapper(class_id=None, user_id=folder.user_id)
                 subject = mapper.map_folder_to_subject(file_name, auto_create=True)
                 if subject:
                     subject_id = subject.id
                     auto_mapped = True
             
-            # Create or update database entry
             if existing_file:
-                # Update existing
                 existing_file.filename = file_name
                 existing_file.encrypted_path = encrypted_path
                 existing_file.file_hash = file_hash
@@ -252,78 +201,40 @@ class DriveSyncService:
                 existing_file.subject_id = subject_id
                 existing_file.auto_mapped = auto_mapped
                 existing_file.ocr_completed = ocr_success
-                existing_file.ocr_error = None if ocr_success else "OCR failed"
                 existing_file.updated_at = datetime.utcnow()
-                
-                # Update content
                 if existing_file.content:
                     existing_file.content.content_text = text
                     existing_file.content.page_count = page_count
                     existing_file.content.ocr_completed_at = datetime.utcnow()
                 else:
-                    content = DriveFileContent(
-                        drive_file_id=existing_file.id,
-                        content_text=text,
-                        page_count=page_count
-                    )
-                    db.session.add(content)
-                
-                db.session.commit()
-                return 'updated'
+                    db.session.add(DriveFileContent(drive_file_id=existing_file.id, content_text=text, page_count=page_count))
             else:
-                # Create new
                 new_file = DriveFile(
-                    drive_folder_id=folder.id,
-                    file_id=file_id,
-                    filename=file_name,
-                    encrypted_path=encrypted_path,
-                    file_hash=file_hash,
-                    file_size=file_size,
-                    mime_type=mime_type,
-                    subject_id=subject_id,
-                    auto_mapped=auto_mapped,
-                    ocr_completed=ocr_success,
-                    ocr_error=None if ocr_success else "OCR failed"
+                    drive_folder_id=folder.id, file_id=file_id, filename=file_name,
+                    encrypted_path=encrypted_path, file_hash=file_hash,
+                    file_size=file_size, mime_type=mime_type, subject_id=subject_id,
+                    auto_mapped=auto_mapped, ocr_completed=ocr_success
                 )
-                
                 db.session.add(new_file)
-                db.session.flush()  # Get the ID
-                
-                # Add content
-                content = DriveFileContent(
-                    drive_file_id=new_file.id,
-                    content_text=text,
-                    page_count=page_count
-                )
-                db.session.add(content)
-                
-                db.session.commit()
-                return 'new'
-        
+                db.session.flush()
+                db.session.add(DriveFileContent(drive_file_id=new_file.id, content_text=text, page_count=page_count))
+            
+            db.session.commit()
+            return 'new' if not existing_file else 'updated'
         finally:
-            # Clean up temp file
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-    
+
     def add_folder(
         self,
         user_id: int,
         folder_id: str,
-        privacy_level: str = 'private'
+        privacy_level: str = 'private',
+        is_root: bool = False,
+        parent_id: Optional[int] = None
     ) -> DriveFolder:
         """
         Fügt einen neuen Ordner hinzu
-        
-        Args:
-            user_id: Benutzer-ID
-            folder_id: Google Drive Folder ID
-            privacy_level: 'private' oder 'public'
-        
-        Returns:
-            DriveFolder Objekt
-        
-        Raises:
-            DriveSyncError: Bei Fehlern
         """
         self._init_services()
         
@@ -344,7 +255,8 @@ class DriveSyncService:
         ).first()
         
         if existing:
-            raise DriveSyncError("Folder already added")
+            # If it exists, update it if needed or just return it
+            return existing
         
         # Create folder
         folder = DriveFolder(
@@ -352,14 +264,46 @@ class DriveSyncService:
             folder_id=folder_id,
             folder_name=folder_name,
             privacy_level=privacy_level,
-            sync_enabled=True,
-            sync_status='pending'
+            sync_enabled=not is_root, # Roots usually don't sync files directly
+            sync_status='pending',
+            is_root=is_root,
+            parent_id=parent_id
         )
         
         db.session.add(folder)
         db.session.commit()
         
         return folder
+
+    def list_subfolders(self, folder_db_id: int) -> List[dict]:
+        """Lists subfolders from Google Drive for a given DB folder"""
+        self._init_services()
+        folder = DriveFolder.query.get(folder_db_id)
+        if not folder:
+            raise DriveSyncError("Folder not found")
+        
+        try:
+            drive_subfolders = self.drive_client.list_subfolders(folder.folder_id)
+            
+            # Enrich with DB info (is it already a target?)
+            results = []
+            for ds in drive_subfolders:
+                db_sub = DriveFolder.query.filter_by(
+                    user_id=folder.user_id,
+                    folder_id=ds['id']
+                ).first()
+                
+                results.append({
+                    'id': ds['id'],
+                    'name': ds['name'],
+                    'is_synced': db_sub is not None,
+                    'db_id': db_sub.id if db_sub else None,
+                    'privacy_level': db_sub.privacy_level if db_sub else None
+                })
+            return results
+        except Exception as e:
+            current_app.logger.error(f"Failed to list subfolders for {folder_db_id}: {e}")
+            raise DriveSyncError(str(e))
 
 
 # Utility function

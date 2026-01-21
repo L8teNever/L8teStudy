@@ -2431,13 +2431,91 @@ def get_drive_folders():
                 'sync_error': folder.sync_error,
                 'last_sync_at': folder.last_sync_at.isoformat() if folder.last_sync_at else None,
                 'file_count': folder.files.count(),
-                'owner_name': folder.user.username if folder.user else 'System'
+                'owner_name': folder.user.username if folder.user else 'System',
+                'is_root': folder.is_root,
+                'parent_id': folder.parent_id
             })
         
         return jsonify(results)
         
     except Exception as e:
         current_app.logger.error(f"Error in get_drive_folders: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/folders/<int:id>/children', methods=['GET'])
+@login_required
+def get_drive_folder_children(id):
+    """List subfolders of a root folder from Google Drive"""
+    try:
+        from .models import DriveFolder
+        folder = DriveFolder.query.get_or_404(id)
+        
+        # Check permissions
+        can_view = folder.user_id == current_user.id or current_user.is_super_admin
+        if not can_view and current_user.is_admin:
+            if folder.user and folder.user.class_id == current_user.class_id:
+                can_view = True
+        
+        if not can_view:
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        from .drive_sync import get_drive_sync_service
+        sync_service = get_drive_sync_service()
+        children = sync_service.list_subfolders(id)
+        return jsonify(children)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/folders/<int:id>/subfolders', methods=['POST'])
+@login_required
+def toggle_drive_subfolder(id):
+    """Enable or disable sync for a subfolder of an authorized root"""
+    try:
+        from .models import DriveFolder
+        root_folder = DriveFolder.query.get_or_404(id)
+        
+        # Check permissions
+        can_manage = root_folder.user_id == current_user.id or current_user.is_super_admin
+        if not can_manage and current_user.is_admin:
+            if root_folder.user and root_folder.user.class_id == current_user.class_id:
+                can_manage = True
+        
+        if not can_manage:
+            return jsonify({'error': 'Not authorized'}), 403
+            
+        data = request.get_json()
+        sub_folder_id = data.get('folder_id') # Google ID
+        enabled = data.get('enabled', True)
+        privacy = data.get('privacy_level', 'private')
+        
+        from .drive_sync import get_drive_sync_service
+        sync_service = get_drive_sync_service()
+        
+        if enabled:
+            # Create a sync target folder
+            new_folder = sync_service.add_folder(
+                user_id=root_folder.user_id,
+                folder_id=sub_folder_id,
+                privacy_level=privacy,
+                is_root=False,
+                parent_id=root_folder.id
+            )
+            return jsonify({'success': True, 'id': new_folder.id})
+        else:
+            # Find and delete the sync target
+            target = DriveFolder.query.filter_by(
+                user_id=root_folder.user_id, 
+                folder_id=sub_folder_id,
+                is_root=False
+            ).first()
+            if target:
+                # Use common delete logic
+                return delete_drive_folder(target.id)
+            return jsonify({'success': True, 'message': 'Target not found or already deleted'})
+            
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
@@ -2492,14 +2570,15 @@ def add_drive_folder():
             if not target_user or target_user.class_id != current_user.class_id:
                 return jsonify({'success': False, 'message': 'Ungültiger Benutzer oder falsche Klasse'}), 400
         
-        # Add folder using sync service
+        # Add folder as ROOT using sync service
         from .drive_sync import get_drive_sync_service
         
         sync_service = get_drive_sync_service()
         folder = sync_service.add_folder(
             user_id=target_user_id,
             folder_id=folder_id,
-            privacy_level=privacy_level
+            privacy_level=privacy_level,
+            is_root=True # Admins add sources/roots
         )
         
         return jsonify({

@@ -2377,34 +2377,72 @@
                     return;
                 }
 
-                container.innerHTML = folders.map(f => `
-                    <div class="floating-card" style="padding: 20px; margin-bottom: 15px; cursor:pointer;" onclick="openEditFolderSheet(${JSON.stringify(f).replace(/"/g, '&quot;')})">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 15px;">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <div class="account-item-icon" style="margin:0; width:44px; height:44px; background:rgba(0,113,227,0.1); color:var(--accent);">
-                                    <i data-lucide="folder"></i>
+                const roots = folders.filter(f => f.is_root);
+                const targets = folders.filter(f => !f.is_root);
+
+                let html = '';
+
+                // Roots Section
+                if (roots.length > 0) {
+                    html += `<div class="item-sub" style="margin: 20px 0 10px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px;">Quellen (${roots.length})</div>`;
+                    html += roots.map(f => `
+                        <div class="floating-card" style="padding: 16px; margin-bottom: 12px; cursor:pointer;" onclick="browseRootFolder(${f.id}, '${f.folder_name}')">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:rgba(0,113,227,0.05); color:var(--accent);">
+                                        <i data-lucide="database"></i>
+                                    </div>
+                                    <div>
+                                        <div class="item-title">${f.folder_name}</div>
+                                        <div class="item-sub">${f.owner_name ? f.owner_name : ''} • Tippe zum Verwalten</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div class="item-title">${f.subject_name || t('unknown')}</div>
-                                    <div class="item-sub">${f.privacy_level === 'public' ? t('public') : t('private')} ${f.owner_name ? ' • ' + f.owner_name : ''}</div>
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:5px;" onclick="event.stopPropagation()">
-                                <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px;" onclick="syncFolder(${f.id}, this)">
-                                    <i data-lucide="refresh-cw" style="width:16px;"></i>
-                                </button>
-                                ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `
-                                <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px; background:rgba(255,59,48,0.1); color:var(--danger); box-shadow:none;" onclick="deleteFolder(${f.id})">
-                                    <i data-lucide="trash-2" style="width:16px;"></i>
-                                </button>` : ''}
+                                <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                             </div>
                         </div>
-                        <div style="font-size: 12px; color: var(--text-sec); display:flex; justify-content:space-between;">
-                            <span>${t('last_sync')}: ${f.last_sync_at ? new Date(f.last_sync_at).toLocaleString() : 'Nie'}</span>
-                            <span>${f.file_count || 0} ${t('files')}</span>
+                    `).join('');
+                }
+
+                // Targets Section
+                if (targets.length > 0) {
+                    html += `<div class="item-sub" style="margin: 20px 0 10px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px;">Synchronisierte Fächer (${targets.length})</div>`;
+                    html += targets.map(f => `
+                        <div class="floating-card" style="padding: 16px; margin-bottom: 12px; cursor:pointer;" onclick="openEditFolderSheet(${JSON.stringify(f).replace(/"/g, '&quot;')})">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:rgba(52,199,89,0.1); color:var(--success);">
+                                        <i data-lucide="folder-check"></i>
+                                    </div>
+                                    <div>
+                                        <div class="item-title">${f.subject_name || f.folder_name}</div>
+                                        <div class="item-sub">${f.privacy_level === 'public' ? t('public') : t('private')} ${f.owner_name ? ' • ' + f.owner_name : ''}</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:5px;" onclick="event.stopPropagation()">
+                                    <button class="btn-chat-open" style="width:32px; height:32px; padding:0; border-radius:8px;" onclick="syncFolder(${f.id}, this)">
+                                        <i data-lucide="refresh-cw" style="width:14px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-sec); display:flex; justify-content:space-between;">
+                                <span>${t('last_sync')}: ${f.last_sync_at ? new Date(f.last_sync_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Nie'}</span>
+                                <span>${f.file_count || 0} ${t('files')}</span>
+                            </div>
                         </div>
-                    </div>
-                `).join('');
+                    `).join('');
+                }
+
+                if (html === '') {
+                    container.innerHTML = `
+                        <div class="floating-card" style="text-align:center; padding:40px;">
+                            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.2;"><i data-lucide="folder-plus" style="width:64px; height:64px;"></i></div>
+                            <p class="item-sub">Noch keine Drive-Quellen verknüpft.</p>
+                            ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `<button class="ios-btn btn-small" style="margin-top: 15px;" onclick="openAddFolderSheet()">${t('add_folder')}</button>` : ''}
+                        </div>`;
+                } else {
+                    container.innerHTML = html;
+                }
+                lucide.createIcons();
                 lucide.createIcons();
             } catch (e) {
                 container.innerHTML = `<p class="item-sub" style="text-align:center;">${t('error_loading')}</p>`;
@@ -2484,6 +2522,84 @@
                 lucide.createIcons();
             } catch (e) {
                 console.error(e);
+            }
+        }
+
+        async function browseRootFolder(id, name) {
+            const container = document.getElementById('drive-content-container');
+            container.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; padding:0 5px;">
+                    <button class="btn-chat-open" style="width:32px; height:32px; padding:0; border-radius:8px;" onclick="renderDriveFolders()">
+                        <i data-lucide="arrow-left" style="width:16px;"></i>
+                    </button>
+                    <span class="item-title" style="font-size:16px;">${name}</span>
+                </div>
+                <div id="subfolder-list">
+                    <div style="text-align:center; padding:30px; color:var(--text-sec)">
+                        <div class="spinner-icon"><i data-lucide="loader-2" class="spin"></i></div>
+                        Lade Unterordner...
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch(`/api/drive/folders/${id}/children`);
+                const children = await res.json();
+
+                const list = document.getElementById('subfolder-list');
+                if (children.length === 0) {
+                    list.innerHTML = `<p class="item-sub" style="text-align:center; padding:20px;">Keine Unterordner gefunden.</p>`;
+                    return;
+                }
+
+                list.innerHTML = children.map(c => `
+                    <div class="floating-card" style="padding: 16px; margin-bottom: 12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:${c.is_synced ? 'rgba(52,199,89,0.1)' : 'rgba(0,113,227,0.05)'}; color:${c.is_synced ? 'var(--success)' : 'var(--text-sec)'}">
+                                    <i data-lucide="${c.is_synced ? 'folder-check' : 'folder'}"></i>
+                                </div>
+                                <div>
+                                    <div class="item-title">${c.name}</div>
+                                    <div class="item-sub">${c.is_synced ? 'Status: Aktiv' : 'Nicht synchronisiert'}</div>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                ${c.is_synced ? `
+                                    <button class="ios-btn btn-small" style="background:rgba(255,59,48,0.1); color:var(--danger);" onclick="toggleSubfolderSync(${id}, '${c.id}', false)">Deaktivieren</button>
+                                ` : `
+                                    <button class="ios-btn btn-small" onclick="toggleSubfolderSync(${id}, '${c.id}', true)">Aktivieren</button>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) {
+                showToast("Fehler beim Laden der Ordner", "error");
+            }
+        }
+
+        async function toggleSubfolderSync(rootId, subGoogleId, enabled) {
+            try {
+                const res = await fetch(`/api/drive/folders/${rootId}/subfolders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        folder_id: subGoogleId,
+                        enabled: enabled,
+                        privacy_level: 'private' // Default to private when enabling
+                    })
+                });
+                if (res.ok) {
+                    showToast(enabled ? "Synchronisierung aktiviert" : "Synchronisierung deaktiviert", "success");
+                    // Refresh current browse view
+                    const title = document.querySelector('#drive-content-container .item-title').innerText;
+                    browseRootFolder(rootId, title);
+                }
+            } catch (e) {
+                showToast("Fehler beim Speichern", "error");
             }
         }
 

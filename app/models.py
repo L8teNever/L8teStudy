@@ -257,15 +257,18 @@ class DriveFolder(db.Model):
     folder_id = db.Column(db.String(256), nullable=False)  # Google Drive folder ID
     folder_name = db.Column(db.String(256), nullable=False)
     privacy_level = db.Column(db.String(20), default='private')  # 'private' or 'public'
+    is_root = db.Column(db.Boolean, default=False)  # Admin-added root source
+    parent_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=True)
     sync_enabled = db.Column(db.Boolean, default=True)
     last_sync_at = db.Column(db.DateTime, nullable=True)
-    sync_status = db.Column(db.String(50), default='pending')  # pending, syncing, completed, error
+    sync_status = db.Column(db.String(50), default='pending')
     sync_error = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
     user = db.relationship('User', backref='drive_folders')
     files = db.relationship('DriveFile', backref='folder', lazy='dynamic', cascade='all, delete-orphan')
+    subfolders = db.relationship('DriveFolder', backref=db.backref('parent', remote_side=[id]), lazy='dynamic')
     
     # Ensure unique folder per user
     __table_args__ = (
