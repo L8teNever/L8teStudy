@@ -2329,10 +2329,10 @@
         }
 
         /* --- DRIVE INTEGRATION --- */
-        let activeDriveTab = 'folders';
+        let activeDriveTab = 'files';
         let driveFolderCache = {}; // Cache for folder exploration
 
-        async function renderDrive(tab = 'folders') {
+        async function renderDrive(tab = 'files') {
             currentView = 'drive';
             activeDriveTab = tab;
             setPageTitle(t('drive'));
@@ -2341,8 +2341,8 @@
             container.innerHTML = `
                 <div class="controls-row">
                     <div class="tab-bar">
+                         <button class="tab-btn ${tab === 'files' ? 'active' : ''}" onclick="renderDrive('files')">${t('files')}</button>
                         <button class="tab-btn ${tab === 'folders' ? 'active' : ''}" onclick="renderDrive('folders')">${t('folders')}</button>
-                        <button class="tab-btn ${tab === 'files' ? 'active' : ''}" onclick="renderDrive('files')">${t('files')}</button>
                     </div>
                 </div>
                 
@@ -2364,10 +2364,10 @@
             `;
             lucide.createIcons();
 
-            if (tab === 'folders') {
-                await renderDriveFolders();
-            } else {
+            if (tab === 'files') {
                 await renderDriveFiles();
+            } else {
+                await renderDriveFolders();
             }
         }
 
