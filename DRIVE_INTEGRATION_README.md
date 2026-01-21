@@ -54,10 +54,19 @@ pip install -r requirements.txt
    - Keys → Add Key → Create new key → JSON
    - Datei speichern als `service-account.json`
 
-### 3. Konfiguration
-
 #### Docker (Empfohlen)
 Die Variablen werden direkt in der `docker-compose.yml` unter `environment` konfiguriert. 
+
+**Tipp: "Copy & Paste" Methode (Kein Datei-Upload nötig)**
+Du kannst den gesamten Inhalt deiner `service-account.json` einfach in die Variable `GOOGLE_SERVICE_ACCOUNT_INFO` kopieren:
+
+```yaml
+# In docker-compose.yml
+environment:
+  - GOOGLE_SERVICE_ACCOUNT_INFO='{"type": "service_account", "project_id": ...}'
+```
+
+*(Achte darauf, den Inhalt in einfache Anführungszeichen `' '` zu setzen, falls er Sonderzeichen enthält.)*
 
 #### Lokal (.env)
 Falls du kein Docker nutzt, erstelle eine `.env` Datei:

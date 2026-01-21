@@ -59,6 +59,15 @@ def create_app():
     # Ensure upload directory exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
+    # Drive Integration Configuration
+    app.config['GOOGLE_SERVICE_ACCOUNT_FILE'] = os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE')
+    app.config['GOOGLE_SERVICE_ACCOUNT_INFO'] = os.environ.get('GOOGLE_SERVICE_ACCOUNT_INFO')
+    app.config['DRIVE_ENCRYPTION_KEY'] = os.environ.get('DRIVE_ENCRYPTION_KEY')
+    app.config['ENCRYPTED_FILES_PATH'] = os.environ.get('ENCRYPTED_FILES_PATH', os.path.join(app.instance_path, 'encrypted_files'))
+    
+    # Ensure encrypted files directory exists
+    os.makedirs(app.config['ENCRYPTED_FILES_PATH'], exist_ok=True)
+    
     # Session Configuration - Enhanced Security
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'  # Changed from Lax to Strict for better CSRF protection

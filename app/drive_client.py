@@ -35,26 +35,44 @@ class GoogleDriveClient:
     def __init__(self, service_account_file: Optional[str] = None):
         """
         Initialize Google Drive client
-        
-        Args:
-            service_account_file: Path to service account JSON file
         """
+        import json
+        self.service = None
+        
+        # 1. Try JSON Info (Direct string from Env)
+        service_account_info = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO')
+        if service_account_info:
+            try:
+                # If it's a string, parse it
+                if isinstance(service_account_info, str):
+                    info = json.loads(service_account_info)
+                else:
+                    info = service_account_info
+                
+                credentials = service_account.Credentials.from_service_account_info(
+                    info, scopes=self.SCOPES
+                )
+                self.service = build('drive', 'v3', credentials=credentials)
+                return
+            except Exception as e:
+                current_app.logger.error(f"Failed to load Drive credentials from INFO: {e}")
+
+        # 2. Try File Path
         if service_account_file is None:
             service_account_file = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_FILE')
         
-        if not service_account_file or not os.path.exists(service_account_file):
-            raise DriveClientError(
-                f"Service account file not found: {service_account_file}"
-            )
-        
-        try:
-            credentials = service_account.Credentials.from_service_account_file(
-                service_account_file,
-                scopes=self.SCOPES
-            )
-            self.service = build('drive', 'v3', credentials=credentials)
-        except Exception as e:
-            raise DriveClientError(f"Failed to initialize Drive client: {str(e)}")
+        if service_account_file and os.path.exists(service_account_file):
+            try:
+                credentials = service_account.Credentials.from_service_account_file(
+                    service_account_file,
+                    scopes=self.SCOPES
+                )
+                self.service = build('drive', 'v3', credentials=credentials)
+                return
+            except Exception as e:
+                current_app.logger.error(f"Failed to load Drive credentials from FILE: {e}")
+
+        raise DriveClientError("No valid Google Drive credentials found (File or Info)")
     
     def list_files(
         self,

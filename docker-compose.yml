@@ -1,30 +1,31 @@
 services:
-  web:
-    build: .
+  l8testudy:
+    image: l8tenever/l8testudy:latest
+    container_name: l8testudy
     ports:
-      - "5000:5000"
+      - 10.66.66.1:5000:5000
     volumes:
-      - ./instance:/data
+      - ./data:/data
     environment:
-      - DATABASE_URL=sqlite:////data/l8testudy.db
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
-      - FLASK_ENV=production
-      
-      # WebUntis Integration
-      - UNTIS_FERNET_KEY=${UNTIS_FERNET_KEY:-your-untis-fernet-key-here}
+      DATABASE_URL: sqlite:////data/l8testudy.db
+      SECRET_KEY: ein-sichersdfes-passwort-hier-einfuegen
+      FLASK_ENV: production
       
       # Google Drive Integration
-      - GOOGLE_SERVICE_ACCOUNT_FILE=/data/service-account.json
-      - DRIVE_ENCRYPTION_KEY=${DRIVE_ENCRYPTION_KEY:-qv6aHbyp1j1xHpLVE87DIax+x/4YvD54rlh3SbZGTjg=}
-      - ENCRYPTED_FILES_PATH=/data/encrypted_files
+      # ANLEITUNG: Kopiere den Inhalt deiner JSON-Datei hier unter 'GOOGLE_SERVICE_ACCOUNT_INFO:' 
+      # Achte darauf, dass der Inhalt eingerückt ist (genau wie diese Zeile)!
+      GOOGLE_SERVICE_ACCOUNT_INFO: |
+        {}
+
+      # Verschlüsselung
+      DRIVE_ENCRYPTION_KEY: qv6aHbyp1j1xHpLVE87DIax+x/4YvD54rlh3SbZGTjg=
+      ENCRYPTED_FILES_PATH: /data/encrypted_files
       
-      # Upload Configuration
-      - UPLOAD_FOLDER=/data/uploads
-      - MAX_CONTENT_LENGTH=104857600
-      
-      # Security
-      - SESSION_COOKIE_SECURE=True
-      - SESSION_COOKIE_HTTPONLY=True
-      - SESSION_COOKIE_SAMESITE=Lax
-      - TZ=Europe/Berlin
+      # Sonstiges
+      UPLOAD_FOLDER: /data/uploads
+      MAX_CONTENT_LENGTH: 104857600
+      TZ: Europe/Berlin
+
     restart: always
+
+networks: {}
