@@ -297,6 +297,9 @@ class DriveFile(db.Model):
     ocr_completed = db.Column(db.Boolean, default=False)
     ocr_error = db.Column(db.Text, nullable=True)
     
+    # Context
+    parent_folder_name = db.Column(db.String(512), nullable=True) # Immediate parent in GDrive
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

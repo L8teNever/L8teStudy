@@ -250,17 +250,43 @@ class GoogleDriveClient:
         except:
             return False
     
-    def list_pdf_files(self, folder_id: str) -> List[Dict]:
+    def list_pdf_files(self, folder_id: str, recursive: bool = True, parent_name: Optional[str] = None) -> List[Dict]:
         """
-        List only PDF files in a folder
+        List PDF files in a folder, optionally recursive
         
         Args:
             folder_id: Google Drive folder ID
+            recursive: Whether to search subfolders
+            parent_name: Internal use for recursion
         
         Returns:
             List of PDF file metadata
         """
-        return self.list_files(folder_id, mime_type='application/pdf')
+        if not recursive:
+            return self.list_files(folder_id, mime_type='application/pdf')
+            
+        # Recursive approach
+        all_files = []
+        
+        # 1. Get PDFs in current folder
+        try:
+            current_files = self.list_files(folder_id, mime_type='application/pdf')
+            for f in current_files:
+                if parent_name:
+                    f['parent_name'] = parent_name
+            all_files.extend(current_files)
+        except Exception as e:
+            current_app.logger.warning(f"Could not list PDFs in {folder_id}: {e}")
+
+        # 2. Get subfolders and recurse
+        try:
+            subfolders = self.list_subfolders(folder_id)
+            for sf in subfolders:
+                all_files.extend(self.list_pdf_files(sf['id'], recursive=True, parent_name=sf['name']))
+        except Exception as e:
+            current_app.logger.warning(f"Could not list subfolders in {folder_id}: {e}")
+            
+        return all_files
 
     def list_subfolders(self, folder_id: str) -> List[Dict]:
         """

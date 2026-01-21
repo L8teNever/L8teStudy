@@ -2468,7 +2468,8 @@
                         <div class="item-content">
                             <div class="item-title">${f.filename}</div>
                             <div class="item-sub">
-                                <span style="color:var(--accent)">${f.subject_name || t('unknown')}</span> • 
+                                <span style="color:var(--accent)">${f.subject_name || t('unknown')}</span> 
+                                ${f.parent_folder_name ? `• <span style="color:var(--text-sec)">${f.parent_folder_name}</span>` : ''} • 
                                 ${(f.file_size / 1024 / 1024).toFixed(1)} MB
                             </div>
                         </div>
@@ -2511,7 +2512,8 @@
                         <div class="item-content">
                             <div class="item-title">${file.filename}</div>
                             <div class="item-sub">
-                                <span style="color:var(--accent)">${file.subject_name || t('unknown')}</span> • 
+                                <span style="color:var(--accent)">${file.subject_name || t('unknown')}</span> 
+                                ${file.parent_folder_name ? `• <span style="color:var(--text-sec)">${file.parent_folder_name}</span>` : ''} • 
                                 <span style="color:var(--text-main); font-style:italic;">"${file.snippet || '...'}"</span>
                                 <div style="font-size:10px; margin-top:2px;">${t('found_in')} ${file.folder_name || ''} ${file.owner_name ? t('by') + ' ' + file.owner_name : ''}</div>
                             </div>

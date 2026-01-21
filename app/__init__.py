@@ -371,6 +371,9 @@ def create_app():
                     if 'ocr_error' not in cols:
                         app.logger.info("Migrating: Adding ocr_error to drive_file")
                         conn.execute(text("ALTER TABLE drive_file ADD COLUMN ocr_error TEXT"))
+                    if 'parent_folder_name' not in cols:
+                        app.logger.info("Migrating: Adding parent_folder_name to drive_file")
+                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN parent_folder_name VARCHAR(512)"))
                     conn.commit()
         except Exception as e:
             app.logger.error(f"Drive file schema migration error: {e}")

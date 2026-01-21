@@ -155,7 +155,9 @@ class DriveSearchService:
                     'subject_name': row[7],
                     'file_size': row[8],
                     'page_count': row[9],
-                    'created_at': row[10]
+                    'created_at': row[10],
+                    'parent_folder_name': row[11],
+                    'folder_name': row[12]
                 })
             
             return formatted_results
@@ -198,7 +200,9 @@ class DriveSearchService:
                 s.name as subject_name,
                 df.file_size,
                 dfc.page_count,
-                df.created_at
+                df.created_at,
+                df.parent_folder_name,
+                dfolder.folder_name
             FROM drive_file_content_fts fts
             JOIN drive_file_content dfc ON fts.rowid = dfc.id
             JOIN drive_file df ON dfc.drive_file_id = df.id

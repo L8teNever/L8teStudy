@@ -2779,6 +2779,7 @@ def get_drive_files():
                 'page_count': file.content.page_count if file.content else 0,
                 'created_at': file.created_at.isoformat() if file.created_at else None,
                 'folder_name': file.folder.folder_name,
+                'parent_folder_name': file.parent_folder_name,
                 'owner_username': file.folder.user.username,
                 'owner_id': file.folder.user_id
             })

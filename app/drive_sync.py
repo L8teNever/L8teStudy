@@ -186,10 +186,20 @@ class DriveSyncService:
             subject_id = folder.subject_id # Default to folder's subject if set
             auto_mapped = False
             
-            # Try to auto-detect from filename if folder subject isn't set OR to see if we can be more specific
+            # Try to auto-detect from filename or parent folder name if folder subject isn't set
             if folder.user_id:
                 mapper = SubjectMapper(class_id=None, user_id=folder.user_id)
-                subject = mapper.map_folder_to_subject(file_name, auto_create=True)
+                subject = None
+                
+                # 1. Try parent folder name (e.g. "Physics" in "Source/Physics/File.pdf")
+                parent_folder_name = drive_file.get('parent_name')
+                if parent_folder_name:
+                    subject = mapper.map_folder_to_subject(parent_folder_name, auto_create=True)
+                
+                # 2. If not found, try filename
+                if not subject:
+                    subject = mapper.map_folder_to_subject(file_name, auto_create=True)
+                
                 if subject:
                     subject_id = subject.id
                     auto_mapped = True
@@ -203,6 +213,7 @@ class DriveSyncService:
                 existing_file.subject_id = subject_id
                 existing_file.auto_mapped = auto_mapped
                 existing_file.ocr_completed = ocr_success
+                existing_file.parent_folder_name = drive_file.get('parent_name')
                 existing_file.updated_at = datetime.utcnow()
                 if existing_file.content:
                     existing_file.content.content_text = text
@@ -215,7 +226,8 @@ class DriveSyncService:
                     drive_folder_id=folder.id, file_id=file_id, filename=file_name,
                     encrypted_path=encrypted_path, file_hash=file_hash,
                     file_size=file_size, mime_type=mime_type, subject_id=subject_id,
-                    auto_mapped=auto_mapped, ocr_completed=ocr_success
+                    auto_mapped=auto_mapped, ocr_completed=ocr_success,
+                    parent_folder_name=drive_file.get('parent_name')
                 )
                 db.session.add(new_file)
                 db.session.flush()
