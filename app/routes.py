@@ -2637,6 +2637,30 @@ def update_drive_folder(id):
             
         if 'subject_id' in data:
             folder.subject_id = data['subject_id']
+
+        if 'user_id' in data:
+            # Only admin/super_admin can reassign users
+            if not current_user.is_admin and not current_user.is_super_admin:
+                return jsonify({'success': False, 'message': 'Nur Administratoren können den Besitzer ändern'}), 403
+            
+            new_user_id = data['user_id']
+            from .models import User
+            new_user = User.query.get(new_user_id)
+            
+            if not new_user:
+                 return jsonify({'success': False, 'message': 'Benutzer nicht gefunden'}), 404
+
+            # Permission check: can I manage this new user?
+            if not current_user.is_super_admin:
+                 if new_user.class_id != current_user.class_id:
+                      return jsonify({'success': False, 'message': 'Benutzer gehört nicht zu Ihrer Klasse'}), 403
+
+            # Check for uniqueness violation
+            existing = DriveFolder.query.filter_by(user_id=new_user_id, folder_id=folder.folder_id).first()
+            if existing and existing.id != folder.id:
+                 return jsonify({'success': False, 'message': 'Dieser Benutzer hat diesen Ordner bereits verknüpft'}), 400
+
+            folder.user_id = new_user_id
         
         db.session.commit()
         

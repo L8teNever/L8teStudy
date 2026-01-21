@@ -2106,7 +2106,7 @@
                 else if (view === 'sub_admin') renderAdminContent();
 
                 const fab = document.getElementById('main-fab');
-                if (view !== 'home' && view !== 'settings' && view !== 'account' && view !== 'stundenplan' && !view.startsWith('sub_')) fab.classList.add('visible');
+                if (view !== 'home' && view !== 'settings' && view !== 'account' && view !== 'stundenplan' && view !== 'drive' && !view.startsWith('sub_')) fab.classList.add('visible');
                 else fab.classList.remove('visible');
 
                 // Mark "Mehr" button as active if on stundenplan or grades or drive (mobile only)
@@ -2863,24 +2863,7 @@
         }
 
         function viewDriveFile(id, filename) {
-            const html = `
-                <div class="sheet-header">
-                    <div style="flex:1; min-width:0; margin-right:15px;">
-                        <div class="item-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${filename}</div>
-                    </div>
-                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
-                </div>
-                <div style="height: calc(90vh - 100px); width:100%; border-radius:12px; overflow:hidden; background:var(--tab-bg); position:relative;">
-                    <iframe src="/api/drive/files/${id}/download?inline=true" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
-                </div>
-                <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button class="ios-btn" style="flex:1;" onclick="downloadDriveFile(${id})">
-                        <i data-lucide="download" style="width:16px; margin-right:8px;"></i> Download
-                    </button>
-                    <button class="ios-btn" style="flex:1; background:var(--tab-bg); color:var(--text-main);" onclick="closeSheet()">Schließen</button>
-                </div>
-            `;
-            openSheet(html);
+            window.open(`/api/drive/files/${id}/download?inline=true`, '_blank');
         }
 
         function downloadDriveFile(id) {
@@ -4498,6 +4481,11 @@
                     <div class="account-item" onclick="renderSubjectManagement()">
                         <div class="account-item-icon" style="background:#5856D6; color:white;"><i data-lucide="book-open"></i></div>
                         <div class="account-item-text">${t('manage_subjects')}</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    <div class="account-item" onclick="renderDriveManagement()">
+                        <div class="account-item-icon" style="background:#30B0C7; color:white;"><i data-lucide="hard-drive"></i></div>
+                        <div class="account-item-text">Drive Verwaltung</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     <div class="account-item" onclick="renderActivityLog()">
@@ -6838,6 +6826,118 @@
 
 
 
+
+        async function renderDriveManagement() {
+            setPageTitle('Drive Verwaltung');
+            currentView = 'sub_drive_mgmt';
+            document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => renderAdminMenu();
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_drive_mgmt' }, '', '/admin/drive');
+            }
+            window.isPoppingState = false;
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>`;
+
+            try {
+                const res = await fetch('/api/drive/folders');
+                const folders = await res.json();
+
+                if (currentView !== 'sub_drive_mgmt') return;
+
+                const listHtml = folders.map(f => `
+                    <div class="list-item" style="display:block; padding:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="font-weight:600; font-size:16px;">${f.folder_name}</div>
+                            <div style="font-size:11px; background:var(--tab-bg); padding:2px 6px; border-radius:4px;">${f.subject_name || '-'}</div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                            <div style="font-size:13px; color:var(--text-sec);">
+                                <div>Besitzer: <strong style="color:var(--text-main);">${f.owner_name}</strong></div>
+                                <div style="font-size:11px; margin-top:2px;">Dateien: ${f.file_count}</div>
+                            </div>
+                            <button class="ios-btn btn-small btn-sec" style="width:auto; margin:0;" onclick="openDriveOwnerSelect(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')">
+                                Besitzer ändern
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('app-container').innerHTML = `
+                    <div class="floating-card" style="padding:0 24px; margin-bottom: 20px;">
+                        ${listHtml || '<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Ordner gefunden</div>'}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+            }
+        }
+
+        async function openDriveOwnerSelect(folderId, folderName) {
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h3 style="margin:0;">Besitzer ändern</h3>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+                </div>
+                <div style="margin-bottom:15px; font-size:14px;">
+                    Ordner: <strong>${folderName}</strong>
+                </div>
+                <div id="drive-user-list-loading" style="text-align:center; padding:20px;">${t('loading')}</div>
+                <div id="drive-user-list" style="display:none; max-height:400px; overflow-y:auto;"></div>
+            `;
+            openSheetOverlay();
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/drive/admin/users');
+                const users = await res.json();
+
+                const listEl = document.getElementById('drive-user-list');
+                const loadEl = document.getElementById('drive-user-list-loading');
+
+                if (!listEl) return;
+
+                loadEl.style.display = 'none';
+                listEl.style.display = 'block';
+
+                listEl.innerHTML = users.map(u => `
+                    <div class="account-item" onclick="saveDriveOwner(${folderId}, ${u.id}, '${u.username}')" style="cursor:pointer;">
+                        <div class="account-item-icon"><i data-lucide="user"></i></div>
+                        <div class="account-item-text">${u.display_name || u.username}</div>
+                        <i data-lucide="chevron-right" style="width:16px; color:var(--text-sec);"></i>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) {
+                if (document.getElementById('drive-user-list-loading'))
+                    document.getElementById('drive-user-list-loading').innerText = t('error');
+            }
+        }
+
+        async function saveDriveOwner(folderId, userId, userName) {
+            if (!confirm(`Besitzer wirklich zu "${userName}" ändern?`)) return;
+
+            try {
+                const res = await fetch(`/api/drive/folders/${folderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    closeSheet();
+                    alert('Besitzer erfolgreich geändert.');
+                    renderDriveManagement(); // Refresh
+                } else {
+                    alert(data.message || t('error'));
+                }
+            } catch (e) {
+                alert(t('connection_error'));
+            }
+        }
+
         window.onload = () => {
             const path = window.location.pathname;
             if (window.currentUser && window.currentUser.language) {
@@ -6907,6 +7007,7 @@
                 renderSubjectDetails(sub, '?', '[]');
             }
             else if (relevantPath === '/admin/untis') renderUntisConfig();
+            else if (relevantPath === '/admin/drive') renderDriveManagement();
             else if (relevantPath === '/drive') renderDrive();
             else renderHome();
         };
