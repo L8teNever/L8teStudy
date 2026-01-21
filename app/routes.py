@@ -2,8 +2,9 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_user, logout_user, login_required, current_user
 from .models import (
     User, Task, TaskImage, Event, Grade, NotificationSetting, 
-    PushSubscription, Subject, TaskMessage, TaskChatRead, 
+    PushSubscription, Subject, SubjectMapping, TaskMessage, TaskChatRead, 
     GlobalSetting, SchoolClass, TaskCompletion, UserRole,
+    DriveFolder, DriveFile, DriveFileContent,
     subject_classes, db
 )
 from app.notifications import notify_new_task, notify_new_event
@@ -2164,3 +2165,716 @@ def get_current_subject_from_untis():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'subject': None})
+
+# --- Subject Mapping Routes ---
+
+@api_bp.route('/subject-mappings', methods=['GET'])
+@login_required
+def get_subject_mappings():
+    """Get all subject mappings for the current user's class"""
+    try:
+        from .models import SubjectMapping
+        
+        # Get class-specific and global mappings
+        mappings = SubjectMapping.query.filter(
+            db.or_(
+                db.and_(
+                    SubjectMapping.class_id == current_user.class_id,
+                    SubjectMapping.is_global == True
+                ),
+                db.and_(
+                    SubjectMapping.user_id == current_user.id,
+                    SubjectMapping.is_global == False
+                )
+            )
+        ).all()
+        
+        results = []
+        for m in mappings:
+            results.append({
+                'id': m.id,
+                'informal_name': m.informal_name,
+                'subject_id': m.subject_id,
+                'subject_name': m.official_subject.name if m.official_subject else None,
+                'is_global': m.is_global,
+                'is_own': m.user_id == current_user.id,
+                'created_at': m.created_at.isoformat()
+            })
+        
+        return jsonify(results)
+    except Exception as e:
+        current_app.logger.error(f"Error in get_subject_mappings: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/subject-mappings', methods=['POST'])
+@login_required
+def create_subject_mapping():
+    """Create a new subject mapping"""
+    try:
+        from .models import SubjectMapping
+        
+        data = request.json
+        informal_name = data.get('informal_name', '').strip()
+        subject_id = data.get('subject_id')
+        is_global = data.get('is_global', False)
+        
+        if not informal_name or not subject_id:
+            return jsonify({'success': False, 'message': 'Informal name and subject are required'}), 400
+        
+        # Only admins can create global mappings
+        if is_global and not current_user.is_admin:
+            is_global = False
+        
+        # Check if mapping already exists
+        existing = SubjectMapping.query.filter_by(
+            informal_name=informal_name,
+            class_id=current_user.class_id if is_global else None,
+            user_id=None if is_global else current_user.id
+        ).first()
+        
+        if existing:
+            return jsonify({'success': False, 'message': 'Mapping already exists'}), 400
+        
+        # Create new mapping
+        mapping = SubjectMapping(
+            informal_name=informal_name,
+            subject_id=subject_id,
+            class_id=current_user.class_id if is_global else None,
+            user_id=None if is_global else current_user.id,
+            is_global=is_global
+        )
+        
+        db.session.add(mapping)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'id': mapping.id,
+            'informal_name': mapping.informal_name,
+            'subject_id': mapping.subject_id,
+            'subject_name': mapping.official_subject.name,
+            'is_global': mapping.is_global
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in create_subject_mapping: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@api_bp.route('/subject-mappings/<int:id>', methods=['PUT'])
+@login_required
+def update_subject_mapping(id):
+    """Update an existing subject mapping"""
+    try:
+        from .models import SubjectMapping
+        
+        mapping = SubjectMapping.query.get_or_404(id)
+        
+        # Permission check
+        if mapping.is_global and not current_user.is_admin:
+            return jsonify({'success': False, 'message': 'No permission'}), 403
+        if not mapping.is_global and mapping.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'No permission'}), 403
+        
+        data = request.json
+        
+        if 'informal_name' in data:
+            mapping.informal_name = data['informal_name'].strip()
+        if 'subject_id' in data:
+            mapping.subject_id = data['subject_id']
+        if 'is_global' in data and current_user.is_admin:
+            mapping.is_global = data['is_global']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'id': mapping.id,
+            'informal_name': mapping.informal_name,
+            'subject_id': mapping.subject_id,
+            'subject_name': mapping.official_subject.name,
+            'is_global': mapping.is_global
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in update_subject_mapping: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@api_bp.route('/subject-mappings/<int:id>', methods=['DELETE'])
+@login_required
+def delete_subject_mapping(id):
+    """Delete a subject mapping"""
+    try:
+        from .models import SubjectMapping
+        
+        mapping = SubjectMapping.query.get_or_404(id)
+        
+        # Permission check
+        if mapping.is_global and not current_user.is_admin:
+            return jsonify({'success': False, 'message': 'No permission'}), 403
+        if not mapping.is_global and mapping.user_id != current_user.id:
+            return jsonify({'success': False, 'message': 'No permission'}), 403
+        
+        db.session.delete(mapping)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in delete_subject_mapping: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@api_bp.route('/subject-mappings/resolve', methods=['POST'])
+@login_required
+def resolve_subject_mapping():
+    """Resolve an informal folder name to an official subject"""
+    try:
+        from .models import SubjectMapping
+        
+        data = request.json
+        informal_name = data.get('informal_name', '').strip()
+        
+        if not informal_name:
+            return jsonify({'success': False, 'message': 'Informal name required'}), 400
+        
+        # Try exact match first (case-insensitive)
+        mapping = SubjectMapping.query.filter(
+            db.func.lower(SubjectMapping.informal_name) == informal_name.lower(),
+            db.or_(
+                db.and_(
+                    SubjectMapping.class_id == current_user.class_id,
+                    SubjectMapping.is_global == True
+                ),
+                db.and_(
+                    SubjectMapping.user_id == current_user.id,
+                    SubjectMapping.is_global == False
+                )
+            )
+        ).first()
+        
+        if mapping:
+            return jsonify({
+                'success': True,
+                'subject_id': mapping.subject_id,
+                'subject_name': mapping.official_subject.name,
+                'mapping_id': mapping.id,
+                'match_type': 'exact'
+            })
+        
+        # Try fuzzy matching with available subjects
+        subjects = Subject.query.filter(
+            Subject.classes.any(id=current_user.class_id)
+        ).all()
+        
+        # Simple fuzzy matching based on substring and similarity
+        best_match = None
+        best_score = 0
+        
+        for subject in subjects:
+            subject_name_lower = subject.name.lower()
+            informal_lower = informal_name.lower()
+            
+            # Check if informal name is contained in subject name or vice versa
+            if informal_lower in subject_name_lower or subject_name_lower in informal_lower:
+                score = len(informal_lower) / max(len(subject_name_lower), 1)
+                if score > best_score:
+                    best_score = score
+                    best_match = subject
+        
+        if best_match and best_score > 0.3:  # Threshold for suggestion
+            return jsonify({
+                'success': True,
+                'subject_id': best_match.id,
+                'subject_name': best_match.name,
+                'match_type': 'fuzzy',
+                'confidence': best_score
+            })
+        
+        return jsonify({
+            'success': False,
+            'message': 'No matching subject found',
+            'suggestions': [{'id': s.id, 'name': s.name} for s in subjects[:5]]
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in resolve_subject_mapping: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# --- Drive Integration API ---
+
+@api_bp.route('/drive/folders', methods=['GET'])
+@login_required
+def get_drive_folders():
+    """Get all Drive folders for the current user"""
+    try:
+        from .models import DriveFolder
+        
+        folders = DriveFolder.query.filter_by(user_id=current_user.id).all()
+        
+        results = []
+        for folder in folders:
+            results.append({
+                'id': folder.id,
+                'folder_id': folder.folder_id,
+                'folder_name': folder.folder_name,
+                'privacy_level': folder.privacy_level,
+                'sync_enabled': folder.sync_enabled,
+                'sync_status': folder.sync_status,
+                'sync_error': folder.sync_error,
+                'last_sync_at': folder.last_sync_at.isoformat() if folder.last_sync_at else None,
+                'file_count': folder.files.count(),
+                'created_at': folder.created_at.isoformat() if folder.created_at else None
+            })
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in get_drive_folders: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/folders', methods=['POST'])
+@login_required
+def add_drive_folder():
+    """Add a new Drive folder"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('folder_id'):
+            return jsonify({'success': False, 'message': 'folder_id is required'}), 400
+        
+        folder_id = data['folder_id'].strip()
+        privacy_level = data.get('privacy_level', 'private')
+        
+        if privacy_level not in ['private', 'public']:
+            return jsonify({'success': False, 'message': 'Invalid privacy_level'}), 400
+        
+        # Add folder using sync service
+        from .drive_sync import get_drive_sync_service
+        
+        sync_service = get_drive_sync_service()
+        folder = sync_service.add_folder(
+            user_id=current_user.id,
+            folder_id=folder_id,
+            privacy_level=privacy_level
+        )
+        
+        # Trigger initial sync in background (optional)
+        # For now, return success immediately
+        
+        return jsonify({
+            'success': True,
+            'folder': {
+                'id': folder.id,
+                'folder_id': folder.folder_id,
+                'folder_name': folder.folder_name,
+                'privacy_level': folder.privacy_level,
+                'sync_status': folder.sync_status
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in add_drive_folder: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
+@api_bp.route('/drive/folders/<int:id>', methods=['PATCH'])
+@login_required
+def update_drive_folder(id):
+    """Update Drive folder settings"""
+    try:
+        from .models import DriveFolder
+        
+        folder = DriveFolder.query.get_or_404(id)
+        
+        # Check ownership
+        if folder.user_id != current_user.id and not current_user.is_super_admin:
+            return jsonify({'success': False, 'message': 'Not authorized'}), 403
+        
+        data = request.get_json()
+        
+        if 'privacy_level' in data:
+            if data['privacy_level'] not in ['private', 'public']:
+                return jsonify({'success': False, 'message': 'Invalid privacy_level'}), 400
+            folder.privacy_level = data['privacy_level']
+        
+        if 'sync_enabled' in data:
+            folder.sync_enabled = bool(data['sync_enabled'])
+        
+        if 'folder_name' in data:
+            folder.folder_name = data['folder_name']
+        
+        db.session.commit()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in update_drive_folder: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
+@api_bp.route('/drive/folders/<int:id>', methods=['DELETE'])
+@login_required
+def delete_drive_folder(id):
+    """Delete a Drive folder and all its files"""
+    try:
+        from .models import DriveFolder
+        
+        folder = DriveFolder.query.get_or_404(id)
+        
+        # Check ownership
+        if folder.user_id != current_user.id and not current_user.is_super_admin:
+            return jsonify({'success': False, 'message': 'Not authorized'}), 403
+        
+        # Delete encrypted files from disk
+        from .drive_encryption import get_drive_encryption_manager
+        encryption_manager = get_drive_encryption_manager()
+        
+        for file in folder.files:
+            try:
+                encryption_manager.delete_encrypted_file(file.encrypted_path)
+            except:
+                pass
+        
+        # Delete from database (cascade will handle files and content)
+        db.session.delete(folder)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in delete_drive_folder: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@api_bp.route('/drive/folders/<int:id>/sync', methods=['POST'])
+@login_required
+def sync_drive_folder(id):
+    """Manually trigger sync for a folder"""
+    try:
+        from .models import DriveFolder
+        
+        folder = DriveFolder.query.get_or_404(id)
+        
+        # Check ownership
+        if folder.user_id != current_user.id and not current_user.is_super_admin:
+            return jsonify({'success': False, 'message': 'Not authorized'}), 403
+        
+        # Trigger sync
+        from .drive_sync import get_drive_sync_service
+        
+        sync_service = get_drive_sync_service()
+        stats = sync_service.sync_folder(id)
+        
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in sync_drive_folder: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@api_bp.route('/drive/files', methods=['GET'])
+@login_required
+def get_drive_files():
+    """Get Drive files with optional filters"""
+    try:
+        from .models import DriveFile, DriveFolder
+        
+        # Get query parameters
+        folder_id = request.args.get('folder_id', type=int)
+        subject_id = request.args.get('subject_id', type=int)
+        user_id = request.args.get('user_id', type=int)
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        # Build query
+        query = db.session.query(DriveFile).join(DriveFolder)
+        
+        # Filter by folder
+        if folder_id:
+            query = query.filter(DriveFile.drive_folder_id == folder_id)
+        
+        # Filter by subject
+        if subject_id:
+            query = query.filter(DriveFile.subject_id == subject_id)
+        
+        # Filter by user (folder owner)
+        if user_id:
+            query = query.filter(DriveFolder.user_id == user_id)
+        else:
+            # Default: show own files + public files from class
+            query = query.filter(
+                db.or_(
+                    DriveFolder.user_id == current_user.id,
+                    DriveFolder.privacy_level == 'public'
+                )
+            )
+        
+        # Order and paginate
+        query = query.order_by(DriveFile.created_at.desc())
+        query = query.limit(limit).offset(offset)
+        
+        files = query.all()
+        
+        results = []
+        for file in files:
+            results.append({
+                'id': file.id,
+                'filename': file.filename,
+                'file_size': file.file_size,
+                'mime_type': file.mime_type,
+                'subject_id': file.subject_id,
+                'subject_name': file.subject.name if file.subject else None,
+                'auto_mapped': file.auto_mapped,
+                'ocr_completed': file.ocr_completed,
+                'page_count': file.content.page_count if file.content else 0,
+                'created_at': file.created_at.isoformat() if file.created_at else None,
+                'folder_name': file.folder.folder_name,
+                'owner_username': file.folder.user.username,
+                'owner_id': file.folder.user_id
+            })
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in get_drive_files: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/files/<int:id>/download', methods=['GET'])
+@login_required
+def download_drive_file(id):
+    """Download a Drive file (decrypted)"""
+    try:
+        from .models import DriveFile, DriveFolder
+        
+        file = DriveFile.query.get_or_404(id)
+        folder = file.folder
+        
+        # Check permissions
+        if folder.user_id != current_user.id:
+            if folder.privacy_level != 'public':
+                return jsonify({'error': 'Not authorized'}), 403
+        
+        # Decrypt file to memory
+        from .drive_encryption import get_drive_encryption_manager
+        
+        encryption_manager = get_drive_encryption_manager()
+        
+        metadata = {
+            'file_id': file.file_id,
+            'filename': file.filename,
+            'user_id': folder.user_id,
+            'folder_id': folder.folder_id
+        }
+        
+        decrypted_bytes = encryption_manager.decrypt_file_to_memory(
+            file.encrypted_path,
+            metadata=metadata
+        )
+        
+        # Send file
+        return send_file(
+            BytesIO(decrypted_bytes),
+            mimetype=file.mime_type,
+            as_attachment=True,
+            download_name=file.filename
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in download_drive_file: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/search', methods=['GET'])
+@login_required
+def search_drive_files():
+    """Search Drive files using FTS5"""
+    try:
+        query = request.args.get('q', '').strip()
+        subject_id = request.args.get('subject_id', type=int)
+        user_id = request.args.get('user_id', type=int)
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        if not query:
+            return jsonify([])
+        
+        # Search using FTS5
+        from .drive_search import get_drive_search_service
+        
+        search_service = get_drive_search_service(
+            current_user_id=current_user.id,
+            class_id=current_user.class_id
+        )
+        
+        results = search_service.search(
+            query=query,
+            subject_id=subject_id,
+            user_id=user_id,
+            limit=limit,
+            offset=offset
+        )
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in search_drive_files: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/search/suggestions', methods=['GET'])
+@login_required
+def get_drive_search_suggestions():
+    """Get autocomplete suggestions for search"""
+    try:
+        query = request.args.get('q', '').strip()
+        limit = request.args.get('limit', 10, type=int)
+        
+        if not query:
+            return jsonify([])
+        
+        from .drive_search import get_drive_search_service
+        
+        search_service = get_drive_search_service(
+            current_user_id=current_user.id
+        )
+        
+        suggestions = search_service.get_suggestions(query, limit=limit)
+        
+        return jsonify(suggestions)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in get_drive_search_suggestions: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/stats', methods=['GET'])
+@login_required
+def get_drive_stats():
+    """Get Drive statistics"""
+    try:
+        from .drive_search import get_drive_search_service
+        
+        search_service = get_drive_search_service(
+            current_user_id=current_user.id,
+            class_id=current_user.class_id
+        )
+        
+        stats = search_service.get_file_stats()
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in get_drive_stats: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/subject-mappings', methods=['GET'])
+@login_required
+def get_drive_subject_mappings():
+    """Get all subject mappings for the user"""
+    try:
+        mappings = SubjectMapping.query.filter(
+            db.or_(
+                SubjectMapping.user_id == current_user.id,
+                db.and_(
+                    SubjectMapping.is_global == True,
+                    SubjectMapping.class_id == current_user.class_id
+                )
+            )
+        ).all()
+        
+        results = []
+        for mapping in mappings:
+            results.append({
+                'id': mapping.id,
+                'informal_name': mapping.informal_name,
+                'subject_id': mapping.subject_id,
+                'subject_name': mapping.official_subject.name,
+                'is_global': mapping.is_global,
+                'is_own': mapping.user_id == current_user.id
+            })
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in get_drive_subject_mappings: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/drive/subject-mappings', methods=['POST'])
+@login_required
+def create_drive_subject_mapping():
+    """Create a new subject mapping"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('informal_name') or not data.get('subject_id'):
+            return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+        
+        informal_name = data['informal_name'].strip()
+        subject_id = data['subject_id']
+        is_global = data.get('is_global', False)
+        
+        # Only admins can create global mappings
+        if is_global and not current_user.is_admin:
+            is_global = False
+        
+        # Create mapping
+        from .subject_mapper import get_subject_mapper
+        
+        mapper = get_subject_mapper(
+            class_id=current_user.class_id,
+            user_id=current_user.id
+        )
+        
+        mapping = mapper.create_mapping(
+            informal_name=informal_name,
+            subject_id=subject_id,
+            is_global=is_global
+        )
+        
+        return jsonify({
+            'success': True,
+            'mapping': {
+                'id': mapping.id,
+                'informal_name': mapping.informal_name,
+                'subject_id': mapping.subject_id,
+                'subject_name': mapping.official_subject.name,
+                'is_global': mapping.is_global
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in create_drive_subject_mapping: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+
+@api_bp.route('/drive/subject-mappings/<int:id>', methods=['DELETE'])
+@login_required
+def delete_drive_subject_mapping(id):
+    """Delete a subject mapping"""
+    try:
+        mapping = SubjectMapping.query.get_or_404(id)
+        
+        # Check permissions
+        if mapping.user_id != current_user.id and not current_user.is_admin:
+            return jsonify({'success': False, 'message': 'Not authorized'}), 403
+        
+        db.session.delete(mapping)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error in delete_drive_subject_mapping: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+

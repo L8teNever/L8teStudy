@@ -1791,6 +1791,8 @@
                     data-lucide="clock-4"></i><span>Stundenplan</span></a>
             <a class="nav-link" onclick="navigate('grades', this, 'Noten')"><i
                     data-lucide="bar-chart-3"></i><span>Noten</span></a>
+            <a class="nav-link" id="nav-drive-side" onclick="navigate('drive', this, 'Drive')"><i
+                    data-lucide="hard-drive"></i><span>Drive</span></a>
         </div>
         <div class="nav-group">
             <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
@@ -1816,6 +1818,9 @@
         </div>
         <div class="more-menu-item" onclick="navigate('grades', null, 'Noten'); toggleMoreMenu()">
             <i data-lucide="bar-chart-3"></i><span>Noten</span>
+        </div>
+        <div class="more-menu-item" onclick="navigate('drive', null, 'Drive'); toggleMoreMenu()">
+            <i data-lucide="hard-drive"></i><span>Drive</span>
         </div>
     </div>
 
@@ -2046,7 +2051,7 @@
                 // Set Header Title using translation
                 const titleKeys = {
                     home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
-                    settings: 'settings', account: 'account'
+                    settings: 'settings', account: 'account', drive: 'drive'
                 };
                 const translatedTitle = titleKeys[view] ? t(titleKeys[view]) : (view.charAt(0).toUpperCase() + view.slice(1));
                 setPageTitle(translatedTitle);
@@ -2067,6 +2072,7 @@
                     grades: '/grades',
                     settings: '/settings',
                     account: '/account',
+                    drive: '/drive',
                     sub_admin_menu: '/admin',
                     sub_users: '/admin/users',
                     sub_activity: '/admin/activity',
@@ -2096,15 +2102,16 @@
                 else if (view === 'grades') renderGrades();
                 else if (view === 'settings') renderSettingsPage();
                 else if (view === 'account') renderAccountHub();
+                else if (view === 'drive') renderDrive();
                 else if (view === 'sub_admin') renderAdminContent();
 
                 const fab = document.getElementById('main-fab');
                 if (view !== 'home' && view !== 'settings' && view !== 'account' && view !== 'stundenplan' && !view.startsWith('sub_')) fab.classList.add('visible');
                 else fab.classList.remove('visible');
 
-                // Mark "Mehr" button as active if on stundenplan or grades (mobile only)
+                // Mark "Mehr" button as active if on stundenplan or grades or drive (mobile only)
                 const moreBtn = document.getElementById('nav-more');
-                if (moreBtn && ['stundenplan', 'grades'].includes(view)) {
+                if (moreBtn && ['stundenplan', 'grades', 'drive'].includes(view)) {
                     moreBtn.classList.add('active');
                 }
 
@@ -2124,6 +2131,7 @@
             else if (currentView === 'tasks') await renderTasks(currentTaskTab);
             else if (currentView === 'calendar') await renderCalendar(currentCalendarTab);
             else if (currentView === 'grades') await renderGrades();
+            else if (currentView === 'drive') await renderDrive(activeDriveTab);
             else if (currentView === 'sub_subject_details') {
                 try {
                     const urlPart = window.location.pathname.split('/').pop();
@@ -2182,6 +2190,7 @@
                 if (event.state.view === 'sub_super_admin') { renderSuperAdminDashboard(); return; }
                 if (event.state.view === 'sub_shared_content') { renderSharedContentManagement(); return; }
                 if (event.state.view === 'sub_legal_settings') { renderLegalSettings(); return; }
+                if (event.state.view === 'drive') { renderDrive(); return; }
 
                 const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
                 let title = t('home');
@@ -2189,6 +2198,7 @@
                 if (event.state.view === 'calendar') title = t('calendar');
                 if (event.state.view === 'stundenplan') title = t('timetable');
                 if (event.state.view === 'grades') title = t('grades');
+                if (event.state.view === 'drive') title = t('drive');
                 if (event.state.view === 'settings') title = t('settings');
                 navigate(event.state.view, navLink, title);
             } else if (event.state && event.state.modal) {
@@ -2304,6 +2314,276 @@
             const { outcome } = await deferredPrompt.userChoice;
             if (outcome === 'accepted') deferredPrompt = null;
             renderAccountHub();
+        }
+
+        /* --- DRIVE INTEGRATION --- */
+        let activeDriveTab = 'folders';
+
+        async function renderDrive(tab = 'folders') {
+            currentView = 'drive';
+            activeDriveTab = tab;
+            setPageTitle(t('drive'));
+
+            const container = document.getElementById('app-container');
+            container.innerHTML = `
+                <div class="controls-row">
+                    <div class="tab-bar">
+                        <button class="tab-btn ${tab === 'folders' ? 'active' : ''}" onclick="renderDrive('folders')">${t('folders')}</button>
+                        <button class="tab-btn ${tab === 'files' ? 'active' : ''}" onclick="renderDrive('files')">${t('files')}</button>
+                    </div>
+                </div>
+                
+                <div class="floating-card" style="margin-bottom: 20px; padding: 12px 16px;">
+                    <div class="search-container active" style="width:100%; box-shadow:none; border:none; background:var(--tab-bg); height: 40px; min-height: 40px;">
+                        <div class="search-icon-box" style="min-width: 40px; height: 40px;"><i data-lucide="search" style="width:18px"></i></div>
+                        <input type="text" id="drive-search-input" class="search-input" style="opacity:1; transform:none; font-size: 15px;" placeholder="${t('search_drive')}" onkeyup="handleDriveSearch(event)">
+                    </div>
+                </div>
+
+                <div id="drive-content-container">
+                    <div style="text-align:center; padding:40px; color:var(--text-sec)">
+                        <div class="spinner-icon" style="margin-bottom: 10px;"><i data-lucide="loader-2" class="spin" style="width:24px;"></i></div>
+                        ${t('loading')}
+                    </div>
+                </div>
+                
+                <button class="fab visible" onclick="openAddFolderSheet()"><i data-lucide="plus"></i></button>
+            `;
+            lucide.createIcons();
+
+            if (tab === 'folders') {
+                await renderDriveFolders();
+            } else {
+                await renderDriveFiles();
+            }
+        }
+
+        async function renderDriveFolders() {
+            const container = document.getElementById('drive-content-container');
+            try {
+                const res = await fetch('/api/drive/folders');
+                const folders = await res.json();
+
+                if (currentView !== 'drive' || activeDriveTab !== 'folders') return;
+
+                if (folders.length === 0) {
+                    container.innerHTML = `
+                        <div class="floating-card" style="text-align:center; padding:40px;">
+                            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.2;"><i data-lucide="folder-plus" style="width:64px; height:64px;"></i></div>
+                            <p class="item-sub">${t('no_subjects_found')}</p>
+                            <button class="ios-btn btn-small" style="margin-top: 15px;" onclick="openAddFolderSheet()">${t('add_folder')}</button>
+                        </div>`;
+                    lucide.createIcons();
+                    return;
+                }
+
+                container.innerHTML = folders.map(f => `
+                    <div class="floating-card" style="padding: 20px; margin-bottom: 15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 15px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div class="account-item-icon" style="margin:0; width:44px; height:44px; background:rgba(0,113,227,0.1); color:var(--accent);">
+                                    <i data-lucide="folder"></i>
+                                </div>
+                                <div>
+                                    <div class="item-title">${f.subject_name || t('unknown')}</div>
+                                    <div class="item-sub">${f.privacy_level === 'public' ? t('public') : t('private')}</div>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px;" onclick="syncFolder(${f.id}, this)">
+                                    <i data-lucide="refresh-cw" style="width:16px;"></i>
+                                </button>
+                                <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px; background:rgba(255,59,48,0.1); color:var(--danger); box-shadow:none;" onclick="deleteFolder(${f.id})">
+                                    <i data-lucide="trash-2" style="width:16px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-sec); display:flex; justify-content:space-between;">
+                            <span>${t('last_sync')}: ${f.last_sync ? new Date(f.last_sync).toLocaleString() : 'Nie'}</span>
+                            <span>${f.file_count || 0} ${t('files')}</span>
+                        </div>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) {
+                container.innerHTML = `<p class="item-sub" style="text-align:center;">${t('error_loading')}</p>`;
+            }
+        }
+
+        async function renderDriveFiles() {
+            const container = document.getElementById('drive-content-container');
+            try {
+                const res = await fetch('/api/drive/files');
+                const files = await res.json();
+
+                if (currentView !== 'drive' || activeDriveTab !== 'files') return;
+
+                if (files.length === 0) {
+                    container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_files_found')}</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = files.map(f => `
+                    <div class="list-item" onclick="downloadDriveFile(${f.id})">
+                        <div class="account-item-icon"><i data-lucide="file-text"></i></div>
+                        <div class="item-content">
+                            <div class="item-title">${f.name}</div>
+                            <div class="item-sub">
+                                <span style="color:var(--accent)">${f.subject_name || t('unknown')}</span> • 
+                                ${(f.size / 1024 / 1024).toFixed(1)} MB
+                            </div>
+                        </div>
+                        <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) {
+                container.innerHTML = `<p class="item-sub" style="text-align:center;">${t('error_loading')}</p>`;
+            }
+        }
+
+        async function handleDriveSearch(e) {
+            const query = e.target.value.trim();
+            if (query.length < 3) {
+                if (query.length === 0) {
+                    if (activeDriveTab === 'folders') renderDriveFolders();
+                    else renderDriveFiles();
+                }
+                return;
+            }
+
+            const container = document.getElementById('drive-content-container');
+            // Don't clear immediately to avoid flickering for fast typists, maybe just show a small loader
+
+            try {
+                const res = await fetch(`/api/drive/search?q=${encodeURIComponent(query)}`);
+                const results = await res.json();
+
+                if (currentView !== 'drive') return;
+
+                if (results.length === 0) {
+                    container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_results')}</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = results.map(file => `
+                    <div class="list-item" onclick="downloadDriveFile(${file.id})">
+                        <div class="account-item-icon" style="background:rgba(0,113,227,0.1); color:var(--accent);"><i data-lucide="file-search"></i></div>
+                        <div class="item-content">
+                            <div class="item-title">${file.name}</div>
+                            <div class="item-sub">
+                                <span style="color:var(--accent)">${file.subject_name || t('unknown')}</span> • 
+                                <span style="color:var(--text-main); font-style:italic;">"${file.snippet || '...'}"</span>
+                                <div style="font-size:10px; margin-top:2px;">${t('found_in')} ${file.folder_name} ${file.owner_name ? t('by') + ' ' + file.owner_name : ''}</div>
+                            </div>
+                        </div>
+                        <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function syncFolder(id, btn) {
+            if (btn) {
+                btn.innerHTML = `<i data-lucide="loader-2" class="spin" style="width:16px;"></i>`;
+                btn.disabled = true;
+                lucide.createIcons();
+            }
+            try {
+                const res = await fetch(`/api/drive/folders/${id}/sync`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`${t('sync_now')} erfolgreich!`, 'success');
+                    renderDriveFolders();
+                } else {
+                    showToast(data.error || t('error'), 'error');
+                }
+            } catch (e) {
+                showToast(t('error_loading'), 'error');
+            } finally {
+                if (btn) {
+                    btn.innerHTML = `<i data-lucide="refresh-cw" style="width:16px;"></i>`;
+                    btn.disabled = false;
+                    lucide.createIcons();
+                }
+            }
+        }
+
+        async function deleteFolder(id) {
+            if (!confirm(t('confirm_delete'))) return;
+            try {
+                const res = await fetch(`/api/drive/folders/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast(t('done'), 'success');
+                    renderDriveFolders();
+                }
+            } catch (e) { showToast(t('error_deleting'), 'error'); }
+        }
+
+        function openAddFolderSheet() {
+            window.selectedDrivePrivacy = 'private';
+            const html = `
+                <div class="sheet-header"><h3>${t('add_folder')}</h3><div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div></div>
+                <div style="padding-bottom: 20px;">
+                    <p class="item-sub" style="margin-bottom:20px;">Gib die Google Drive Ordner-ID ein. Der Ordner muss für den Service-Account (L8teStudy) freigegeben sein.</p>
+                    <input type="text" id="new-folder-id" class="ios-input" placeholder="${t('folder_id')} (z.B. 1a2b3c...)">
+                    
+                    <div class="custom-picker-trigger" onclick="toggleOptionList('privacy-list')">
+                        <span style="font-weight:600;">${t('privacy_level')}</span>
+                        <span id="selected-privacy-display" style="color:var(--accent)">${t('private')}</span>
+                    </div>
+                    <div id="privacy-list" class="picker-options">
+                        <div class="picker-option" onclick="selectDrivePrivacy('private', '${t('private')}')">
+                            <i data-lucide="lock" style="width:18px;"></i> ${t('private')}
+                        </div>
+                        <div class="picker-option" onclick="selectDrivePrivacy('public', '${t('public')}')">
+                            <i data-lucide="users" style="width:18px;"></i> ${t('public')}
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:20px;">
+                        <button class="ios-btn" onclick="submitNewDriveFolder()">${t('add')}</button>
+                    </div>
+                </div>
+            `;
+            openSheet(html);
+        }
+
+        function selectDrivePrivacy(val, label) {
+            window.selectedDrivePrivacy = val;
+            document.getElementById('selected-privacy-display').innerText = label;
+            toggleOptionList('privacy-list');
+        }
+
+        async function submitNewDriveFolder() {
+            const folderId = document.getElementById('new-folder-id').value.trim();
+            if (!folderId) return showToast(t('error'), 'error');
+
+            try {
+                const res = await fetch('/api/drive/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        folder_id: folderId,
+                        privacy_level: window.selectedDrivePrivacy
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(t('add') + ' erfolgreich!', 'success');
+                    closeSheet();
+                    renderDrive();
+                } else {
+                    showToast(data.error || t('error'), 'error');
+                }
+            } catch (e) { showToast(t('error_adding'), 'error'); }
+        }
+
+        function downloadDriveFile(id) {
+            window.open(`/api/drive/files/${id}/download`, '_blank');
         }
 
         async function renderHome() {
@@ -6280,6 +6560,7 @@
                 '/grades': 'grades',
                 '/settings': 'settings',
                 '/account': 'account',
+                '/drive': 'drive',
                 '/admin': 'sub_admin_menu',
                 '/superadmin': 'sub_super_admin'
             };
@@ -6320,6 +6601,7 @@
                 renderSubjectDetails(sub, '?', '[]');
             }
             else if (relevantPath === '/admin/untis') renderUntisConfig();
+            else if (relevantPath === '/drive') renderDrive();
             else renderHome();
         };
         console.log('Main Script Parsed Successfully');

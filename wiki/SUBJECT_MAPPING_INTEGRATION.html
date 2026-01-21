@@ -1,0 +1,222 @@
+<!-- 
+  Subject Mapping Integration Example
+  Dieses Snippet zeigt, wie die Fach-Zuordnungs-Funktion in die L8teStudy-Oberfläche integriert werden kann.
+  
+  Integration Steps:
+  1. Füge das Script in index.html ein (vor </body>)
+  2. Füge die Sheets am Ende des body ein
+  3. Füge einen Menüpunkt in den Einstellungen hinzu
+-->
+
+<!-- 1. Script einbinden (in <head> oder vor </body>) -->
+<script src="/static/subject-mapping.js"></script>
+
+<!-- 2. Sheets für Dialoge (am Ende des <body>) -->
+<div class="sheet-overlay" id="subjectMappingsOverlay">
+    <div class="sheet" id="subjectMappingsSheet">
+        <div class="sheet-drag-indicator"></div>
+        <div class="sheet-header">
+            <h2 style="margin: 0; font-size: 24px; font-weight: 700;">Fach-Zuordnungen</h2>
+            <div class="sheet-close-btn" onclick="closeSheet('subjectMappingsSheet')">
+                <i data-lucide="x"></i>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <p style="color: var(--text-sec); font-size: 14px; margin-bottom: 20px;">
+                Verknüpfe unordentliche Ordnernamen (z.B. "Ph", "GdT") mit offiziellen Fächern.
+            </p>
+            
+            <button class="ios-btn" onclick="subjectMappingManager.showCreateDialog()">
+                <i data-lucide="plus" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                Neue Zuordnung erstellen
+            </button>
+        </div>
+        
+        <div id="mappings-list"></div>
+    </div>
+</div>
+
+<div class="sheet-overlay" id="createMappingSheetOverlay">
+    <div class="sheet" id="createMappingSheet"></div>
+</div>
+
+<div class="sheet-overlay" id="editMappingSheetOverlay">
+    <div class="sheet" id="editMappingSheet"></div>
+</div>
+
+<!-- 3. Menüpunkt in Einstellungen/Account-Bereich -->
+<!-- Beispiel für einen Account-Item -->
+<div class="account-item" onclick="openSubjectMappings()">
+    <div class="account-item-icon">
+        <i data-lucide="folder-search"></i>
+    </div>
+    <div class="account-item-text">Fach-Zuordnungen</div>
+    <i data-lucide="chevron-right" style="color: var(--text-sec);"></i>
+</div>
+
+<!-- 4. JavaScript-Funktionen -->
+<script>
+    // Sheet-Helper-Funktionen (falls nicht bereits vorhanden)
+    function openSheet(sheetId) {
+        const overlay = document.getElementById(sheetId + 'Overlay') || 
+                       document.getElementById(sheetId).parentElement;
+        if (overlay) {
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeSheet(sheetId) {
+        const overlay = document.getElementById(sheetId + 'Overlay') || 
+                       document.getElementById(sheetId).parentElement;
+        if (overlay) {
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+
+    // Funktion zum Öffnen der Zuordnungsverwaltung
+    function openSubjectMappings() {
+        if (!window.subjectMappingManager) {
+            window.subjectMappingManager = new SubjectMappingManager();
+        }
+        
+        // Lade und zeige Zuordnungen
+        subjectMappingManager.loadMappings().then(() => {
+            subjectMappingManager.renderMappingsList('mappings-list');
+            openSheet('subjectMappingsSheet');
+        });
+    }
+
+    // Initialisierung beim Laden der Seite
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manager initialisieren
+        window.subjectMappingManager = new SubjectMappingManager();
+        
+        // Overlay-Click-Handler für alle Sheets
+        document.querySelectorAll('.sheet-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    const sheet = this.querySelector('.sheet');
+                    if (sheet) {
+                        closeSheet(sheet.id);
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+<!-- 5. Beispiel: Verwendung in einer Aufgaben-Erstellung -->
+<script>
+    // Beispiel: Beim Erstellen einer Aufgabe den Ordnernamen auflösen
+    async function createTaskWithFolderMapping(taskData, folderName) {
+        // Versuche, den Ordnernamen aufzulösen
+        const resolution = await subjectMappingManager.resolveInformalName(folderName);
+        
+        if (resolution && resolution.success) {
+            // Verwende das aufgelöste Fach
+            taskData.subject_id = resolution.subject_id;
+            taskData.subject = resolution.subject_name;
+            
+            console.log(`Ordner "${folderName}" wurde zu "${resolution.subject_name}" aufgelöst`);
+            console.log(`Match-Typ: ${resolution.match_type}`);
+            
+            if (resolution.match_type === 'fuzzy') {
+                console.log(`Konfidenz: ${(resolution.confidence * 100).toFixed(0)}%`);
+            }
+        } else {
+            // Keine Zuordnung gefunden - zeige Vorschläge
+            console.log('Keine Zuordnung gefunden für:', folderName);
+            if (resolution && resolution.suggestions) {
+                console.log('Vorschläge:', resolution.suggestions);
+            }
+        }
+        
+        // Erstelle die Aufgabe
+        // ... Rest der Aufgabenerstellung
+    }
+</script>
+
+<!-- 6. CSS-Anpassungen (optional, falls benötigt) -->
+<style>
+    /* Zusätzliche Styles für die Zuordnungsverwaltung */
+    .mapping-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--tab-bg);
+        color: var(--text-sec);
+        margin-left: 8px;
+    }
+    
+    .mapping-badge.global {
+        background: rgba(0, 113, 227, 0.1);
+        color: var(--accent);
+    }
+    
+    .mapping-item-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+    
+    .mapping-item-actions button {
+        flex: 1;
+    }
+</style>
+
+<!-- 7. Beispiel für eine kompakte Darstellung in den Einstellungen -->
+<div class="floating-card">
+    <h3 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700;">
+        <i data-lucide="folder-search" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;"></i>
+        Fach-Zuordnungen
+    </h3>
+    
+    <p style="color: var(--text-sec); font-size: 14px; margin-bottom: 16px;">
+        Verknüpfe Ordnernamen aus GoodNotes mit offiziellen Fächern für automatische Zuordnung.
+    </p>
+    
+    <div id="mappings-preview-list" style="margin-bottom: 16px;">
+        <!-- Wird dynamisch gefüllt -->
+    </div>
+    
+    <button class="ios-btn btn-sec" onclick="openSubjectMappings()">
+        Zuordnungen verwalten
+    </button>
+</div>
+
+<script>
+    // Vorschau der Zuordnungen laden
+    async function loadMappingsPreview() {
+        if (!window.subjectMappingManager) {
+            window.subjectMappingManager = new SubjectMappingManager();
+        }
+        
+        await subjectMappingManager.loadMappings();
+        const container = document.getElementById('mappings-preview-list');
+        
+        if (subjectMappingManager.mappings.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-sec); font-size: 14px; text-align: center;">Noch keine Zuordnungen</p>';
+        } else {
+            const preview = subjectMappingManager.mappings.slice(0, 3);
+            container.innerHTML = preview.map(m => `
+                <div style="padding: 8px 0; border-bottom: 0.5px solid var(--border);">
+                    <span style="font-weight: 600;">${m.informal_name}</span>
+                    <span style="color: var(--text-sec);"> → ${m.subject_name}</span>
+                    ${m.is_global ? '<span class="mapping-badge global">Global</span>' : ''}
+                </div>
+            `).join('');
+            
+            if (subjectMappingManager.mappings.length > 3) {
+                container.innerHTML += `<p style="color: var(--text-sec); font-size: 12px; text-align: center; margin-top: 8px;">+${subjectMappingManager.mappings.length - 3} weitere</p>`;
+            }
+        }
+    }
+    
+    // Beim Laden der Einstellungsseite
+    // loadMappingsPreview();
+</script>

@@ -159,6 +159,22 @@ class Subject(db.Model):
     
     tasks = db.relationship('Task', backref='subject_rel', lazy='dynamic')
     events = db.relationship('Event', backref='subject_rel', lazy='dynamic')
+    mappings = db.relationship('SubjectMapping', backref='official_subject', lazy='dynamic')
+
+class SubjectMapping(db.Model):
+    """Maps informal/messy folder names to official subjects"""
+    id = db.Column(db.Integer, primary_key=True)
+    informal_name = db.Column(db.String(128), nullable=False)  # e.g., "Ph", "GdT", "Technik"
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)  # Optional: class-specific mapping
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Who created this mapping
+    is_global = db.Column(db.Boolean, default=False)  # If true, applies to all users in class
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Ensure unique informal names per scope (global or per-user)
+    __table_args__ = (
+        db.UniqueConstraint('informal_name', 'class_id', 'user_id', name='_informal_name_scope_uc'),
+    )
 
 class TaskMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -230,3 +246,72 @@ class UntisCredential(db.Model):
             # Fallback for old plain text passwords if decryption fails
             # This is only useful during transition.
             return self.password
+
+
+# --- Drive Integration Models ---
+
+class DriveFolder(db.Model):
+    """Represents a linked Google Drive folder"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    folder_id = db.Column(db.String(256), nullable=False)  # Google Drive folder ID
+    folder_name = db.Column(db.String(256), nullable=False)
+    privacy_level = db.Column(db.String(20), default='private')  # 'private' or 'public'
+    sync_enabled = db.Column(db.Boolean, default=True)
+    last_sync_at = db.Column(db.DateTime, nullable=True)
+    sync_status = db.Column(db.String(50), default='pending')  # pending, syncing, completed, error
+    sync_error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='drive_folders')
+    files = db.relationship('DriveFile', backref='folder', lazy='dynamic', cascade='all, delete-orphan')
+    
+    # Ensure unique folder per user
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'folder_id', name='_user_folder_uc'),
+    )
+
+
+class DriveFile(db.Model):
+    """Represents a file synced from Google Drive"""
+    id = db.Column(db.Integer, primary_key=True)
+    drive_folder_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=False)
+    file_id = db.Column(db.String(256), nullable=False)  # Google Drive file ID
+    filename = db.Column(db.String(512), nullable=False)
+    encrypted_path = db.Column(db.String(512), nullable=False)  # Path to encrypted file on disk
+    file_hash = db.Column(db.String(64), nullable=False)  # SHA-256 hash for change detection
+    file_size = db.Column(db.Integer, nullable=False)  # Size in bytes
+    mime_type = db.Column(db.String(128), nullable=False)
+    
+    # Subject mapping (can be auto-detected or manually set)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
+    auto_mapped = db.Column(db.Boolean, default=False)  # True if auto-detected
+    
+    # OCR status
+    ocr_completed = db.Column(db.Boolean, default=False)
+    ocr_error = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    subject = db.relationship('Subject', backref='drive_files')
+    content = db.relationship('DriveFileContent', backref='file', uselist=False, cascade='all, delete-orphan')
+    
+    # Ensure unique file per folder
+    __table_args__ = (
+        db.UniqueConstraint('drive_folder_id', 'file_id', name='_folder_file_uc'),
+    )
+
+
+class DriveFileContent(db.Model):
+    """Stores OCR-extracted text content for full-text search"""
+    id = db.Column(db.Integer, primary_key=True)
+    drive_file_id = db.Column(db.Integer, db.ForeignKey('drive_file.id'), nullable=False, unique=True)
+    content_text = db.Column(db.Text, nullable=False)  # Extracted text
+    page_count = db.Column(db.Integer, default=0)
+    ocr_completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # For FTS5 search, we'll create a virtual table separately
+    # This model just stores the raw content
