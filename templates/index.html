@@ -2664,9 +2664,15 @@
                 });
                 if (res.ok) {
                     showToast(enabled ? "Synchronisierung aktiviert" : "Synchronisierung deaktiviert", "success");
-                    // Refresh current browse view
-                    const title = document.querySelector('#drive-content-container .item-title').innerText;
-                    browseRootFolder(rootId, title);
+
+                    // Invalidate Cache
+                    const currentGoogleId = (window.history.state && window.history.state.googleFolderId) ? window.history.state.googleFolderId : null;
+                    const cacheKey = `${rootId}-${currentGoogleId || 'root'}`;
+                    delete driveFolderCache[cacheKey];
+
+                    // Refresh current view without jumping to root
+                    const currentTitle = (window.history.state && window.history.state.folderName) ? window.history.state.folderName : document.querySelector('#drive-content-container .item-title').innerText;
+                    browseRootFolder(rootId, currentTitle, false, currentGoogleId);
                 }
             } catch (e) {
                 showToast("Fehler beim Speichern", "error");

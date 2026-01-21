@@ -219,12 +219,12 @@ class DriveSearchService:
             AND {privacy_cond} {extra_filters}
         """
 
-        # 2. Metadata Query (Filename OR Subject Match)
+        # 2. Metadata Query (Filename OR Subject OR Username Match)
         meta_part = f"""
             SELECT 
                 df.id,
                 df.filename,
-                'Treffer im Titel/Fach' as snippet,
+                'Treffer im Titel/Fach/User' as snippet,
                 -10.0 as rank,
                 u.id as user_id,
                 u.username,
@@ -236,7 +236,7 @@ class DriveSearchService:
                 df.parent_folder_name,
                 dfolder.folder_name
             {base_joins}
-            WHERE (df.filename LIKE :like_query OR s.name LIKE :like_query)
+            WHERE (df.filename LIKE :like_query OR s.name LIKE :like_query OR u.username LIKE :like_query)
             AND {privacy_cond} {extra_filters}
         """
         
