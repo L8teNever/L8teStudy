@@ -2132,6 +2132,12 @@
             else if (currentView === 'calendar') await renderCalendar(currentCalendarTab);
             else if (currentView === 'grades') await renderGrades();
             else if (currentView === 'drive') await renderDrive(activeDriveTab);
+            else if (currentView === 'drive_folder') {
+                await renderDrive('folders');
+                if (window.history.state && window.history.state.folderId) {
+                    await browseRootFolder(window.history.state.folderId, window.history.state.folderName, false);
+                }
+            }
             else if (currentView === 'sub_subject_details') {
                 try {
                     const urlPart = window.location.pathname.split('/').pop();
@@ -2149,7 +2155,7 @@
         }
 
         // --- History / Back Button Logic ---
-        window.addEventListener('popstate', (event) => {
+        window.addEventListener('popstate', async (event) => {
             // Check if we are closing a modal
             const sheet = document.getElementById('sheet-overlay');
             if (sheet && sheet.classList.contains('active')) {
@@ -2191,6 +2197,12 @@
                 if (event.state.view === 'sub_shared_content') { renderSharedContentManagement(); return; }
                 if (event.state.view === 'sub_legal_settings') { renderLegalSettings(); return; }
                 if (event.state.view === 'drive') { renderDrive(); return; }
+                if (event.state.view === 'drive_folder') {
+                    // Ensure base drive is rendered, then browse
+                    if (!document.getElementById('drive-content-container')) await renderDrive('folders');
+                    browseRootFolder(event.state.folderId, event.state.folderName, false);
+                    return;
+                }
 
                 const navLink = document.querySelector(`.nav-link[onclick*="'${event.state.view}'"]`) || null;
                 let title = t('home');
@@ -2386,7 +2398,7 @@
                 if (roots.length > 0) {
                     html += `<div class="item-sub" style="margin: 20px 0 10px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px;">Quellen (${roots.length})</div>`;
                     html += roots.map(f => `
-                        <div class="floating-card" style="padding: 16px; margin-bottom: 12px; cursor:pointer;" onclick="browseRootFolder(${f.id}, '${f.folder_name}')">
+                        <div class="floating-card" style="padding: 16px; margin-bottom: 12px; cursor:pointer;" onclick="browseRootFolder(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <div style="display:flex; align-items:center; gap:12px;">
                                     <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:rgba(0,113,227,0.05); color:var(--accent);">
@@ -2463,7 +2475,7 @@
                 }
 
                 container.innerHTML = files.map(f => `
-                    <div class="list-item" onclick="viewDriveFile(${f.id}, '${f.filename}')">
+                    <div class="list-item" onclick="viewDriveFile(${f.id}, '${f.filename.replace(/'/g, "\\'")}')">
                         <div class="account-item-icon"><i data-lucide="file-text"></i></div>
                         <div class="item-content">
                             <div class="item-title">${f.filename}</div>
@@ -2532,11 +2544,16 @@
             }
         }
 
-        async function browseRootFolder(id, name) {
+        async function browseRootFolder(id, name, pushToHistory = true) {
+            if (pushToHistory) {
+                window.history.pushState({ view: 'drive_folder', folderId: id, folderName: name }, '', '/drive/folder/' + id);
+            }
+            currentView = 'drive_folder';
+
             const container = document.getElementById('drive-content-container');
             container.innerHTML = `
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; padding:0 5px;">
-                    <button class="btn-chat-open" style="width:32px; height:32px; padding:0; border-radius:8px;" onclick="renderDriveFolders()">
+                    <button class="btn-chat-open" style="width:32px; height:32px; padding:0; border-radius:8px;" onclick="window.history.back()">
                         <i data-lucide="arrow-left" style="width:16px;"></i>
                     </button>
                     <span class="item-title" style="font-size:16px;">${name}</span>
@@ -6857,9 +6874,14 @@
                                 <div>Besitzer: <strong style="color:var(--text-main);">${f.owner_name}</strong></div>
                                 <div style="font-size:11px; margin-top:2px;">Dateien: ${f.file_count}</div>
                             </div>
-                            <button class="ios-btn btn-small btn-sec" style="width:auto; margin:0;" onclick="openDriveOwnerSelect(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')">
-                                Besitzer ändern
-                            </button>
+                            <div style="display:flex; gap:8px;">
+                                <button class="ios-btn btn-small btn-sec" style="width:auto; margin:0;" onclick="openDriveOwnerSelect(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')">
+                                    Besitzer ändern
+                                </button>
+                                <button class="ios-btn btn-small btn-sec" style="width:32px; height:32px; margin:0; padding:0; background:rgba(255,59,48,0.1); color:var(--danger); border:none; display:flex; align-items:center; justify-content:center;" onclick="deleteDriveFolderAdmin(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')">
+                                    <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `).join('');
@@ -6872,6 +6894,20 @@
             } catch (e) {
                 document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
             }
+        }
+
+        async function deleteDriveFolderAdmin(id, name) {
+            if (!confirm(`Möchten Sie den Ordner "${name}" wirklich löschen? Dies entfernt die Verknüpfung für den Benutzer.`)) return;
+            try {
+                const res = await fetch(`/api/drive/folders/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Ordner erfolgreich gelöscht.');
+                    renderDriveManagement();
+                } else {
+                    alert(data.message || 'Fehler beim Löschen');
+                }
+            } catch (e) { alert('Verbindungsfehler'); }
         }
 
         async function openDriveOwnerSelect(folderId, folderName) {
