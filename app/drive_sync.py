@@ -293,19 +293,22 @@ class DriveSyncService:
         
         return folder
 
-    def list_subfolders(self, folder_db_id: int) -> List[dict]:
-        """Lists subfolders from Google Drive for a given DB folder"""
+    def list_subfolders(self, folder_db_id: int, google_folder_id: Optional[str] = None) -> List[dict]:
+        """Lists subfolders from Google Drive. Can navigate sub-tree."""
         self._init_services()
         folder = DriveFolder.query.get(folder_db_id)
         if not folder:
             raise DriveSyncError("Folder not found")
         
+        target_id = google_folder_id if google_folder_id else folder.folder_id
+        
         try:
-            drive_subfolders = self.drive_client.list_subfolders(folder.folder_id)
+            drive_subfolders = self.drive_client.list_subfolders(target_id)
             
-            # Enrich with DB info (is it already a target?)
+            # Enrich with DB info
             results = []
             for ds in drive_subfolders:
+                # Check if this specific google folder ID is already linked in DB
                 db_sub = DriveFolder.query.filter_by(
                     user_id=folder.user_id,
                     folder_id=ds['id']
@@ -320,7 +323,7 @@ class DriveSyncService:
                 })
             return results
         except Exception as e:
-            current_app.logger.error(f"Failed to list subfolders for {folder_db_id}: {e}")
+            current_app.logger.error(f"Failed to list subfolders for {folder_db_id} (target {target_id}): {e}")
             raise DriveSyncError(str(e))
 
 

@@ -2450,7 +2450,7 @@ def get_drive_folders():
 @api_bp.route('/drive/folders/<int:id>/children', methods=['GET'])
 @login_required
 def get_drive_folder_children(id):
-    """List subfolders of a root folder from Google Drive"""
+    """List subfolders of a root folder from Google Drive (supports deep browsing)"""
     try:
         from .models import DriveFolder
         folder = DriveFolder.query.get_or_404(id)
@@ -2464,9 +2464,11 @@ def get_drive_folder_children(id):
         if not can_view:
             return jsonify({'error': 'Not authorized'}), 403
             
+        target_folder_id = request.args.get('folder_id')
+
         from .drive_sync import get_drive_sync_service
         sync_service = get_drive_sync_service()
-        children = sync_service.list_subfolders(id)
+        children = sync_service.list_subfolders(id, google_folder_id=target_folder_id)
         return jsonify(children)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
