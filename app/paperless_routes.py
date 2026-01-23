@@ -25,11 +25,15 @@ def get_user_paperless_config():
     # Priority: User config > Class config > Global config
     config = None
     
-    if current_user.paperless_configs.filter_by(is_active=True).first():
-        config = current_user.paperless_configs.filter_by(is_active=True).first()
-    elif current_user.school_class and current_user.school_class.paperless_config:
-        config = current_user.school_class.paperless_config.filter_by(is_active=True).first()
-    else:
+    # Check for user-specific config
+    config = PaperlessConfig.query.filter_by(user_id=current_user.id, is_active=True).first()
+    
+    if not config and current_user.school_class:
+        # Check for class config
+        config = PaperlessConfig.query.filter_by(class_id=current_user.school_class.id, is_active=True).first()
+    
+    if not config:
+        # Check for global config
         config = PaperlessConfig.query.filter_by(is_global=True, is_active=True).first()
     
     return config
@@ -98,7 +102,7 @@ def save_config():
         
         if scope == 'user':
             # User-specific config
-            config = current_user.paperless_configs.filter_by(is_active=True).first()
+            config = PaperlessConfig.query.filter_by(user_id=current_user.id, is_active=True).first()
             if not config:
                 config = PaperlessConfig(user_id=current_user.id)
                 db.session.add(config)
