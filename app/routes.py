@@ -2446,7 +2446,7 @@ def get_drive_folders():
             
             results.append({
                 'id': folder.id,
-                'folder_id': folder.folder_id,
+                'folder_id': folder.drive_folder_id,
                 'folder_name': folder.folder_name,
                 'subject_id': folder.subject_id,
                 'subject_name': actual_subject_name,
@@ -2614,7 +2614,7 @@ def add_drive_folder():
             'success': True,
             'folder': {
                 'id': folder.id,
-                'folder_id': folder.folder_id,
+                'folder_id': folder.drive_folder_id,
                 'folder_name': folder.folder_name,
                 'privacy_level': folder.privacy_level,
                 'sync_status': folder.sync_status,
@@ -2679,7 +2679,7 @@ def update_drive_folder(id):
                       return jsonify({'success': False, 'message': 'Benutzer gehört nicht zu Ihrer Klasse'}), 403
 
             # Check for uniqueness violation
-            existing = DriveFolder.query.filter_by(user_id=new_user_id, folder_id=folder.folder_id).first()
+            existing = DriveFolder.query.filter_by(user_id=new_user_id, drive_folder_id=folder.drive_folder_id).first()
             if existing and existing.id != folder.id:
                  return jsonify({'success': False, 'message': 'Dieser Benutzer hat diesen Ordner bereits verknüpft'}), 400
 
@@ -2701,7 +2701,7 @@ def update_drive_folder(id):
                                 'file_id': file.file_id,
                                 'filename': file.filename,
                                 'user_id': old_user_id,
-                                'folder_id': folder.folder_id,
+                                'folder_id': folder.drive_folder_id,
                                 'file_hash': file.file_hash
                             }
                             
@@ -2715,7 +2715,7 @@ def update_drive_folder(id):
                                 'file_id': file.file_id,
                                 'filename': file.filename,
                                 'user_id': new_user_id,
-                                'folder_id': folder.folder_id,
+                                'folder_id': folder.drive_folder_id,
                                 'file_hash': file.file_hash
                             }
                             
@@ -2910,7 +2910,7 @@ def download_drive_file(id):
             'file_id': file.file_id,
             'filename': file.filename,
             'user_id': folder.user_id,
-            'folder_id': folder.folder_id,
+            'folder_id': folder.drive_folder_id,
             'file_hash': file.file_hash
         }
         

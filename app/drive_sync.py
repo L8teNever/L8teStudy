@@ -120,7 +120,7 @@ class DriveSyncService:
             folder.sync_error = None
             db.session.commit()
             
-            drive_files = self.drive_client.list_pdf_files(folder.folder_id)
+            drive_files = self.drive_client.list_pdf_files(folder.drive_folder_id)
             
             for drive_file in drive_files:
                 try:
@@ -176,7 +176,7 @@ class DriveSyncService:
             if existing_file and existing_file.file_hash == file_hash:
                 return 'skipped'
             
-            metadata = {'file_id': file_id, 'filename': file_name, 'user_id': folder.user_id, 'folder_id': folder.folder_id}
+            metadata = {'file_id': file_id, 'filename': file_name, 'user_id': folder.user_id, 'folder_id': folder.drive_folder_id}
             encrypted_path, _, _ = self.encryption_manager.encrypt_and_store_file(temp_path, file_id, metadata)
             
             text, page_count, ocr_success = self.ocr_service.process_pdf_file(temp_path)
@@ -266,7 +266,7 @@ class DriveSyncService:
         # Check if already exists
         existing = DriveFolder.query.filter_by(
             user_id=user_id,
-            folder_id=folder_id
+            drive_folder_id=folder_id
         ).first()
         
         if existing:
@@ -300,7 +300,7 @@ class DriveSyncService:
         if not folder:
             raise DriveSyncError("Folder not found")
         
-        target_id = google_folder_id if google_folder_id else folder.folder_id
+        target_id = google_folder_id if google_folder_id else folder.drive_folder_id
         
         try:
             drive_subfolders = self.drive_client.list_subfolders(target_id)
@@ -311,7 +311,7 @@ class DriveSyncService:
                 # Check if this specific google folder ID is already linked in DB
                 db_sub = DriveFolder.query.filter_by(
                     user_id=folder.user_id,
-                    folder_id=ds['id']
+                    drive_folder_id=ds['id']
                 ).first()
                 
                 results.append({

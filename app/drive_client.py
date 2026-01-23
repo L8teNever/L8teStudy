@@ -34,7 +34,7 @@ class GoogleDriveClient:
     
     def __init__(self, service_account_file: Optional[str] = None):
         """
-        Initialize Google Drive client
+        Initialize Google Drive client (Service Account or OAuth)
         """
         import json
         self.service = None
@@ -43,19 +43,18 @@ class GoogleDriveClient:
         service_account_info = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO')
         if service_account_info:
             try:
-                # If it's a string, parse it
                 if isinstance(service_account_info, str):
-                    info = json.loads(service_account_info)
-                else:
-                    info = service_account_info
-                
-                credentials = service_account.Credentials.from_service_account_info(
-                    info, scopes=self.SCOPES
-                )
-                self.service = build('drive', 'v3', credentials=credentials)
-                return
+                    # Clean up possible formatting issues
+                    clean_info = service_account_info.strip()
+                    if clean_info:
+                        info = json.loads(clean_info)
+                        credentials = service_account.Credentials.from_service_account_info(
+                            info, scopes=self.SCOPES
+                        )
+                        self.service = build('drive', 'v3', credentials=credentials)
+                        return
             except Exception as e:
-                current_app.logger.error(f"Failed to load Drive credentials from INFO: {e}")
+                current_app.logger.warning(f"Failed to load Drive credentials from INFO (normal if not using SA): {e}")
 
         # 2. Try File Path
         if service_account_file is None:
@@ -70,9 +69,20 @@ class GoogleDriveClient:
                 self.service = build('drive', 'v3', credentials=credentials)
                 return
             except Exception as e:
-                current_app.logger.error(f"Failed to load Drive credentials from FILE: {e}")
+                current_app.logger.warning(f"Failed to load Drive credentials from FILE: {e}")
 
-        raise DriveClientError("No valid Google Drive credentials found (File or Info)")
+        # 3. Fallback to OAuth Refresh Token (from Env or DB)
+        try:
+            from .drive_oauth_client import DriveOAuthClient
+            oauth_client = DriveOAuthClient()
+            credentials = oauth_client.get_credentials()
+            if credentials:
+                self.service = build('drive', 'v3', credentials=credentials)
+                return
+        except Exception as e:
+            current_app.logger.error(f"Failed to load OAuth fallback for Drive client: {e}")
+
+        raise DriveClientError("No valid Google Drive credentials found (Service Account or OAuth)")
     
     def list_files(
         self,

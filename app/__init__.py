@@ -324,79 +324,75 @@ def create_app():
             app.logger.error(f"Schema migration (notify_chat_message) error: {e}")
 
         # Schema Update: Drive Folder Enhancements (is_root, parent_id, privacy_level, sync columns)
-        try:
-            if 'drive_folder' in inspector.get_table_names():
-                cols = [c['name'] for c in inspector.get_columns('drive_folder')]
-                with db.engine.connect() as conn:
-                    if 'user_id' not in cols:
-                        app.logger.info("Migrating: Adding user_id to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN user_id INTEGER REFERENCES user(id)"))
-                    if 'is_root' not in cols:
-                        app.logger.info("Migrating: Adding is_root to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN is_root BOOLEAN DEFAULT 0"))
-                    if 'parent_id' not in cols:
-                        app.logger.info("Migrating: Adding parent_id to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN parent_id INTEGER REFERENCES drive_folder(id)"))
-                    if 'privacy_level' not in cols:
-                        app.logger.info("Migrating: Adding privacy_level to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN privacy_level VARCHAR(20) DEFAULT 'private'"))
-                    if 'subject_id' not in cols:
-                        app.logger.info("Migrating: Adding subject_id to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN subject_id INTEGER REFERENCES subject(id)"))
-                    if 'sync_enabled' not in cols:
-                        app.logger.info("Migrating: Adding sync_enabled to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN sync_enabled BOOLEAN DEFAULT 1"))
-                    if 'last_sync_at' not in cols:
-                        app.logger.info("Migrating: Adding last_sync_at to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN last_sync_at DATETIME"))
-                    if 'sync_status' not in cols:
-                        app.logger.info("Migrating: Adding sync_status to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN sync_status VARCHAR(50) DEFAULT 'pending'"))
-                    if 'sync_error' not in cols:
-                        app.logger.info("Migrating: Adding sync_error to drive_folder")
-                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN sync_error TEXT"))
-                    conn.commit()
-        except Exception as e:
-            app.logger.error(f"Drive folder schema migration error: {e}")
+        if 'drive_folder' in inspector.get_table_names():
+            cols = [c.get('name') for c in inspector.get_columns('drive_folder')]
+            
+            def add_col_if_missing(table, col, type_sql):
+                if col not in cols:
+                    try:
+                        with db.engine.connect() as conn:
+                            app.logger.info(f"Migrating: Adding {col} to {table}")
+                            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {type_sql}"))
+                            conn.commit()
+                        app.logger.info(f"Successfully added {col} to {table}")
+                    except Exception as ex:
+                        app.logger.warning(f"Failed to add column {col} to {table}: {ex}")
 
-        # Schema Update: Drive File Enhancements (subject_id, auto_mapped, ocr)
-        try:
-            if 'drive_file' in inspector.get_table_names():
-                cols = [c['name'] for c in inspector.get_columns('drive_file')]
-                with db.engine.connect() as conn:
-                    if 'file_id' not in cols and 'google_file_id' in cols:
-                        app.logger.info("Migrating: Renaming google_file_id to file_id in drive_file")
+            # Special case for core drive_folder_id renaming
+            if 'drive_folder_id' not in cols and 'folder_id' in cols:
+                try:
+                    with db.engine.connect() as conn:
+                        app.logger.info("Migrating: Renaming folder_id to drive_folder_id")
+                        conn.execute(text("ALTER TABLE drive_folder RENAME COLUMN folder_id TO drive_folder_id"))
+                        conn.commit()
+                except Exception as ex:
+                    app.logger.warning(f"Rename failed, adding instead: {ex}")
+                    add_col_if_missing('drive_folder', 'drive_folder_id', 'VARCHAR(256)')
+            elif 'drive_folder_id' not in cols:
+                add_col_if_missing('drive_folder', 'drive_folder_id', 'VARCHAR(256)')
+
+            add_col_if_missing('drive_folder', 'user_id', 'INTEGER REFERENCES user(id)')
+            add_col_if_missing('drive_folder', 'is_root', 'BOOLEAN DEFAULT 0')
+            add_col_if_missing('drive_folder', 'parent_id', 'INTEGER REFERENCES drive_folder(id)')
+            add_col_if_missing('drive_folder', 'privacy_level', 'VARCHAR(20) DEFAULT \'private\'')
+            add_col_if_missing('drive_folder', 'sync_enabled', 'BOOLEAN DEFAULT 1')
+            add_col_if_missing('drive_folder', 'last_sync_at', 'DATETIME')
+            add_col_if_missing('drive_folder', 'sync_status', 'VARCHAR(50) DEFAULT \'pending\'')
+            add_col_if_missing('drive_folder', 'sync_error', 'TEXT')
+            add_col_if_missing('drive_folder', 'subject_id', 'INTEGER REFERENCES subject(id)')
+
+        if 'drive_file' in inspector.get_table_names():
+            cols = [c.get('name') for c in inspector.get_columns('drive_file')]
+            
+            def add_fcol_if_missing(col, type_sql):
+                if col not in cols:
+                    try:
+                        with db.engine.connect() as conn:
+                            app.logger.info(f"Migrating: Adding {col} to drive_file")
+                            conn.execute(text(f"ALTER TABLE drive_file ADD COLUMN {col} {type_sql}"))
+                            conn.commit()
+                    except Exception as ex:
+                        app.logger.warning(f"Failed to add drive_file column {col}: {ex}")
+
+            if 'file_id' not in cols and 'google_file_id' in cols:
+                try:
+                    with db.engine.connect() as conn:
+                        app.logger.info("Migrating: Renaming google_file_id to file_id")
                         conn.execute(text("ALTER TABLE drive_file RENAME COLUMN google_file_id TO file_id"))
-                    elif 'file_id' not in cols:
-                        app.logger.info("Migrating: Adding file_id to drive_file")
-                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN file_id VARCHAR(256)"))
-                    
-                    if 'file_hash' not in cols:
-                        app.logger.info("Migrating: Adding file_hash to drive_file")
-                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN file_hash VARCHAR(128)"))
-                    
-                    if 'encrypted_path' not in cols:
-                        app.logger.info("Migrating: Adding encrypted_path to drive_file")
-                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN encrypted_path VARCHAR(1000)"))
-                    
-                    if 'subject_id' not in cols:
-                        app.logger.info("Migrating: Adding subject_id to drive_file")
-                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN subject_id INTEGER REFERENCES subject(id)"))
-                    if 'auto_mapped' not in cols:
-                        app.logger.info("Migrating: Adding auto_mapped to drive_file")
-                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN auto_mapped BOOLEAN DEFAULT 0"))
-                    if 'ocr_completed' not in cols:
-                        app.logger.info("Migrating: Adding ocr_completed to drive_file")
-                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN ocr_completed BOOLEAN DEFAULT 0"))
-                    if 'ocr_error' not in cols:
-                        app.logger.info("Migrating: Adding ocr_error to drive_file")
-                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN ocr_error TEXT"))
-                    if 'parent_folder_name' not in cols:
-                        app.logger.info("Migrating: Adding parent_folder_name to drive_file")
-                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN parent_folder_name VARCHAR(512)"))
-                    conn.commit()
-        except Exception as e:
-            app.logger.error(f"Drive file schema migration error: {e}")
+                        conn.commit()
+                except Exception:
+                    add_fcol_if_missing('file_id', 'VARCHAR(256)')
+            elif 'file_id' not in cols:
+                add_fcol_if_missing('file_id', 'VARCHAR(256)')
+
+            add_fcol_if_missing('file_hash', 'VARCHAR(128)')
+            add_fcol_if_missing('encrypted_path', 'VARCHAR(1000)')
+            add_fcol_if_missing('subject_id', 'INTEGER REFERENCES subject(id)')
+            add_fcol_if_missing('auto_mapped', 'BOOLEAN DEFAULT 0')
+            add_fcol_if_missing('ocr_completed', 'BOOLEAN DEFAULT 0')
+            add_fcol_if_missing('ocr_error', 'TEXT')
+            add_fcol_if_missing('parent_folder_name', 'VARCHAR(512)')
+            add_fcol_if_missing('parent_folder_name', 'VARCHAR(512)')
 
         # Schema Update: Drive File Content Enhancement (page_count)
         try:
