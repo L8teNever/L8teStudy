@@ -312,30 +312,46 @@ class DriveFolder(db.Model):
     folder_name = db.Column(db.String(500), nullable=False)
     folder_path = db.Column(db.String(1000), nullable=True)  # Full path for display
     
+    # Ownership and Hierarchy
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    is_root = db.Column(db.Boolean, default=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=True)
+    
     # Subject mapping (optional)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
     
-    # Settings
-    is_active = db.Column(db.Boolean, default=True)
+    # Settings and Privacy
+    privacy_level = db.Column(db.String(20), default='private')
+    is_active = db.Column(db.Boolean, default=True) # Legacy UI
+    sync_enabled = db.Column(db.Boolean, default=True)
     include_subfolders = db.Column(db.Boolean, default=True)
+    
+    # Sync Status
+    last_sync_at = db.Column(db.DateTime)
+    sync_status = db.Column(db.String(50), default='pending')
+    sync_error = db.Column(db.Text)
     
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # Legacy UI
     
     # Relationships
     subject = db.relationship('Subject', backref='drive_folders')
-    created_by = db.relationship('User', backref='created_drive_folders')
+    created_by = db.relationship('User', foreign_keys=[created_by_user_id], backref='created_drive_folders')
+    owner = db.relationship('User', foreign_keys=[user_id], backref='owned_drive_folders')
+    parent = db.relationship('DriveFolder', remote_side=[id], backref='subfolders')
 
 
 class DriveFile(db.Model):
-    """Stores metadata for Drive files (optional caching/indexing)"""
+    """Stores metadata for Drive files (sync/caching)"""
     id = db.Column(db.Integer, primary_key=True)
     drive_folder_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=True)
-    google_file_id = db.Column(db.String(256), nullable=False, unique=True)
+    file_id = db.Column(db.String(256), nullable=False, unique=True)
     filename = db.Column(db.String(500), nullable=False)
     mime_type = db.Column(db.String(128))
     file_size = db.Column(db.BigInteger)
+    file_hash = db.Column(db.String(128))
+    encrypted_path = db.Column(db.String(1000))
     parent_folder_name = db.Column(db.String(512))
     
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)

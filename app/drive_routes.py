@@ -13,10 +13,7 @@ drive_bp = Blueprint('drive', __name__, url_prefix='/api/drive')
 @drive_bp.route('/auth/status', methods=['GET'])
 @login_required
 def auth_status():
-    """Check if Drive is authenticated"""
-    if not current_user.role in ['admin', 'super_admin']:
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-    
+    """Check if Drive is authenticated (all users)"""
     client = DriveOAuthClient()
     is_authenticated = client.is_authenticated()
     

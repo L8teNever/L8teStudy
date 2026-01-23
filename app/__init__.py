@@ -396,16 +396,31 @@ def create_app():
     scheduler.init_app(app)
     
     # Register Jobs
-    # Start scheduler for notifications
+    # Start scheduler for notifications and drive sync
     from app.notifications import check_reminders
+    from app.drive_sync import get_drive_sync_service
+    
+    def drive_sync_job():
+        with app.app_context():
+            try:
+                sync_service = get_drive_sync_service()
+                sync_service.sync_all_folders()
+            except Exception as e:
+                app.logger.error(f"Background drive sync failed: {e}")
+
     # In Gunicorn/Docker, we want it to run. In dev with reloader, only in the main process.
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or os.environ.get('GUNICORN_VERSION'):
         try:
             if not scheduler.get_job('check_reminders'):
                 scheduler.add_job(id='check_reminders', func=check_reminders, trigger='interval', seconds=45)
+            
+            # Drive Sync every 15 minutes
+            if not scheduler.get_job('drive_sync'):
+                scheduler.add_job(id='drive_sync', func=drive_sync_job, trigger='interval', minutes=15)
+                
             if not scheduler.running:
                 scheduler.start()
-                app.logger.info("--- Notification Scheduler Started ---")
+                app.logger.info("--- Background Scheduler Started (Notifications & Drive) ---")
         except Exception as e:
             app.logger.error(f"Failed to start scheduler: {e}")
 
