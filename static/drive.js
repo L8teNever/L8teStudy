@@ -20,6 +20,7 @@ class DriveManager {
             const response = await fetch('/api/drive/auth/status');
             const data = await response.json();
             this.authenticated = data.authenticated;
+            this.authMethod = data.method; // 'oauth' or 'service_account'
             return this.authenticated;
         } catch (error) {
             console.error('Failed to check auth status:', error);

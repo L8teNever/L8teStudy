@@ -59,10 +59,12 @@ def create_app():
     # Ensure upload directory exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # Google Drive OAuth Configuration
+    # Google Drive Configuration
     app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
     app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
     app.config['DRIVE_ENCRYPTION_KEY'] = os.environ.get('DRIVE_ENCRYPTION_KEY')
+    app.config['GOOGLE_SERVICE_ACCOUNT_INFO'] = os.environ.get('GOOGLE_SERVICE_ACCOUNT_INFO')
+    app.config['GOOGLE_SERVICE_ACCOUNT_FILE'] = os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE')
     
     
     # Session Configuration - Enhanced Security

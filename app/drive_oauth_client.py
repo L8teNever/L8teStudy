@@ -95,34 +95,75 @@ class DriveOAuthClient:
         """Get valid credentials, refreshing if necessary"""
         token = DriveOAuthToken.query.filter_by(is_active=True).first()
         
-        if not token:
+        # Check environment variable fallback
+        env_refresh_token = os.environ.get('GOOGLE_REFRESH_TOKEN')
+        
+        if not token and not env_refresh_token:
             return None
         
-        credentials = Credentials(
-            token=token.get_access_token(),
-            refresh_token=token.get_refresh_token(),
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-            scopes=SCOPES
-        )
-        
-        # Check if token is expired and refresh if needed
-        if token.token_expiry and token.token_expiry < datetime.utcnow():
-            from google.auth.transport.requests import Request
-            credentials.refresh(Request())
+        if token:
+            credentials = Credentials(
+                token=token.get_access_token(),
+                refresh_token=token.get_refresh_token(),
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                scopes=SCOPES
+            )
             
-            # Update stored tokens
-            token.set_access_token(credentials.token)
-            if credentials.expiry:
-                token.token_expiry = credentials.expiry
-            token.updated_at = datetime.utcnow()
-            db.session.commit()
+            # Check if token is expired and refresh if needed
+            if token.token_expiry and token.token_expiry < datetime.utcnow():
+                from google.auth.transport.requests import Request
+                try:
+                    credentials.refresh(Request())
+                    
+                    # Update stored tokens
+                    token.set_access_token(credentials.token)
+                    if credentials.expiry:
+                        token.token_expiry = credentials.expiry
+                    token.updated_at = datetime.utcnow()
+                    db.session.commit()
+                except Exception as e:
+                    current_app.logger.error(f"Failed to refresh DB token: {e}")
+                    # If DB token refresh fails, try env fallback if available
+                    if not env_refresh_token:
+                        return None
         
+        # If no DB token or refresh failed, try ENV token
+        if not token and env_refresh_token:
+            credentials = Credentials(
+                token=None,
+                refresh_token=env_refresh_token,
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                scopes=SCOPES
+            )
+            # It will refresh automatically on first use of the service
+            
         return credentials
     
     def get_service(self):
-        """Get authenticated Drive service"""
+        """Get authenticated Drive service (Service Account or OAuth)"""
+        # 1. Try Service Account (Priority)
+        service_account_info = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO')
+        if service_account_info:
+            try:
+                from google.oauth2 import service_account
+                import json
+                if isinstance(service_account_info, str):
+                    # Clean up possible formatting issues from env vars
+                    clean_info = service_account_info.strip()
+                    if clean_info:
+                        info = json.loads(clean_info)
+                        credentials = service_account.Credentials.from_service_account_info(
+                            info, scopes=SCOPES
+                        )
+                        return build('drive', 'v3', credentials=credentials)
+            except Exception as e:
+                current_app.logger.warning(f"Note: Service Account check failed (normal if not using SA): {e}")
+
+        # 2. Fallback to OAuth credentials
         credentials = self.get_credentials()
         if not credentials:
             return None
@@ -276,5 +317,8 @@ class DriveOAuthClient:
             return None
     
     def is_authenticated(self):
-        """Check if we have valid OAuth credentials"""
+        """Check if we have valid credentials (SA or OAuth)"""
+        # Service Account is considered "always authenticated" if config exists
+        if current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO'):
+            return True
         return self.get_credentials() is not None

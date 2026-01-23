@@ -2453,6 +2453,7 @@
             lucide.createIcons();
 
             const isAuth = await driveManager.checkAuthStatus();
+            const method = driveManager.authMethod;
 
             container.innerHTML = `
                 <div class="floating-card" style="padding: 24px;">
@@ -2463,21 +2464,29 @@
                         <div>
                             <h3 style="margin:0; font-size:18px;">Google Drive Integration</h3>
                             <p class="item-sub" style="margin:4px 0 0 0;">
-                                ${isAuth ? '<span style="color:var(--success); font-weight:600;">✓ Verbunden</span>' : '<span style="color:var(--danger); font-weight:600;">× Nicht verbunden</span>'}
+                                ${isAuth ? `<span style="color:var(--success); font-weight:600;">✓ Verbunden ${method === 'service_account' ? '(Service Account)' : ''}</span>` : '<span style="color:var(--danger); font-weight:600;">× Nicht verbunden</span>'}
                             </p>
                         </div>
                     </div>
 
                     <p style="font-size:14px; line-height:1.6; color:var(--text-sec); margin-bottom:24px;">
-                        Verbinde einen Google Account, um alle darin enthaltenen Dateien für alle Nutzer dieser App lesbar zu machen. Die Dateien werden live über die API abgerufen und nicht lokal gespeichert.
+                        ${method === 'service_account'
+                    ? 'Diese Instanz nutzt einen <b>Service Account</b> für den Zugriff auf Google Drive. Die Konfiguration erfolgt über Umgebungsvariablen.'
+                    : 'Verbinde einen Google Account, um alle darin enthaltenen Dateien für alle Nutzer dieser App lesbar zu machen. Die Dateien werden live über die API abgerufen und nicht lokal gespeichert.'
+                }
                     </p>
 
-                    ${isAuth ? `
-                        <button class="ios-btn btn-danger-light" onclick="driveManager.revokeAuth().then(() => renderDriveAuthSettings())">
+                    ${isAuth ? (
+                    method === 'service_account'
+                        ? `<div style="padding:12px; background:rgba(0,113,227,0.05); border-radius:10px; color:var(--accent); font-size:13px; font-weight:500;">
+                             <i data-lucide="info" style="width:14px; margin-right:6px; vertical-align:middle;"></i>
+                             Die Verbindung ist dauerhaft über die System-Konfiguration aktiv.
+                           </div>`
+                        : `<button class="ios-btn btn-danger-light" onclick="driveManager.revokeAuth().then(() => renderDriveAuthSettings())">
                             <i data-lucide="log-out" style="width:18px; margin-right:8px; vertical-align:middle;"></i>
                             Verbindung trennen
-                        </button>
-                    ` : `
+                        </button>`
+                ) : `
                         <button class="ios-btn" onclick="driveManager.startOAuth()">
                             <i data-lucide="log-in" style="width:18px; margin-right:8px; vertical-align:middle;"></i>
                             Mit Google Drive verbinden
@@ -5202,65 +5211,6 @@
             } catch (e) { console.error(e); alert(t('error')); }
         }
 
-        async function testPaperlessConnectionAdmin(classId) {
-            const url = document.getElementById('edit-paperless-url').value.trim();
-            const token = document.getElementById('edit-paperless-token').value.trim();
-            const statusDiv = document.getElementById(`paperless-test-status-${classId}`);
-
-            if (!url || !token) {
-                statusDiv.innerHTML = `
-                    <div style="padding:12px; background:rgba(255,59,48,0.1); border-radius:10px; color:var(--danger); font-size:13px;">
-                        <i data-lucide="alert-circle" style="width:14px; margin-right:6px;"></i>
-                        Bitte URL und Token eingeben
-                    </div>
-                `;
-                lucide.createIcons();
-                return;
-            }
-
-            statusDiv.innerHTML = `
-                <div style="padding:12px; background:var(--tab-bg); border-radius:10px; font-size:13px;">
-                    <i data-lucide="loader-2" class="spin" style="width:14px; margin-right:6px;"></i>
-                    Teste Verbindung...
-                </div>
-            `;
-            lucide.createIcons();
-
-            try {
-                const res = await fetch('/api/paperless/config/test', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, token })
-                });
-
-                const result = await res.json();
-
-                if (result.success) {
-                    statusDiv.innerHTML = `
-                        <div style="padding:12px; background:rgba(52,199,89,0.1); border-radius:10px; color:var(--success); font-size:13px;">
-                            <i data-lucide="check-circle" style="width:14px; margin-right:6px;"></i>
-                            ✓ Verbindung erfolgreich!
-                        </div>
-                    `;
-                } else {
-                    statusDiv.innerHTML = `
-                        <div style="padding:12px; background:rgba(255,59,48,0.1); border-radius:10px; color:var(--danger); font-size:13px;">
-                            <i data-lucide="x-circle" style="width:14px; margin-right:6px;"></i>
-                            ${result.message || 'Verbindung fehlgeschlagen'}
-                        </div>
-                    `;
-                }
-            } catch (e) {
-                statusDiv.innerHTML = `
-                    <div style="padding:12px; background:rgba(255,59,48,0.1); border-radius:10px; color:var(--danger); font-size:13px;">
-                        <i data-lucide="x-circle" style="width:14px; margin-right:6px;"></i>
-                        Fehler: ${e.message}
-                    </div>
-                `;
-            }
-
-            lucide.createIcons();
-        }
 
         async function openCreateUserMenu() {
             let classSelectorHtml = '';
