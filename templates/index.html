@@ -2383,9 +2383,10 @@
 
                 if (folders.length === 0) {
                     container.innerHTML = `
-                        <div class="floating-card" style="text-align:center; padding:40px;">
-                            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.2;"><i data-lucide="folder-plus" style="width:64px; height:64px;"></i></div>
-                            <p class="item-sub">${t('no_subjects_found')}</p>
+                        <div class="floating-card" style="text-align:center; padding:50px 30px;">
+                            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.15;"><i data-lucide="folder-plus" style="width:72px; height:72px;"></i></div>
+                            <h3 style="font-size:18px; margin-bottom:10px; font-weight:600;">Noch keine Ordner</h3>
+                            <p class="item-sub" style="margin-bottom:25px;">Verbinde deine Google Drive Ordner, um Notizen zu synchronisieren.</p>
                             <button class="ios-btn btn-small" style="margin-top: 15px;" onclick="openAddFolderSheet()">${t('add_folder')}</button>
                         </div>`;
                     lucide.createIcons();
@@ -2397,70 +2398,105 @@
 
                 let html = '';
 
-                // Roots Section
+                // Roots Section - Drive Sources
                 if (roots.length > 0) {
-                    html += `<div class="item-sub" style="margin: 20px 0 10px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px;">Quellen (${roots.length})</div>`;
-                    html += roots.map(f => `
-                        <div class="floating-card slide-in-bottom" style="padding: 16px; margin-bottom: 12px; cursor:pointer; animation-fill-mode: both; animation-delay: ${Math.random() * 0.1}s" onclick="browseRootFolder(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')">
+                    html += `
+                        <div style="margin: 0 0 15px 0;">
+                            <div class="item-sub" style="margin: 0 0 12px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="database" style="width:14px; height:14px;"></i>
+                                Drive Quellen (${roots.length})
+                            </div>
+                    `;
+                    html += roots.map((f, idx) => `
+                        <div class="floating-card slide-in-bottom" style="padding: 18px; margin-bottom: 12px; cursor:pointer; animation-fill-mode: both; animation-delay: ${idx * 0.05}s; transition: all 0.2s ease;" onclick="browseRootFolder(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="display:flex; align-items:center; gap:12px;">
-                                    <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:rgba(0,113,227,0.05); color:var(--accent);">
-                                        <i data-lucide="database"></i>
+                                <div style="display:flex; align-items:center; gap:14px; flex:1;">
+                                    <div class="account-item-icon" style="margin:0; width:48px; height:48px; background:linear-gradient(135deg, rgba(0,113,227,0.1) 0%, rgba(0,113,227,0.05) 100%); color:var(--accent);">
+                                        <i data-lucide="hard-drive" style="width:22px; height:22px;"></i>
                                     </div>
-                                    <div>
-                                        <div class="item-title">${f.folder_name}</div>
-                                        <div class="item-sub">${f.owner_name ? f.owner_name : ''} • Tippe zum Verwalten</div>
+                                    <div style="flex:1;">
+                                        <div class="item-title" style="font-size:16px; margin-bottom:4px;">${f.folder_name}</div>
+                                        <div class="item-sub" style="font-size:13px; display:flex; align-items:center; gap:8px;">
+                                            ${f.owner_name ? `<span><i data-lucide="user" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i> ${f.owner_name}</span>` : ''}
+                                            <span style="color:var(--accent);">Verwalten →</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                                <i data-lucide="chevron-right" style="width:20px; height:20px; color:var(--text-sec); opacity:0.5;"></i>
                             </div>
                         </div>
                     `).join('');
+                    html += `</div>`;
                 }
 
-                // Targets Section
+                // Targets Section - Synced Subject Folders
                 if (targets.length > 0) {
-                    html += `<div class="item-sub" style="margin: 20px 0 10px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px;">Synchronisierte Fächer (${targets.length})</div>`;
-                    html += targets.map(f => `
-                        <div class="floating-card" style="padding: 16px; margin-bottom: 12px; cursor:pointer;" onclick="openEditFolderSheet(${JSON.stringify(f).replace(/"/g, '&quot;')})">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
-                                <div style="display:flex; align-items:center; gap:12px;">
-                                    <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:rgba(52,199,89,0.1); color:var(--success);">
-                                        <i data-lucide="folder-check"></i>
+                    html += `
+                        <div style="margin: ${roots.length > 0 ? '30px' : '0'} 0 15px 0;">
+                            <div class="item-sub" style="margin: 0 0 12px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; display:flex; align-items:center; gap:6px; color:var(--success);">
+                                <i data-lucide="folder-sync" style="width:14px; height:14px;"></i>
+                                Synchronisierte Fächer (${targets.length})
+                            </div>
+                    `;
+                    html += targets.map((f, idx) => `
+                        <div class="floating-card slide-in-bottom" style="padding: 18px; margin-bottom: 12px; cursor:pointer; animation-fill-mode: both; animation-delay: ${(roots.length + idx) * 0.05}s; border-left: 3px solid var(--success);" onclick="openEditFolderSheet(${JSON.stringify(f).replace(/"/g, '&quot;')})">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 14px;">
+                                <div style="display:flex; align-items:center; gap:14px; flex:1;">
+                                    <div class="account-item-icon" style="margin:0; width:48px; height:48px; background:rgba(52,199,89,0.12); color:var(--success);">
+                                        <i data-lucide="folder-check" style="width:22px; height:22px;"></i>
                                     </div>
-                                    <div>
-                                        <div class="item-title">${f.subject_name || f.folder_name}</div>
-                                        <div class="item-sub">${f.privacy_level === 'public' ? t('public') : t('private')} ${f.owner_name ? ' • ' + f.owner_name : ''}</div>
+                                    <div style="flex:1;">
+                                        <div class="item-title" style="font-size:16px; margin-bottom:4px;">${f.subject_name || f.folder_name}</div>
+                                        <div class="item-sub" style="font-size:13px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                            <span style="display:flex; align-items:center; gap:4px;">
+                                                <i data-lucide="${f.privacy_level === 'public' ? 'users' : 'lock'}" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i>
+                                                ${f.privacy_level === 'public' ? t('public') : t('private')}
+                                            </span>
+                                            ${f.owner_name ? `<span><i data-lucide="user" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i> ${f.owner_name}</span>` : ''}
+                                        </div>
                                     </div>
                                 </div>
-                                <div style="display:flex; gap:5px;" onclick="event.stopPropagation()">
-                                    <button class="btn-chat-open" style="width:32px; height:32px; padding:0; border-radius:8px;" onclick="syncFolder(${f.id}, this)">
-                                        <i data-lucide="refresh-cw" style="width:14px;"></i>
+                                <div style="display:flex; gap:6px;" onclick="event.stopPropagation()">
+                                    <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px;" onclick="syncFolder(${f.id}, this)" title="Jetzt synchronisieren">
+                                        <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i>
                                     </button>
                                 </div>
                             </div>
-                            <div style="font-size: 11px; color: var(--text-sec); display:flex; justify-content:space-between;">
-                                <span>${t('last_sync')}: ${f.last_sync_at ? new Date(f.last_sync_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Nie'}</span>
-                                <span>${f.file_count || 0} ${t('files')}</span>
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid var(--border);">
+                                <div style="font-size: 12px; color: var(--text-sec); display:flex; gap:15px;">
+                                    <span style="display:flex; align-items:center; gap:5px;">
+                                        <i data-lucide="clock" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i>
+                                        ${f.last_sync_at ? new Date(f.last_sync_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Nie'}
+                                    </span>
+                                    <span style="display:flex; align-items:center; gap:5px;">
+                                        <i data-lucide="file-text" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i>
+                                        ${f.file_count || 0} ${t('files')}
+                                    </span>
+                                </div>
+                                <span style="font-size:11px; padding:4px 10px; background:rgba(52,199,89,0.1); color:var(--success); border-radius:8px; font-weight:600;">
+                                    AKTIV
+                                </span>
                             </div>
                         </div>
                     `).join('');
+                    html += `</div>`;
                 }
 
                 if (html === '') {
                     container.innerHTML = `
-                        <div class="floating-card" style="text-align:center; padding:40px;">
-                            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.2;"><i data-lucide="folder-plus" style="width:64px; height:64px;"></i></div>
-                            <p class="item-sub">Noch keine Drive-Quellen verknüpft.</p>
+                        <div class="floating-card" style="text-align:center; padding:50px 30px;">
+                            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.15;"><i data-lucide="folder-plus" style="width:72px; height:72px;"></i></div>
+                            <h3 style="font-size:18px; margin-bottom:10px; font-weight:600;">Noch keine Drive-Quellen</h3>
+                            <p class="item-sub" style="margin-bottom:25px;">Verbinde deine Google Drive Ordner, um Notizen zu synchronisieren.</p>
                             ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `<button class="ios-btn btn-small" style="margin-top: 15px;" onclick="openAddFolderSheet()">${t('add_folder')}</button>` : ''}
                         </div>`;
                 } else {
                     container.innerHTML = html;
                 }
                 lucide.createIcons();
-                lucide.createIcons();
             } catch (e) {
-                container.innerHTML = `<p class="item-sub" style="text-align:center;">${t('error_loading')}</p>`;
+                container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub" style="color:var(--danger);">${t('error_loading')}</p></div>`;
+                console.error(e);
             }
         }
 
@@ -2647,18 +2683,21 @@
             const container = document.getElementById('drive-content-container');
             const cacheKey = `${id}-${googleFolderId || 'root'}`;
 
-            // Render Skeleton / Header immediately
+            // Render improved header with better visual hierarchy
             container.innerHTML = `
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px; padding:0 5px;">
-                    <button class="btn-chat-open" style="width:32px; height:32px; padding:0; border-radius:8px;" onclick="window.history.back()">
-                        <i data-lucide="arrow-left" style="width:16px;"></i>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; padding:0 5px;">
+                    <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px;" onclick="window.history.back()">
+                        <i data-lucide="arrow-left" style="width:18px;"></i>
                     </button>
-                    <span class="item-title" style="font-size:16px;">${name}</span>
+                    <div>
+                        <div class="item-title" style="font-size:18px; margin-bottom:2px;">${name}</div>
+                        <div class="item-sub" style="font-size:12px;">Wähle Ordner zum Synchronisieren</div>
+                    </div>
                 </div>
                 <div id="subfolder-list">
-                    <div style="text-align:center; padding:30px; color:var(--text-sec)">
-                        <div class="spinner-icon"><i data-lucide="loader-2" class="spin"></i></div>
-                        Lade Ordnerinhalt...
+                    <div style="text-align:center; padding:40px; color:var(--text-sec)">
+                        <div class="spinner-icon"><i data-lucide="loader-2" class="spin" style="width:32px; height:32px;"></i></div>
+                        <p style="margin-top:15px; font-size:14px;">Lade Ordner...</p>
                     </div>
                 </div>
             `;
@@ -2686,55 +2725,135 @@
 
                 const list = document.getElementById('subfolder-list');
                 if (children.length === 0) {
-                    list.innerHTML = `<p class="item-sub" style="text-align:center; padding:20px;">Keine Unterordner gefunden.</p>`;
+                    list.innerHTML = `
+                        <div class="floating-card" style="text-align:center; padding:40px;">
+                            <div style="font-size: 48px; margin-bottom: 15px; opacity: 0.2;"><i data-lucide="folder-x" style="width:56px; height:56px;"></i></div>
+                            <p class="item-sub">Keine Unterordner gefunden.</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
                     return;
                 }
 
-                list.innerHTML = children.map((c, idx) => {
-                    const subjectOptions = subjects.map(s =>
-                        `<option value="${s.id}">${s.name}</option>`
-                    ).join('');
+                // Separate synced and unsynced folders for better organization
+                const syncedFolders = children.filter(c => c.is_synced);
+                const unsyncedFolders = children.filter(c => !c.is_synced);
 
-                    return `
-                    <div class="floating-card slide-in-bottom" style="padding: 16px; margin-bottom: 12px; cursor:pointer; animation-fill-mode: both; animation-delay: ${Math.min(idx * 0.05, 0.5)}s" onclick="browseRootFolder(${id}, '${c.name.replace(/'/g, "\\'")}', true, '${c.id}')">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:${c.is_synced ? '0' : '12px'};">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:${c.is_synced ? 'rgba(52,199,89,0.1)' : 'rgba(0,113,227,0.05)'}; color:${c.is_synced ? 'var(--success)' : 'var(--text-sec)'}">
-                                    <i data-lucide="${c.is_synced ? 'folder-check' : 'folder'}"></i>
+                let html = '';
+
+                // Show active folders first
+                if (syncedFolders.length > 0) {
+                    html += `<div class="item-sub" style="margin: 0 0 12px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; color:var(--success);">✓ Aktiv (${syncedFolders.length})</div>`;
+                    html += syncedFolders.map((c, idx) => {
+                        return `
+                        <div class="floating-card slide-in-bottom" style="padding: 18px; margin-bottom: 10px; border-left: 3px solid var(--success); animation-fill-mode: both; animation-delay: ${Math.min(idx * 0.04, 0.3)}s">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; align-items:center; gap:14px; flex:1; cursor:pointer;" onclick="browseRootFolder(${id}, '${c.name.replace(/'/g, "\\'")}', true, '${c.id}')">
+                                    <div class="account-item-icon" style="margin:0; width:44px; height:44px; background:rgba(52,199,89,0.15); color:var(--success);">
+                                        <i data-lucide="folder-check" style="width:20px; height:20px;"></i>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div class="item-title" style="font-size:15px; margin-bottom:3px;">${c.name}</div>
+                                        <div class="item-sub" style="font-size:12px;">
+                                            <i data-lucide="check-circle" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i>
+                                            Synchronisiert
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div class="item-title">${c.name}</div>
-                                    <div class="item-sub">${c.is_synced ? 'Status: Aktiv' : 'Tippen zum Öffnen'}</div>
-                                </div>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:10px;" onclick="event.stopPropagation()">
-                                ${c.is_synced ? `
-                                    <button class="ios-btn btn-small" style="background:rgba(255,59,48,0.1); color:var(--danger);" onclick="toggleSubfolderSync(${id}, '${c.id}', false)">Deaktivieren</button>
-                                ` : `
-                                    <button class="ios-btn btn-small" onclick="toggleSubfolderSync(${id}, '${c.id}', true)">Aktivieren</button>
-                                `}
+                                <button class="ios-btn btn-small" style="background:rgba(255,59,48,0.08); color:var(--danger); padding:8px 14px; font-size:13px;" onclick="event.stopPropagation(); toggleSubfolderSync(${id}, '${c.id}', false)">
+                                    <i data-lucide="x" style="width:14px; height:14px; display:inline; vertical-align:middle; margin-right:4px;"></i>
+                                    Stopp
+                                </button>
                             </div>
                         </div>
-                        ${!c.is_synced ? `
-                            <div style="display:flex; align-items:center; gap:10px; padding-top:10px; border-top:1px solid var(--border);" onclick="event.stopPropagation()">
-                                <span style="font-size:12px; color:var(--text-sec); white-space:nowrap;">Fach:</span>
-                                <select id="subject-select-${c.id}" class="ios-input" style="margin:0; height:32px; font-size:13px; padding:0 10px;">
-                                    <option value="">(Auto-Erkennung)</option>
-                                    ${subjectOptions}
-                                </select>
+                    `}).join('');
+                }
+
+                // Show available folders to activate
+                if (unsyncedFolders.length > 0) {
+                    html += `<div class="item-sub" style="margin: ${syncedFolders.length > 0 ? '25px' : '0'} 0 12px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px;">Verfügbar (${unsyncedFolders.length})</div>`;
+                    html += unsyncedFolders.map((c, idx) => {
+                        const subjectOptions = subjects.map(s =>
+                            `<option value="${s.id}">${s.name}</option>`
+                        ).join('');
+
+                        return `
+                        <div class="floating-card slide-in-bottom" id="folder-card-${c.id}" style="padding: 18px; margin-bottom: 10px; animation-fill-mode: both; animation-delay: ${Math.min((syncedFolders.length + idx) * 0.04, 0.4)}s; transition: all 0.3s ease;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                                <div style="display:flex; align-items:center; gap:14px; flex:1; cursor:pointer;" onclick="browseRootFolder(${id}, '${c.name.replace(/'/g, "\\'")}', true, '${c.id}')">
+                                    <div class="account-item-icon" style="margin:0; width:44px; height:44px; background:rgba(0,113,227,0.06); color:var(--text-sec);">
+                                        <i data-lucide="folder" style="width:20px; height:20px;"></i>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div class="item-title" style="font-size:15px; margin-bottom:3px;">${c.name}</div>
+                                        <div class="item-sub" style="font-size:12px;">Klicke auf Aktivieren →</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;" onclick="event.stopPropagation()">
+                                    <button class="ios-btn btn-small" style="padding:8px 16px; font-size:13px; white-space:nowrap;" onclick="toggleFolderOptions('${c.id}')">
+                                        <i data-lucide="plus" style="width:14px; height:14px; display:inline; vertical-align:middle; margin-right:4px;"></i>
+                                        Aktivieren
+                                    </button>
+                                </div>
                             </div>
-                        ` : ''}
-                    </div>
-                `}).join('');
+                            <div id="folder-options-${c.id}" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); animation: fadeIn 0.2s ease;">
+                                <div style="margin-bottom:10px;">
+                                    <label style="font-size:12px; font-weight:600; color:var(--text-sec); display:block; margin-bottom:6px;">
+                                        <i data-lucide="book-open" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i>
+                                        Fach zuordnen
+                                    </label>
+                                    <select id="subject-select-${c.id}" class="ios-input" style="margin:0; height:38px; font-size:14px; padding:0 12px;">
+                                        <option value="">🤖 Automatisch erkennen</option>
+                                        ${subjectOptions}
+                                    </select>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="ios-btn" style="flex:1; padding:10px; font-size:13px;" onclick="confirmActivateFolder(${id}, '${c.id}')">
+                                        <i data-lucide="check" style="width:14px; height:14px; display:inline; vertical-align:middle; margin-right:4px;"></i>
+                                        Bestätigen
+                                    </button>
+                                    <button class="ios-btn btn-sec" style="padding:10px 16px; font-size:13px;" onclick="toggleFolderOptions('${c.id}')">
+                                        Abbrechen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `}).join('');
+                }
+
+                list.innerHTML = html;
                 lucide.createIcons();
             } catch (e) {
                 showToast("Fehler beim Laden der Ordner", "error");
+                console.error(e);
             }
         }
 
-        async function toggleSubfolderSync(rootId, subGoogleId, enabled) {
-            let subjectId = null;
-            if (enabled) {
+        function toggleFolderOptions(folderId) {
+            const optionsDiv = document.getElementById(`folder-options-${folderId}`);
+            if (optionsDiv) {
+                const isVisible = optionsDiv.style.display !== 'none';
+                optionsDiv.style.display = isVisible ? 'none' : 'block';
+            }
+        }
+
+        async function confirmActivateFolder(rootId, subGoogleId) {
+            const select = document.getElementById(`subject-select-${subGoogleId}`);
+            const subjectId = select ? (select.value || null) : null;
+
+            // Visual feedback
+            const card = document.getElementById(`folder-card-${subGoogleId}`);
+            if (card) {
+                card.style.opacity = '0.6';
+                card.style.pointerEvents = 'none';
+            }
+
+            await toggleSubfolderSync(rootId, subGoogleId, true, subjectId);
+        }
+
+        async function toggleSubfolderSync(rootId, subGoogleId, enabled, subjectId = null) {
+            // If subjectId not provided and enabling, try to get from select
+            if (enabled && subjectId === null) {
                 const select = document.getElementById(`subject-select-${subGoogleId}`);
                 if (select) subjectId = select.value || null;
             }
@@ -2761,9 +2880,12 @@
                     // Refresh current view without jumping to root
                     const currentTitle = (window.history.state && window.history.state.folderName) ? window.history.state.folderName : document.querySelector('#drive-content-container .item-title').innerText;
                     browseRootFolder(rootId, currentTitle, false, currentGoogleId);
+                } else {
+                    showToast("Fehler beim Speichern", "error");
                 }
             } catch (e) {
                 showToast("Fehler beim Speichern", "error");
+                console.error(e);
             }
         }
 
