@@ -351,6 +351,8 @@ def create_app():
             elif 'drive_folder_id' not in cols:
                 add_col_if_missing('drive_folder', 'drive_folder_id', 'VARCHAR(256)')
 
+            add_col_if_missing('drive_folder', 'folder_name', 'VARCHAR(500)')
+            add_col_if_missing('drive_folder', 'folder_path', 'VARCHAR(1000)')
             add_col_if_missing('drive_folder', 'user_id', 'INTEGER REFERENCES user(id)')
             add_col_if_missing('drive_folder', 'is_root', 'BOOLEAN DEFAULT 0')
             add_col_if_missing('drive_folder', 'parent_id', 'INTEGER REFERENCES drive_folder(id)')
@@ -385,13 +387,15 @@ def create_app():
             elif 'file_id' not in cols:
                 add_fcol_if_missing('file_id', 'VARCHAR(256)')
 
+            add_fcol_if_missing('filename', 'VARCHAR(500)')
+            add_fcol_if_missing('mime_type', 'VARCHAR(128)')
+            add_fcol_if_missing('file_size', 'BIGINTEGER')
             add_fcol_if_missing('file_hash', 'VARCHAR(128)')
             add_fcol_if_missing('encrypted_path', 'VARCHAR(1000)')
             add_fcol_if_missing('subject_id', 'INTEGER REFERENCES subject(id)')
             add_fcol_if_missing('auto_mapped', 'BOOLEAN DEFAULT 0')
             add_fcol_if_missing('ocr_completed', 'BOOLEAN DEFAULT 0')
             add_fcol_if_missing('ocr_error', 'TEXT')
-            add_fcol_if_missing('parent_folder_name', 'VARCHAR(512)')
             add_fcol_if_missing('parent_folder_name', 'VARCHAR(512)')
 
         # Schema Update: Drive File Content Enhancement (page_count)
