@@ -338,7 +338,7 @@ class DriveFolder(db.Model):
     # Relationships
     subject = db.relationship('Subject', backref='drive_folders')
     created_by = db.relationship('User', foreign_keys=[created_by_user_id], backref='created_drive_folders')
-    owner = db.relationship('User', foreign_keys=[user_id], backref='owned_drive_folders')
+    user = db.relationship('User', foreign_keys=[user_id], backref='owned_drive_folders')
     parent = db.relationship('DriveFolder', remote_side=[id], backref='subfolders')
 
 
@@ -365,6 +365,7 @@ class DriveFile(db.Model):
     
     # Relationships
     subject = db.relationship('Subject', backref='drive_files')
+    folder = db.relationship('DriveFolder', backref='files')
 
 
 class DriveFileContent(db.Model):
