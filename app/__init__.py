@@ -328,15 +328,22 @@ def create_app():
             cols = [c.get('name') for c in inspector.get_columns('drive_folder')]
             
             def add_col_if_missing(table, col, type_sql):
-                if col not in cols:
-                    try:
+                try:
+                    # Re-inspect inside the function to handle concurrent workers
+                    from sqlalchemy import inspect
+                    inspector = inspect(db.engine)
+                    current_cols = [c.get('name') for c in inspector.get_columns(table)]
+                    
+                    if col not in current_cols:
                         with db.engine.connect() as conn:
                             app.logger.info(f"Migrating: Adding {col} to {table}")
                             conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {type_sql}"))
                             conn.commit()
                         app.logger.info(f"Successfully added {col} to {table}")
-                    except Exception as ex:
-                        app.logger.warning(f"Failed to add column {col} to {table}: {ex}")
+                except Exception as ex:
+                    if "duplicate column name" in str(ex).lower():
+                        return # Safe to ignore
+                    app.logger.warning(f"Failed to add column {col} to {table}: {ex}")
 
             # Special case for core drive_folder_id renaming
             if 'drive_folder_id' not in cols and 'folder_id' in cols:
@@ -371,14 +378,19 @@ def create_app():
             cols = [c.get('name') for c in inspector.get_columns('drive_file')]
             
             def add_fcol_if_missing(col, type_sql):
-                if col not in cols:
-                    try:
+                try:
+                    from sqlalchemy import inspect
+                    inspector = inspect(db.engine)
+                    current_cols = [c.get('name') for c in inspector.get_columns('drive_file')]
+                    if col not in current_cols:
                         with db.engine.connect() as conn:
                             app.logger.info(f"Migrating: Adding {col} to drive_file")
                             conn.execute(text(f"ALTER TABLE drive_file ADD COLUMN {col} {type_sql}"))
                             conn.commit()
-                    except Exception as ex:
-                        app.logger.warning(f"Failed to add drive_file column {col}: {ex}")
+                except Exception as ex:
+                    if "duplicate column name" in str(ex).lower():
+                        return
+                    app.logger.warning(f"Failed to add drive_file column {col}: {ex}")
 
             if 'file_id' not in cols and 'google_file_id' in cols:
                 try:
@@ -417,14 +429,20 @@ def create_app():
                 
                 # Add other missing columns for drive_file_content
                 def add_cfcol_if_missing(col, type_sql):
-                    if col not in cols:
-                        try:
+                    try:
+                        from sqlalchemy import inspect
+                        inspector = inspect(db.engine)
+                        # We need to refresh cols locally
+                        current_cols = [c['name'] for c in inspector.get_columns('drive_file_content')]
+                        if col not in current_cols:
                             with db.engine.connect() as conn:
                                 app.logger.info(f"Migrating: Adding {col} to drive_file_content")
                                 conn.execute(text(f"ALTER TABLE drive_file_content ADD COLUMN {col} {type_sql}"))
                                 conn.commit()
-                        except Exception as ex:
-                            app.logger.warning(f"Failed to add drive_file_content column {col}: {ex}")
+                    except Exception as ex:
+                        if "duplicate column name" in str(ex).lower():
+                            return
+                        app.logger.warning(f"Failed to add drive_file_content column {col}: {ex}")
 
                 add_cfcol_if_missing('drive_file_id', 'INTEGER REFERENCES drive_file(id)')
                 add_cfcol_if_missing('content_text', 'TEXT')
