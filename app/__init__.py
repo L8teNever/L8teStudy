@@ -362,6 +362,10 @@ def create_app():
             add_col_if_missing('drive_folder', 'sync_status', 'VARCHAR(50) DEFAULT \'pending\'')
             add_col_if_missing('drive_folder', 'sync_error', 'TEXT')
             add_col_if_missing('drive_folder', 'subject_id', 'INTEGER REFERENCES subject(id)')
+            add_col_if_missing('drive_folder', 'is_active', 'BOOLEAN DEFAULT 1')
+            add_col_if_missing('drive_folder', 'include_subfolders', 'BOOLEAN DEFAULT 1')
+            add_col_if_missing('drive_folder', 'created_at', 'DATETIME')
+            add_col_if_missing('drive_folder', 'created_by_user_id', 'INTEGER REFERENCES user(id)')
 
         if 'drive_file' in inspector.get_table_names():
             cols = [c.get('name') for c in inspector.get_columns('drive_file')]
@@ -384,8 +388,9 @@ def create_app():
                         conn.commit()
                 except Exception:
                     add_fcol_if_missing('file_id', 'VARCHAR(256)')
-            elif 'file_id' not in cols:
                 add_fcol_if_missing('file_id', 'VARCHAR(256)')
+            
+            add_fcol_if_missing('drive_folder_id', 'INTEGER REFERENCES drive_folder(id)')
 
             add_fcol_if_missing('filename', 'VARCHAR(500)')
             add_fcol_if_missing('mime_type', 'VARCHAR(128)')
@@ -397,6 +402,8 @@ def create_app():
             add_fcol_if_missing('ocr_completed', 'BOOLEAN DEFAULT 0')
             add_fcol_if_missing('ocr_error', 'TEXT')
             add_fcol_if_missing('parent_folder_name', 'VARCHAR(512)')
+            add_fcol_if_missing('created_at', 'DATETIME')
+            add_fcol_if_missing('updated_at', 'DATETIME')
 
         # Schema Update: Drive File Content Enhancement (page_count)
         try:
@@ -407,6 +414,21 @@ def create_app():
                     with db.engine.connect() as conn:
                         conn.execute(text("ALTER TABLE drive_file_content ADD COLUMN page_count INTEGER DEFAULT 0"))
                         conn.commit()
+                
+                # Add other missing columns for drive_file_content
+                def add_cfcol_if_missing(col, type_sql):
+                    if col not in cols:
+                        try:
+                            with db.engine.connect() as conn:
+                                app.logger.info(f"Migrating: Adding {col} to drive_file_content")
+                                conn.execute(text(f"ALTER TABLE drive_file_content ADD COLUMN {col} {type_sql}"))
+                                conn.commit()
+                        except Exception as ex:
+                            app.logger.warning(f"Failed to add drive_file_content column {col}: {ex}")
+
+                add_cfcol_if_missing('drive_file_id', 'INTEGER REFERENCES drive_file(id)')
+                add_cfcol_if_missing('content_text', 'TEXT')
+                add_cfcol_if_missing('ocr_completed_at', 'DATETIME')
         except Exception as e:
             app.logger.error(f"Drive file content schema migration error: {e}")
 
