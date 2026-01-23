@@ -59,14 +59,11 @@ def create_app():
     # Ensure upload directory exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # Drive Integration Configuration
-    app.config['GOOGLE_SERVICE_ACCOUNT_FILE'] = os.environ.get('GOOGLE_SERVICE_ACCOUNT_FILE')
-    app.config['GOOGLE_SERVICE_ACCOUNT_INFO'] = os.environ.get('GOOGLE_SERVICE_ACCOUNT_INFO')
+    # Google Drive OAuth Configuration
+    app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
+    app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
     app.config['DRIVE_ENCRYPTION_KEY'] = os.environ.get('DRIVE_ENCRYPTION_KEY')
-    app.config['ENCRYPTED_FILES_PATH'] = os.environ.get('ENCRYPTED_FILES_PATH', os.path.join(app.instance_path, 'encrypted_files'))
     
-    # Ensure encrypted files directory exists
-    os.makedirs(app.config['ENCRYPTED_FILES_PATH'], exist_ok=True)
     
     # Session Configuration - Enhanced Security
     app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -168,16 +165,16 @@ def create_app():
         return jsonify({'success': False, 'message': 'Bad Request'}), 400
 
     from .routes import main_bp, auth_bp, api_bp
-    from .paperless_routes import paperless_bp
+    from .drive_routes import drive_bp
     
     # Exempt API from CSRF protection as we rely on session/login_required and it causes issues in Docker
     csrf.exempt(api_bp)
-    csrf.exempt(paperless_bp)
+    csrf.exempt(drive_bp)
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
-    app.register_blueprint(paperless_bp)  # Already has /api/paperless prefix
+    app.register_blueprint(drive_bp)
 
     @app.context_processor
     def utility_processor():
