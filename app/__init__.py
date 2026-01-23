@@ -328,6 +328,9 @@ def create_app():
             if 'drive_folder' in inspector.get_table_names():
                 cols = [c['name'] for c in inspector.get_columns('drive_folder')]
                 with db.engine.connect() as conn:
+                    if 'user_id' not in cols:
+                        app.logger.info("Migrating: Adding user_id to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN user_id INTEGER REFERENCES user(id)"))
                     if 'is_root' not in cols:
                         app.logger.info("Migrating: Adding is_root to drive_folder")
                         conn.execute(text("ALTER TABLE drive_folder ADD COLUMN is_root BOOLEAN DEFAULT 0"))
@@ -361,6 +364,21 @@ def create_app():
             if 'drive_file' in inspector.get_table_names():
                 cols = [c['name'] for c in inspector.get_columns('drive_file')]
                 with db.engine.connect() as conn:
+                    if 'file_id' not in cols and 'google_file_id' in cols:
+                        app.logger.info("Migrating: Renaming google_file_id to file_id in drive_file")
+                        conn.execute(text("ALTER TABLE drive_file RENAME COLUMN google_file_id TO file_id"))
+                    elif 'file_id' not in cols:
+                        app.logger.info("Migrating: Adding file_id to drive_file")
+                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN file_id VARCHAR(256)"))
+                    
+                    if 'file_hash' not in cols:
+                        app.logger.info("Migrating: Adding file_hash to drive_file")
+                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN file_hash VARCHAR(128)"))
+                    
+                    if 'encrypted_path' not in cols:
+                        app.logger.info("Migrating: Adding encrypted_path to drive_file")
+                        conn.execute(text("ALTER TABLE drive_file ADD COLUMN encrypted_path VARCHAR(1000)"))
+                    
                     if 'subject_id' not in cols:
                         app.logger.info("Migrating: Adding subject_id to drive_file")
                         conn.execute(text("ALTER TABLE drive_file ADD COLUMN subject_id INTEGER REFERENCES subject(id)"))
