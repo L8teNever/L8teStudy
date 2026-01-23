@@ -248,78 +248,155 @@ class UntisCredential(db.Model):
             return self.password
 
 
-# --- Drive Integration Models ---
+# --- Paperless-NGX Integration Models ---
 
-class DriveFolder(db.Model):
-    """Represents a linked Google Drive folder"""
+class PaperlessConfig(db.Model):
+    """Stores Paperless-NGX connection configuration"""
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    folder_id = db.Column(db.String(256), nullable=False)  # Google Drive folder ID
-    folder_name = db.Column(db.String(256), nullable=False)
-    privacy_level = db.Column(db.String(20), default='private')  # 'private' or 'public'
-    is_root = db.Column(db.Boolean, default=False)  # Admin-added root source
-    parent_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=True)
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
-    sync_enabled = db.Column(db.Boolean, default=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Per-user config
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)  # Per-class config
+    
+    paperless_url = db.Column(db.String(500), nullable=False)  # Base URL of Paperless instance
+    api_token = db.Column(db.String(500), nullable=False)  # Encrypted API token
+    
+    is_active = db.Column(db.Boolean, default=True)
+    is_global = db.Column(db.Boolean, default=False)  # If true, applies to entire installation
+    
+    # Sync settings
+    auto_sync_enabled = db.Column(db.Boolean, default=True)
     last_sync_at = db.Column(db.DateTime, nullable=True)
-    sync_status = db.Column(db.String(50), default='pending')
-    sync_error = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = db.relationship('User', backref='drive_folders')
-    subject = db.relationship('Subject', backref='drive_folders')
-    files = db.relationship('DriveFile', backref='folder', lazy='dynamic', cascade='all, delete-orphan')
-    subfolders = db.relationship('DriveFolder', backref=db.backref('parent', remote_side=[id]), lazy='dynamic')
-    
-    # Ensure unique folder per user
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'folder_id', name='_user_folder_uc'),
-    )
-
-
-class DriveFile(db.Model):
-    """Represents a file synced from Google Drive"""
-    id = db.Column(db.Integer, primary_key=True)
-    drive_folder_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=False)
-    file_id = db.Column(db.String(256), nullable=False)  # Google Drive file ID
-    filename = db.Column(db.String(512), nullable=False)
-    encrypted_path = db.Column(db.String(512), nullable=False)  # Path to encrypted file on disk
-    file_hash = db.Column(db.String(64), nullable=False)  # SHA-256 hash for change detection
-    file_size = db.Column(db.Integer, nullable=False)  # Size in bytes
-    mime_type = db.Column(db.String(128), nullable=False)
-    
-    # Subject mapping (can be auto-detected or manually set)
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
-    auto_mapped = db.Column(db.Boolean, default=False)  # True if auto-detected
-    
-    # OCR status
-    ocr_completed = db.Column(db.Boolean, default=False)
-    ocr_error = db.Column(db.Text, nullable=True)
-    
-    # Context
-    parent_folder_name = db.Column(db.String(512), nullable=True) # Immediate parent in GDrive
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    subject = db.relationship('Subject', backref='drive_files')
-    content = db.relationship('DriveFileContent', backref='file', uselist=False, cascade='all, delete-orphan')
+    user = db.relationship('User', backref='paperless_configs')
+    school_class = db.relationship('SchoolClass', backref='paperless_config')
+    documents = db.relationship('PaperlessDocument', backref='config', lazy='dynamic', cascade='all, delete-orphan')
     
-    # Ensure unique file per folder
+    def set_api_token(self, token_text):
+        """Encrypt and store API token"""
+        if not token_text:
+            return
+        from flask import current_app
+        f = Fernet(current_app.config['UNTIS_FERNET_KEY'])  # Reuse existing encryption key
+        self.api_token = f.encrypt(token_text.encode()).decode()
+    
+    def get_api_token(self):
+        """Decrypt and return API token"""
+        if not self.api_token:
+            return ""
+        try:
+            from flask import current_app
+            f = Fernet(current_app.config['UNTIS_FERNET_KEY'])
+            return f.decrypt(self.api_token.encode()).decode()
+        except Exception:
+            return self.api_token  # Fallback for unencrypted tokens
+
+
+class PaperlessDocument(db.Model):
+    """Cached metadata for Paperless documents"""
+    id = db.Column(db.Integer, primary_key=True)
+    config_id = db.Column(db.Integer, db.ForeignKey('paperless_config.id'), nullable=False)
+    
+    # Paperless document data
+    paperless_id = db.Column(db.Integer, nullable=False)  # ID in Paperless
+    title = db.Column(db.String(500), nullable=False)
+    content = db.Column(db.Text, nullable=True)  # OCR-extracted text from Paperless
+    
+    # Metadata
+    created = db.Column(db.DateTime, nullable=False)  # Document creation date
+    modified = db.Column(db.DateTime, nullable=False)  # Last modification in Paperless
+    added = db.Column(db.DateTime, nullable=False)  # When added to Paperless
+    
+    # File info
+    original_filename = db.Column(db.String(500), nullable=True)
+    archived_filename = db.Column(db.String(500), nullable=True)  # OCR'd version
+    mime_type = db.Column(db.String(128), nullable=True)
+    
+    # Foreign keys to Paperless entities
+    correspondent_id = db.Column(db.Integer, db.ForeignKey('paperless_correspondent.id'), nullable=True)
+    document_type_id = db.Column(db.Integer, db.ForeignKey('paperless_document_type.id'), nullable=True)
+    
+    # Subject mapping (L8teStudy specific)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
+    
+    # Cache metadata
+    cached_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    subject = db.relationship('Subject', backref='paperless_documents')
+    correspondent = db.relationship('PaperlessCorrespondent', backref='documents')
+    document_type = db.relationship('PaperlessDocumentType', backref='documents')
+    tags = db.relationship('PaperlessTag', secondary='paperless_document_tags', backref='documents')
+    
+    # Ensure unique document per config
     __table_args__ = (
-        db.UniqueConstraint('drive_folder_id', 'file_id', name='_folder_file_uc'),
+        db.UniqueConstraint('config_id', 'paperless_id', name='_config_document_uc'),
     )
 
 
-class DriveFileContent(db.Model):
-    """Stores OCR-extracted text content for full-text search"""
+# Junction table for document-tag many-to-many relationship
+paperless_document_tags = db.Table('paperless_document_tags',
+    db.Column('document_id', db.Integer, db.ForeignKey('paperless_document.id'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('paperless_tag.id'), primary_key=True)
+)
+
+
+class PaperlessTag(db.Model):
+    """Cached Paperless tags"""
     id = db.Column(db.Integer, primary_key=True)
-    drive_file_id = db.Column(db.Integer, db.ForeignKey('drive_file.id'), nullable=False, unique=True)
-    content_text = db.Column(db.Text, nullable=False)  # Extracted text
-    page_count = db.Column(db.Integer, default=0)
-    ocr_completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    config_id = db.Column(db.Integer, db.ForeignKey('paperless_config.id'), nullable=False)
     
-    # For FTS5 search, we'll create a virtual table separately
-    # This model just stores the raw content
+    paperless_id = db.Column(db.Integer, nullable=False)  # ID in Paperless
+    name = db.Column(db.String(128), nullable=False)
+    color = db.Column(db.String(7), default='#a6cee3')  # Hex color
+    is_inbox_tag = db.Column(db.Boolean, default=False)
+    
+    cached_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    config = db.relationship('PaperlessConfig', backref='tags')
+    
+    # Ensure unique tag per config
+    __table_args__ = (
+        db.UniqueConstraint('config_id', 'paperless_id', name='_config_tag_uc'),
+    )
+
+
+class PaperlessCorrespondent(db.Model):
+    """Cached Paperless correspondents"""
+    id = db.Column(db.Integer, primary_key=True)
+    config_id = db.Column(db.Integer, db.ForeignKey('paperless_config.id'), nullable=False)
+    
+    paperless_id = db.Column(db.Integer, nullable=False)  # ID in Paperless
+    name = db.Column(db.String(128), nullable=False)
+    
+    cached_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    config = db.relationship('PaperlessConfig', backref='correspondents')
+    
+    # Ensure unique correspondent per config
+    __table_args__ = (
+        db.UniqueConstraint('config_id', 'paperless_id', name='_config_correspondent_uc'),
+    )
+
+
+class PaperlessDocumentType(db.Model):
+    """Cached Paperless document types"""
+    id = db.Column(db.Integer, primary_key=True)
+    config_id = db.Column(db.Integer, db.ForeignKey('paperless_config.id'), nullable=False)
+    
+    paperless_id = db.Column(db.Integer, nullable=False)  # ID in Paperless
+    name = db.Column(db.String(128), nullable=False)
+    
+    cached_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    config = db.relationship('PaperlessConfig', backref='document_types')
+    
+    # Ensure unique document type per config
+    __table_args__ = (
+        db.UniqueConstraint('config_id', 'paperless_id', name='_config_doctype_uc'),
+    )

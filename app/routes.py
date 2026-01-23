@@ -4,7 +4,8 @@ from .models import (
     User, Task, TaskImage, Event, Grade, NotificationSetting, 
     PushSubscription, Subject, SubjectMapping, TaskMessage, TaskChatRead, 
     GlobalSetting, SchoolClass, TaskCompletion, UserRole,
-    DriveFolder, DriveFile, DriveFileContent,
+    PaperlessConfig, PaperlessDocument, PaperlessTag, 
+    PaperlessCorrespondent, PaperlessDocumentType,
     subject_classes, db
 )
 from app.notifications import notify_new_task, notify_new_event
@@ -1707,11 +1708,17 @@ def get_class(id):
     
     from .models import SchoolClass
     school_class = SchoolClass.query.get_or_404(id)
+    
+    # Get Paperless config if exists
+    paperless_config = PaperlessConfig.query.filter_by(class_id=id, is_active=True).first()
+    
     return jsonify({
         'id': school_class.id,
         'name': school_class.name,
         'code': school_class.code,
-        'chat_enabled': school_class.chat_enabled
+        'chat_enabled': school_class.chat_enabled,
+        'paperless_url': paperless_config.paperless_url if paperless_config else None,
+        'paperless_configured': bool(paperless_config and paperless_config.paperless_url)
     })
 
 @api_bp.route('/admin/classes/<int:id>', methods=['PUT'])
@@ -1738,6 +1745,32 @@ def update_class(id):
     
     if 'chat_enabled' in data:
         school_class.chat_enabled = bool(data['chat_enabled'])
+    
+    # Paperless-NGX Configuration
+    if 'paperless_url' in data or 'paperless_token' in data:
+        paperless_url = data.get('paperless_url')
+        paperless_token = data.get('paperless_token')
+        
+        if paperless_url or paperless_token:
+            # Find or create Paperless config for this class
+            config = PaperlessConfig.query.filter_by(class_id=id, is_active=True).first()
+            
+            if not config:
+                config = PaperlessConfig(class_id=id, is_global=False)
+                db.session.add(config)
+            
+            if paperless_url:
+                config.paperless_url = paperless_url.rstrip('/')
+            
+            if paperless_token:
+                config.set_api_token(paperless_token)
+            
+            config.updated_at = datetime.utcnow()
+        else:
+            # If both are None/empty, deactivate existing config
+            config = PaperlessConfig.query.filter_by(class_id=id, is_active=True).first()
+            if config:
+                config.is_active = False
         
     db.session.commit()
     return jsonify({'success': True})

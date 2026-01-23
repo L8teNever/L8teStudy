@@ -168,13 +168,16 @@ def create_app():
         return jsonify({'success': False, 'message': 'Bad Request'}), 400
 
     from .routes import main_bp, auth_bp, api_bp
+    from .paperless_routes import paperless_bp
     
     # Exempt API from CSRF protection as we rely on session/login_required and it causes issues in Docker
     csrf.exempt(api_bp)
+    csrf.exempt(paperless_bp)
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(paperless_bp)  # Already has /api/paperless prefix
 
     @app.context_processor
     def utility_processor():

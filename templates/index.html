@@ -16,6 +16,7 @@
     <link rel="apple-touch-icon" href="/static/icon-192.png">
     <link rel="icon" href="/static/icon-192.png">
     <script src="/static/translations.js"></script>
+    <script src="/static/paperless.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         // Global Fetch Wrapper for CSRF
@@ -2102,7 +2103,7 @@
                 else if (view === 'grades') renderGrades();
                 else if (view === 'settings') renderSettingsPage();
                 else if (view === 'account') renderAccountHub();
-                else if (view === 'drive') renderDrive();
+                else if (view === 'drive') renderPaperless(); // Paperless-NGX Integration
                 else if (view === 'sub_admin') renderAdminContent();
 
                 const fab = document.getElementById('main-fab');
@@ -2131,12 +2132,10 @@
             else if (currentView === 'tasks') await renderTasks(currentTaskTab);
             else if (currentView === 'calendar') await renderCalendar(currentCalendarTab);
             else if (currentView === 'grades') await renderGrades();
-            else if (currentView === 'drive') await renderDrive(activeDriveTab);
+            else if (currentView === 'drive') await renderPaperless(activePaperlessTab); // Paperless-NGX
             else if (currentView === 'drive_folder') {
-                await renderDrive('folders');
-                if (window.history.state && window.history.state.folderId) {
-                    await browseRootFolder(window.history.state.folderId, window.history.state.folderName, false);
-                }
+                // Legacy drive_folder view - redirect to documents
+                await renderPaperless('documents');
             }
             else if (currentView === 'sub_subject_details') {
                 try {
@@ -2196,11 +2195,10 @@
                 if (event.state.view === 'sub_super_admin') { renderSuperAdminDashboard(); return; }
                 if (event.state.view === 'sub_shared_content') { renderSharedContentManagement(); return; }
                 if (event.state.view === 'sub_legal_settings') { renderLegalSettings(); return; }
-                if (event.state.view === 'drive') { renderDrive(); return; }
+                if (event.state.view === 'drive') { renderPaperless(); return; }
                 if (event.state.view === 'drive_folder') {
-                    // Ensure base drive is rendered, then browse
-                    if (!document.getElementById('drive-content-container')) await renderDrive('folders');
-                    browseRootFolder(event.state.folderId, event.state.folderName, false, event.state.googleFolderId);
+                    // Legacy - redirect to documents
+                    renderPaperless('documents');
                     return;
                 }
 
@@ -5323,6 +5321,49 @@
                             <p style="font-size:11px; color:var(--text-sec); margin-top:8px;">${t('direct_login_hint')}</p>
                         </div>
 
+                        <h4 style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">
+                            <i data-lucide="file-box" style="width:14px; margin-right:4px; vertical-align:middle;"></i>
+                            Paperless-NGX Integration
+                        </h4>
+                        <div class="floating-card" style="padding:20px; margin-bottom:25px;">
+                            <p style="font-size:13px; color:var(--text-sec); margin-bottom:15px;">
+                                Konfiguriere die Paperless-NGX Verbindung für diese Klasse. Alle Schüler können dann Dokumente hochladen und durchsuchen.
+                            </p>
+                            
+                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:8px; display:block;">Paperless URL</label>
+                            <input 
+                                type="url" 
+                                id="edit-paperless-url" 
+                                class="ios-input" 
+                                placeholder="https://paperless.example.com" 
+                                value="${c.paperless_url || ''}"
+                                style="margin-bottom:15px;"
+                            >
+                            
+                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:8px; display:block;">API Token</label>
+                            <input 
+                                type="password" 
+                                id="edit-paperless-token" 
+                                class="ios-input" 
+                                placeholder="${c.paperless_url ? '••••••••••••••••' : 'Token hier eingeben'}" 
+                                style="margin-bottom:15px; font-family:monospace;"
+                            >
+                            <p style="font-size:11px; color:var(--text-sec); margin-top:-10px; margin-bottom:15px;">
+                                Token aus Paperless-NGX: Einstellungen → API Tokens
+                            </p>
+                            
+                            <button 
+                                class="ios-btn btn-sec btn-small" 
+                                onclick="testPaperlessConnectionAdmin(${id})" 
+                                style="width:100%; margin-bottom:10px;"
+                            >
+                                <i data-lucide="wifi" style="width:14px; margin-right:6px;"></i>
+                                Verbindung testen
+                            </button>
+                            
+                            <div id="paperless-test-status-${id}" style="margin-top:10px;"></div>
+                        </div>
+
                         <button class="ios-btn" onclick="saveClassSettings(${id})">${t('save_btn')}</button>
                     </div>
                 `;
@@ -5338,10 +5379,17 @@
             const name = document.getElementById('edit-class-name').value.trim();
             const code = document.getElementById('edit-class-code').value.trim();
             const chatEnabled = document.getElementById('toggle-chat-enabled').classList.contains('active');
+            const paperlessUrl = document.getElementById('edit-paperless-url').value.trim();
+            const paperlessToken = document.getElementById('edit-paperless-token').value.trim();
 
             if (!code) { alert(t('code_required')); return; }
 
-            const body = { code, chat_enabled: chatEnabled };
+            const body = {
+                code,
+                chat_enabled: chatEnabled,
+                paperless_url: paperlessUrl || null,
+                paperless_token: paperlessToken || null
+            };
             if (window.currentUser.is_super_admin) body.name = name;
 
             try {
@@ -5364,6 +5412,66 @@
                     alert(data.message || t('error_save'));
                 }
             } catch (e) { console.error(e); alert(t('error')); }
+        }
+
+        async function testPaperlessConnectionAdmin(classId) {
+            const url = document.getElementById('edit-paperless-url').value.trim();
+            const token = document.getElementById('edit-paperless-token').value.trim();
+            const statusDiv = document.getElementById(`paperless-test-status-${classId}`);
+
+            if (!url || !token) {
+                statusDiv.innerHTML = `
+                    <div style="padding:12px; background:rgba(255,59,48,0.1); border-radius:10px; color:var(--danger); font-size:13px;">
+                        <i data-lucide="alert-circle" style="width:14px; margin-right:6px;"></i>
+                        Bitte URL und Token eingeben
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            statusDiv.innerHTML = `
+                <div style="padding:12px; background:var(--tab-bg); border-radius:10px; font-size:13px;">
+                    <i data-lucide="loader-2" class="spin" style="width:14px; margin-right:6px;"></i>
+                    Teste Verbindung...
+                </div>
+            `;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/paperless/config/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, token })
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    statusDiv.innerHTML = `
+                        <div style="padding:12px; background:rgba(52,199,89,0.1); border-radius:10px; color:var(--success); font-size:13px;">
+                            <i data-lucide="check-circle" style="width:14px; margin-right:6px;"></i>
+                            ✓ Verbindung erfolgreich!
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `
+                        <div style="padding:12px; background:rgba(255,59,48,0.1); border-radius:10px; color:var(--danger); font-size:13px;">
+                            <i data-lucide="x-circle" style="width:14px; margin-right:6px;"></i>
+                            ${result.message || 'Verbindung fehlgeschlagen'}
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                statusDiv.innerHTML = `
+                    <div style="padding:12px; background:rgba(255,59,48,0.1); border-radius:10px; color:var(--danger); font-size:13px;">
+                        <i data-lucide="x-circle" style="width:14px; margin-right:6px;"></i>
+                        Fehler: ${e.message}
+                    </div>
+                `;
+            }
+
+            lucide.createIcons();
         }
 
         async function openCreateUserMenu() {

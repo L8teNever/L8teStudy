@@ -13,14 +13,12 @@ flask-migrate
 tzdata
 webuntis
 cryptography
+requests
 
-# Google Drive Integration
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
+# Paperless-NGX Integration
+# (uses requests library above)
 
-# PDF Processing & OCR
+# PDF Processing & OCR (optional, for local processing if needed)
 pdfplumber
 PyPDF2
 pillow
-
