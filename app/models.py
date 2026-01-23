@@ -326,3 +326,37 @@ class DriveFolder(db.Model):
     # Relationships
     subject = db.relationship('Subject', backref='drive_folders')
     created_by = db.relationship('User', backref='created_drive_folders')
+
+
+class DriveFile(db.Model):
+    """Stores metadata for Drive files (optional caching/indexing)"""
+    id = db.Column(db.Integer, primary_key=True)
+    drive_folder_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=True)
+    google_file_id = db.Column(db.String(256), nullable=False, unique=True)
+    filename = db.Column(db.String(500), nullable=False)
+    mime_type = db.Column(db.String(128))
+    file_size = db.Column(db.BigInteger)
+    parent_folder_name = db.Column(db.String(512))
+    
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
+    auto_mapped = db.Column(db.Boolean, default=False)
+    
+    ocr_completed = db.Column(db.Boolean, default=False)
+    ocr_error = db.Column(db.Text)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    subject = db.relationship('Subject', backref='drive_files')
+
+
+class DriveFileContent(db.Model):
+    """Stores OCR-extracted text for FTS search"""
+    id = db.Column(db.Integer, primary_key=True)
+    drive_file_id = db.Column(db.Integer, db.ForeignKey('drive_file.id'), nullable=False, unique=True)
+    content_text = db.Column(db.Text)
+    page_count = db.Column(db.Integer, default=0)
+    ocr_completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    file = db.relationship('DriveFile', backref=db.backref('content', uselist=False))
