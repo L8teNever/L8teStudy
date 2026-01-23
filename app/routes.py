@@ -2455,7 +2455,7 @@ def get_drive_folders():
                 'sync_status': folder.sync_status,
                 'sync_error': folder.sync_error,
                 'last_sync_at': folder.last_sync_at.isoformat() if folder.last_sync_at else None,
-                'file_count': folder.files.count(),
+                'file_count': len(folder.files),
                 'owner_name': folder.user.username if folder.user else 'System',
                 'is_root': folder.is_root,
                 'parent_id': folder.parent_id
