@@ -16,7 +16,7 @@
     <link rel="apple-touch-icon" href="/static/icon-192.png">
     <link rel="icon" href="/static/icon-192.png">
     <script src="/static/translations.js"></script>
-    <script src="/static/paperless.js"></script>
+    <script src="/static/drive.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         // Global Fetch Wrapper for CSRF
@@ -2103,7 +2103,7 @@
                 else if (view === 'grades') renderGrades();
                 else if (view === 'settings') renderSettingsPage();
                 else if (view === 'account') renderAccountHub();
-                else if (view === 'drive') renderPaperless(); // Paperless-NGX Integration
+                else if (view === 'drive') renderDrive(); // Google Drive OAuth Integration
                 else if (view === 'sub_admin') renderAdminContent();
 
                 const fab = document.getElementById('main-fab');
@@ -2132,10 +2132,10 @@
             else if (currentView === 'tasks') await renderTasks(currentTaskTab);
             else if (currentView === 'calendar') await renderCalendar(currentCalendarTab);
             else if (currentView === 'grades') await renderGrades();
-            else if (currentView === 'drive') await renderPaperless(activePaperlessTab); // Paperless-NGX
+            else if (currentView === 'drive') await renderDrive(); // Google Drive OAuth Integration
             else if (currentView === 'drive_folder') {
                 // Legacy drive_folder view - redirect to documents
-                await renderPaperless('documents');
+                await renderDrive();
             }
             else if (currentView === 'sub_subject_details') {
                 try {
@@ -2195,10 +2195,10 @@
                 if (event.state.view === 'sub_super_admin') { renderSuperAdminDashboard(); return; }
                 if (event.state.view === 'sub_shared_content') { renderSharedContentManagement(); return; }
                 if (event.state.view === 'sub_legal_settings') { renderLegalSettings(); return; }
-                if (event.state.view === 'drive') { renderPaperless(); return; }
+                if (event.state.view === 'drive') { renderDrive(); return; }
                 if (event.state.view === 'drive_folder') {
                     // Legacy - redirect to documents
-                    renderPaperless('documents');
+                    renderDrive();
                     return;
                 }
 
@@ -2327,31 +2327,19 @@
         }
 
         /* --- DRIVE INTEGRATION --- */
-        let activeDriveTab = 'files';
-        let driveFolderCache = {}; // Cache for folder exploration
-
-        async function renderDrive(tab = 'files') {
+        /* --- DRIVE INTEGRATION (Simplified: Show All Files) --- */
+        async function renderDrive() {
             currentView = 'drive';
-            activeDriveTab = tab;
             setPageTitle(t('drive'));
 
             const container = document.getElementById('app-container');
             container.innerHTML = `
-                <div class="controls-row">
-                    <div class="tab-bar">
-                         <button class="tab-btn ${tab === 'files' ? 'active' : ''}" onclick="renderDrive('files')">${t('files')}</button>
-                        <button class="tab-btn ${tab === 'folders' ? 'active' : ''}" onclick="renderDrive('folders')">${t('folders')}</button>
+                <div class="floating-card" style="margin-bottom: 20px; padding: 12px 16px;">
+                    <div class="search-container active" style="width:100%; box-shadow:none; border:none; background:var(--tab-bg); height: 40px; min-height: 40px;">
+                        <div class="search-icon-box" style="min-width: 40px; height: 40px;"><i data-lucide="search" style="width:18px"></i></div>
+                        <input type="text" id="drive-search-input" class="search-input" style="opacity:1; transform:none; font-size: 15px;" placeholder="${t('search_drive')}" onkeyup="handleDriveSearch(event)">
                     </div>
                 </div>
-                
-                ${tab === 'files' ? `
-                    <div class="floating-card" style="margin-bottom: 20px; padding: 12px 16px;">
-                        <div class="search-container active" style="width:100%; box-shadow:none; border:none; background:var(--tab-bg); height: 40px; min-height: 40px;">
-                            <div class="search-icon-box" style="min-width: 40px; height: 40px;"><i data-lucide="search" style="width:18px"></i></div>
-                            <input type="text" id="drive-search-input" class="search-input" style="opacity:1; transform:none; font-size: 15px;" placeholder="${t('search_drive')}" onkeyup="handleDriveSearch(event)">
-                        </div>
-                    </div>
-                ` : ''}
 
                 <div id="drive-content-container">
                     <div style="text-align:center; padding:40px; color:var(--text-sec)">
@@ -2360,311 +2348,156 @@
                     </div>
                 </div>
                 
-                ${window.currentUser.is_admin || window.currentUser.is_super_admin ? `<button class="fab visible" onclick="openAddFolderSheet()"><i data-lucide="plus"></i></button>` : ''}
+                <div id="drive-load-more-container" style="text-align:center; padding: 20px; display:none;">
+                    <button class="ios-btn btn-sec btn-small" onclick="loadMoreDriveFiles()">${t('load_more')}</button>
+                </div>
             `;
             lucide.createIcons();
 
-            if (tab === 'files') {
-                await renderDriveFiles();
-            } else {
-                await renderDriveFolders();
+            if (!driveManager.authenticated) {
+                await driveManager.checkAuthStatus();
             }
-        }
 
-        async function renderDriveFolders() {
-            const container = document.getElementById('drive-content-container');
-            try {
-                const res = await fetch('/api/drive/folders');
-                const folders = await res.json();
-
-                if (currentView !== 'drive' || activeDriveTab !== 'folders') return;
-
-                if (folders.length === 0) {
-                    container.innerHTML = `
-                        <div class="floating-card" style="text-align:center; padding:50px 30px;">
-                            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.15;"><i data-lucide="folder-plus" style="width:72px; height:72px;"></i></div>
-                            <h3 style="font-size:18px; margin-bottom:10px; font-weight:600;">Noch keine Ordner</h3>
-                            <p class="item-sub" style="margin-bottom:25px;">Verbinde deine Google Drive Ordner, um Notizen zu synchronisieren.</p>
-                            <button class="ios-btn btn-small" style="margin-top: 15px;" onclick="openAddFolderSheet()">${t('add_folder')}</button>
-                        </div>`;
-                    lucide.createIcons();
-                    return;
-                }
-
-                const roots = folders.filter(f => f.is_root);
-                const targets = folders.filter(f => !f.is_root);
-
-                let html = '';
-
-                // Roots Section - Drive Sources
-                if (roots.length > 0) {
-                    html += `
-                        <div style="margin: 0 0 15px 0;">
-                            <div class="item-sub" style="margin: 0 0 12px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; display:flex; align-items:center; gap:6px;">
-                                <i data-lucide="database" style="width:14px; height:14px;"></i>
-                                Drive Quellen (${roots.length})
-                            </div>
-                    `;
-                    html += roots.map((f, idx) => `
-                        <div class="floating-card slide-in-bottom" style="padding: 18px; margin-bottom: 12px; cursor:pointer; animation-fill-mode: both; animation-delay: ${idx * 0.05}s; transition: all 0.2s ease;" onclick="browseRootFolder(${f.id}, '${f.folder_name.replace(/'/g, "\\'")}')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="display:flex; align-items:center; gap:14px; flex:1;">
-                                    <div class="account-item-icon" style="margin:0; width:48px; height:48px; background:linear-gradient(135deg, rgba(0,113,227,0.1) 0%, rgba(0,113,227,0.05) 100%); color:var(--accent);">
-                                        <i data-lucide="hard-drive" style="width:22px; height:22px;"></i>
-                                    </div>
-                                    <div style="flex:1;">
-                                        <div class="item-title" style="font-size:16px; margin-bottom:4px;">${f.folder_name}</div>
-                                        <div class="item-sub" style="font-size:13px; display:flex; align-items:center; gap:8px;">
-                                            ${f.owner_name ? `<span><i data-lucide="user" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i> ${f.owner_name}</span>` : ''}
-                                            <span style="color:var(--accent);">Verwalten →</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <i data-lucide="chevron-right" style="width:20px; height:20px; color:var(--text-sec); opacity:0.5;"></i>
-                            </div>
-                        </div>
-                    `).join('');
-                    html += `</div>`;
-                }
-
-                // Targets Section - Synced Subject Folders
-                if (targets.length > 0) {
-                    html += `
-                        <div style="margin: ${roots.length > 0 ? '30px' : '0'} 0 15px 0;">
-                            <div class="item-sub" style="margin: 0 0 12px 5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; display:flex; align-items:center; gap:6px; color:var(--success);">
-                                <i data-lucide="folder-sync" style="width:14px; height:14px;"></i>
-                                Synchronisierte Fächer (${targets.length})
-                            </div>
-                    `;
-                    html += targets.map((f, idx) => `
-                        <div class="floating-card slide-in-bottom" style="padding: 18px; margin-bottom: 12px; cursor:pointer; animation-fill-mode: both; animation-delay: ${(roots.length + idx) * 0.05}s; border-left: 3px solid var(--success);" onclick="openEditFolderSheet(${JSON.stringify(f).replace(/"/g, '&quot;')})">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 14px;">
-                                <div style="display:flex; align-items:center; gap:14px; flex:1;">
-                                    <div class="account-item-icon" style="margin:0; width:48px; height:48px; background:rgba(52,199,89,0.12); color:var(--success);">
-                                        <i data-lucide="folder-check" style="width:22px; height:22px;"></i>
-                                    </div>
-                                    <div style="flex:1;">
-                                        <div class="item-title" style="font-size:16px; margin-bottom:4px;">${f.subject_name || f.folder_name}</div>
-                                        <div class="item-sub" style="font-size:13px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                                            <span style="display:flex; align-items:center; gap:4px;">
-                                                <i data-lucide="${f.privacy_level === 'public' ? 'users' : 'lock'}" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i>
-                                                ${f.privacy_level === 'public' ? t('public') : t('private')}
-                                            </span>
-                                            ${f.owner_name ? `<span><i data-lucide="user" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i> ${f.owner_name}</span>` : ''}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style="display:flex; gap:6px;" onclick="event.stopPropagation()">
-                                    <button class="btn-chat-open" style="width:36px; height:36px; padding:0; border-radius:10px;" onclick="syncFolder(${f.id}, this)" title="Jetzt synchronisieren">
-                                        <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid var(--border);">
-                                <div style="font-size: 12px; color: var(--text-sec); display:flex; gap:15px;">
-                                    <span style="display:flex; align-items:center; gap:5px;">
-                                        <i data-lucide="clock" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i>
-                                        ${f.last_sync_at ? new Date(f.last_sync_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Nie'}
-                                    </span>
-                                    <span style="display:flex; align-items:center; gap:5px;">
-                                        <i data-lucide="file-text" style="width:12px; height:12px; display:inline; vertical-align:middle;"></i>
-                                        ${f.file_count || 0} ${t('files')}
-                                    </span>
-                                </div>
-                                <span style="font-size:11px; padding:4px 10px; background:rgba(52,199,89,0.1); color:var(--success); border-radius:8px; font-weight:600;">
-                                    AKTIV
-                                </span>
-                            </div>
-                        </div>
-                    `).join('');
-                    html += `</div>`;
-                }
-
-                if (html === '') {
-                    container.innerHTML = `
-                        <div class="floating-card" style="text-align:center; padding:50px 30px;">
-                            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.15;"><i data-lucide="folder-plus" style="width:72px; height:72px;"></i></div>
-                            <h3 style="font-size:18px; margin-bottom:10px; font-weight:600;">Noch keine Drive-Quellen</h3>
-                            <p class="item-sub" style="margin-bottom:25px;">Verbinde deine Google Drive Ordner, um Notizen zu synchronisieren.</p>
-                            ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `<button class="ios-btn btn-small" style="margin-top: 15px;" onclick="openAddFolderSheet()">${t('add_folder')}</button>` : ''}
-                        </div>`;
-                } else {
-                    container.innerHTML = html;
-                }
+            if (!driveManager.authenticated) {
+                container.innerHTML = `
+                    <div class="floating-card" style="text-align:center; padding:50px 30px;">
+                        <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.15;"><i data-lucide="hard-drive" style="width:72px; height:72px;"></i></div>
+                        <h3 style="font-size:18px; margin-bottom:10px; font-weight:600;">Google Drive nicht verbunden</h3>
+                        <p class="item-sub" style="margin-bottom:25px;">Ein Admin muss Google Drive in den Einstellungen verbinden.</p>
+                        ${window.currentUser.is_super_admin ? `<button class="ios-btn" onclick="renderDriveAuthSettings()">${t('settings')}</button>` : ''}
+                    </div>`;
                 lucide.createIcons();
-            } catch (e) {
-                container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub" style="color:var(--danger);">${t('error_loading')}</p></div>`;
-                console.error(e);
+                return;
             }
+
+            await loadInitialDriveFiles();
         }
 
-
-        async function renderDriveFiles() {
+        async function loadInitialDriveFiles() {
             const container = document.getElementById('drive-content-container');
-            try {
-                const res = await fetch('/api/drive/files');
-                const files = await res.json();
-
-                if (currentView !== 'drive' || activeDriveTab !== 'files') return;
-
-                if (files.length === 0) {
-                    container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_files_found')}</p></div>`;
-                    return;
-                }
-
-                // Group files by subject
-                const filesBySubject = {};
-                files.forEach(f => {
-                    const subjectName = f.subject_name || 'Sonstiges';
-                    if (!filesBySubject[subjectName]) {
-                        filesBySubject[subjectName] = [];
-                    }
-                    filesBySubject[subjectName].push(f);
-                });
-
-                // Sort subjects alphabetically, but keep "Sonstiges" at the end
-                const sortedSubjects = Object.keys(filesBySubject).sort((a, b) => {
-                    if (a === 'Sonstiges') return 1;
-                    if (b === 'Sonstiges') return -1;
-                    return a.localeCompare(b);
-                });
-
-                // Build HTML with collapsible subject folders
-                let html = '';
-                sortedSubjects.forEach((subjectName, idx) => {
-                    const subjectFiles = filesBySubject[subjectName];
-                    const fileCount = subjectFiles.length;
-                    const subjectId = `subject-${subjectName.replace(/[^a-zA-Z0-9]/g, '-')}`;
-
-                    // Collapsible subject folder card
-                    html += `
-                        <div class="floating-card slide-in-bottom" style="padding: 16px; margin-bottom: 12px; cursor:pointer; animation-delay: ${idx * 0.05}s; animation-fill-mode: both;" onclick="toggleSubjectFolder('${subjectId}')">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="display:flex; align-items:center; gap:12px;">
-                                    <div class="account-item-icon" style="margin:0; width:40px; height:40px; background:rgba(0,113,227,0.05); color:var(--accent);">
-                                        <i data-lucide="folder" id="icon-${subjectId}"></i>
-                                    </div>
-                                    <div>
-                                        <div class="item-title">${subjectName}</div>
-                                        <div class="item-sub">${fileCount} ${fileCount === 1 ? 'Datei' : 'Dateien'}</div>
-                                    </div>
-                                </div>
-                                <i data-lucide="chevron-down" id="chevron-${subjectId}" style="width:20px; color:var(--text-sec); transition: transform 0.3s;"></i>
-                            </div>
-                        </div>
-                        
-                        <div id="${subjectId}" style="display:none; margin-bottom: 20px;">
-                    `;
-
-                    // Files in this subject
-                    html += subjectFiles.map(f => `
-                        <div class="list-item" style="margin-left: 0px;" onclick="viewDriveFile(${f.id}, '${f.filename.replace(/'/g, "\\'")}')">
-                            <div class="account-item-icon"><i data-lucide="file-text"></i></div>
-                            <div class="item-content">
-                                <div class="item-title">${f.filename}</div>
-                                <div class="item-sub">
-                                    ${f.parent_folder_name ? `<span style="color:var(--text-sec)">${f.parent_folder_name}</span> • ` : ''} 
-                                    ${f.owner_username ? `<span style="font-weight:500;">Von: ${f.owner_username}</span> • ` : ''}
-                                    ${(f.file_size / 1024 / 1024).toFixed(1)} MB
-                                </div>
-                            </div>
-                            <div class="sheet-close-btn" style="width:36px; height:36px; background:var(--tab-bg);" onclick="event.stopPropagation(); downloadDriveFile(${f.id})">
-                                 <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
-                            </div>
-                        </div>
-                    `).join('');
-
-                    html += `</div>`;
-                });
-
-                container.innerHTML = html;
-                lucide.createIcons();
-            } catch (e) {
-                container.innerHTML = `<p class="item-sub" style="text-align:center;">${t('error_loading')}</p>`;
-            }
+            const data = await driveManager.loadFiles();
+            renderDriveFileList(data.files, data.nextPageToken);
         }
 
-        function toggleSubjectFolder(subjectId) {
-            const folder = document.getElementById(subjectId);
-            const chevron = document.getElementById(`chevron-${subjectId}`);
-            const icon = document.getElementById(`icon-${subjectId}`);
+        async function loadMoreDriveFiles() {
+            const btn = document.querySelector('#drive-load-more-container button');
+            if (btn) btn.disabled = true;
 
-            if (folder.style.display === 'none') {
-                folder.style.display = 'block';
-                chevron.style.transform = 'rotate(180deg)';
-                icon.setAttribute('data-lucide', 'folder-open');
+            const data = await driveManager.loadMoreFiles();
+            renderDriveFileList(data.files, data.nextPageToken);
+
+            if (btn) btn.disabled = false;
+        }
+
+        function renderDriveFileList(files, nextPageToken) {
+            const container = document.getElementById('drive-content-container');
+            const loadMoreContainer = document.getElementById('drive-load-more-container');
+
+            if (!files || files.length === 0) {
+                container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_files_found')}</p></div>`;
+                loadMoreContainer.style.display = 'none';
+                return;
+            }
+
+            container.innerHTML = files.map((f, idx) => `
+                <div class="list-item slide-in-bottom" style="animation-delay: ${idx * 0.02}s; animation-fill-mode: both;" onclick="window.open('${f.webViewLink}', '_blank')">
+                    <div class="account-item-icon" style="background:var(--tab-bg); color:var(--accent);">
+                        <span style="font-size:20px;">${driveManager.getFileIcon(f.mimeType)}</span>
+                    </div>
+                    <div class="item-content">
+                        <div class="item-title">${f.name}</div>
+                        <div class="item-sub">
+                            ${driveManager.formatDate(f.modifiedTime)} • ${driveManager.formatFileSize(f.size)}
+                        </div>
+                    </div>
+                    <i data-lucide="external-link" style="width:16px; color:var(--text-sec); opacity:0.5;"></i>
+                </div>
+            `).join('');
+
+            if (nextPageToken) {
+                loadMoreContainer.style.display = 'block';
             } else {
-                folder.style.display = 'none';
-                chevron.style.transform = 'rotate(0deg)';
-                icon.setAttribute('data-lucide', 'folder');
+                loadMoreContainer.style.display = 'none';
             }
             lucide.createIcons();
         }
 
         async function handleDriveSearch(e) {
             const query = e.target.value.trim();
-            if (query.length < 3) {
-                if (query.length === 0) {
-                    if (activeDriveTab === 'folders') renderDriveFolders();
-                    else renderDriveFiles();
-                }
+            if (query.length < 2) {
+                if (query.length === 0) loadInitialDriveFiles();
                 return;
             }
 
             const container = document.getElementById('drive-content-container');
+            const loadMoreContainer = document.getElementById('drive-load-more-container');
+            loadMoreContainer.style.display = 'none';
 
-            // Show loading state
+            container.innerHTML = `<div style="text-align:center; padding:20px;"><i data-lucide="loader-2" class="spin"></i></div>`;
+            lucide.createIcons();
+
+            const files = await driveManager.searchFiles(query);
+            renderDriveFileList(files, null);
+        }
+
+
+        async function renderDriveAuthSettings() {
+            previousView = 'sub_super_admin';
+            currentView = 'sub_drive_auth';
+            setPageTitle('Google Drive Auth');
+            document.getElementById('header-back-btn').style.display = 'block';
+            document.getElementById('header-back-btn').onclick = () => renderSuperAdminDashboard();
+
+            const container = document.getElementById('app-container');
+            container.innerHTML = `<div style="text-align:center; padding:20px;"><i data-lucide="loader-2" class="spin"></i></div>`;
+            lucide.createIcons();
+
+            const isAuth = await driveManager.checkAuthStatus();
+
             container.innerHTML = `
-                <div style="text-align:center; padding:40px; color:var(--text-sec)">
-                    <div class="spinner-icon"><i data-lucide="loader-2" class="spin"></i></div>
-                    Suche nach "${query}"...
+                <div class="floating-card" style="padding: 24px;">
+                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+                        <div class="account-item-icon" style="width:56px; height:56px; background:rgba(0,113,227,0.1); color:var(--accent);">
+                            <i data-lucide="hard-drive" style="width:28px; height:28px;"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin:0; font-size:18px;">Google Drive Integration</h3>
+                            <p class="item-sub" style="margin:4px 0 0 0;">
+                                ${isAuth ? '<span style="color:var(--success); font-weight:600;">✓ Verbunden</span>' : '<span style="color:var(--danger); font-weight:600;">× Nicht verbunden</span>'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <p style="font-size:14px; line-height:1.6; color:var(--text-sec); margin-bottom:24px;">
+                        Verbinde einen Google Account, um alle darin enthaltenen Dateien für alle Nutzer dieser App lesbar zu machen. Die Dateien werden live über die API abgerufen und nicht lokal gespeichert.
+                    </p>
+
+                    ${isAuth ? `
+                        <button class="ios-btn btn-danger-light" onclick="driveManager.revokeAuth().then(() => renderDriveAuthSettings())">
+                            <i data-lucide="log-out" style="width:18px; margin-right:8px; vertical-align:middle;"></i>
+                            Verbindung trennen
+                        </button>
+                    ` : `
+                        <button class="ios-btn" onclick="driveManager.startOAuth()">
+                            <i data-lucide="log-in" style="width:18px; margin-right:8px; vertical-align:middle;"></i>
+                            Mit Google Drive verbinden
+                        </button>
+                    `}
+                </div>
+
+                <div class="floating-card" style="margin-top:20px; padding:20px; background:rgba(255,159,10,0.05); border:1px solid rgba(255,159,10,0.2);">
+                    <h4 style="margin:0 0 10px 0; color:#FF9F0A; display:flex; align-items:center; gap:8px;">
+                        <i data-lucide="alert-triangle" style="width:18px;"></i>
+                        Wichtiger Hinweis
+                    </h4>
+                    <ul style="font-size:13px; color:var(--text-sec); padding-left:20px; line-height:1.5;">
+                        <li style="margin-bottom:8px;">Die App hat nur <b>Lesezugriff</b> auf Dateien und Metadaten.</li>
+                        <li style="margin-bottom:8px;">Alle Nutzer der App können die Dateien des verbundenen Accounts sehen.</li>
+                        <li>Verwende am besten einen dedizierten Account oder teile nur die benötigten Ordner mit dem verbundenen Account.</li>
+                    </ul>
                 </div>
             `;
             lucide.createIcons();
-
-            try {
-                console.log('Searching for:', query);
-                const res = await fetch(`/api/drive/search?q=${encodeURIComponent(query)}`);
-
-                if (!res.ok) {
-                    const errorText = await res.text();
-                    console.error('Search failed:', res.status, errorText);
-                    container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub" style="color:var(--danger)">Suchfehler: ${res.status}</p></div>`;
-                    return;
-                }
-
-                const results = await res.json();
-                console.log('Search results:', results);
-
-                if (currentView !== 'drive') return;
-
-                if (!results || results.length === 0) {
-                    container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Keine Ergebnisse für "${query}"</p></div>`;
-                    return;
-                }
-
-                container.innerHTML = results.map(file => `
-                    <div class="list-item" onclick="viewDriveFile(${file.id || file.file_id}, '${(file.filename || '').replace(/'/g, "\\'")}')">
-                        <div class="account-item-icon" style="background:rgba(0,113,227,0.1); color:var(--accent);"><i data-lucide="file-search"></i></div>
-                        <div class="item-content">
-                            <div class="item-title">${file.filename || 'Unbekannt'}</div>
-                            <div class="item-sub">
-                                <span style="color:var(--accent)">${file.subject_name || 'Unbekannt'}</span> 
-                                ${file.parent_folder_name ? `• <span style="color:var(--text-sec)">${file.parent_folder_name}</span>` : ''} •
-                                <span style="color:var(--text-main); font-style:italic;">"${file.snippet || '...'}"</span>
-                                <div style="font-size:10px; margin-top:2px;">Gefunden in ${file.folder_name || '?'} von ${file.owner_username || '?'}</div>
-                            </div>
-                        </div>
-                        <div class="sheet-close-btn" style="width:36px; height:36px; background:var(--tab-bg);" onclick="event.stopPropagation(); downloadDriveFile(${file.id || file.file_id})">
-                            <i data-lucide="download" style="width:18px; color:var(--text-sec)"></i>
-                        </div>
-                    </div>
-                `).join('');
-                lucide.createIcons();
-            } catch (e) {
-                console.error('Search error:', e);
-                container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub" style="color:var(--danger)">Fehler: ${e.message}</p></div>`;
-            }
         }
 
         async function browseRootFolder(id, name, pushToHistory = true, googleFolderId = null) {
@@ -5321,48 +5154,7 @@
                             <p style="font-size:11px; color:var(--text-sec); margin-top:8px;">${t('direct_login_hint')}</p>
                         </div>
 
-                        <h4 style="margin:0 0 10px 20px; font-size:13px; color:var(--text-sec); text-transform:uppercase;">
-                            <i data-lucide="file-box" style="width:14px; margin-right:4px; vertical-align:middle;"></i>
-                            Paperless-NGX Integration
-                        </h4>
-                        <div class="floating-card" style="padding:20px; margin-bottom:25px;">
-                            <p style="font-size:13px; color:var(--text-sec); margin-bottom:15px;">
-                                Konfiguriere die Paperless-NGX Verbindung für diese Klasse. Alle Schüler können dann Dokumente hochladen und durchsuchen.
-                            </p>
-                            
-                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:8px; display:block;">Paperless URL</label>
-                            <input 
-                                type="url" 
-                                id="edit-paperless-url" 
-                                class="ios-input" 
-                                placeholder="https://paperless.example.com" 
-                                value="${c.paperless_url || ''}"
-                                style="margin-bottom:15px;"
-                            >
-                            
-                            <label style="font-size:12px; color:var(--text-sec); font-weight:600; text-transform:uppercase; margin-bottom:8px; display:block;">API Token</label>
-                            <input 
-                                type="password" 
-                                id="edit-paperless-token" 
-                                class="ios-input" 
-                                placeholder="${c.paperless_url ? '••••••••••••••••' : 'Token hier eingeben'}" 
-                                style="margin-bottom:15px; font-family:monospace;"
-                            >
-                            <p style="font-size:11px; color:var(--text-sec); margin-top:-10px; margin-bottom:15px;">
-                                Token aus Paperless-NGX: Einstellungen → API Tokens
-                            </p>
-                            
-                            <button 
-                                class="ios-btn btn-sec btn-small" 
-                                onclick="testPaperlessConnectionAdmin(${id})" 
-                                style="width:100%; margin-bottom:10px;"
-                            >
-                                <i data-lucide="wifi" style="width:14px; margin-right:6px;"></i>
-                                Verbindung testen
-                            </button>
-                            
-                            <div id="paperless-test-status-${id}" style="margin-top:10px;"></div>
-                        </div>
+
 
                         <button class="ios-btn" onclick="saveClassSettings(${id})">${t('save_btn')}</button>
                     </div>
@@ -5379,16 +5171,12 @@
             const name = document.getElementById('edit-class-name').value.trim();
             const code = document.getElementById('edit-class-code').value.trim();
             const chatEnabled = document.getElementById('toggle-chat-enabled').classList.contains('active');
-            const paperlessUrl = document.getElementById('edit-paperless-url').value.trim();
-            const paperlessToken = document.getElementById('edit-paperless-token').value.trim();
 
             if (!code) { alert(t('code_required')); return; }
 
             const body = {
                 code,
-                chat_enabled: chatEnabled,
-                paperless_url: paperlessUrl || null,
-                paperless_token: paperlessToken || null
+                chat_enabled: chatEnabled
             };
             if (window.currentUser.is_super_admin) body.name = name;
 
@@ -5551,6 +5339,11 @@
                     <div class="account-item" onclick="renderLegalSettings()" style="padding:12px 0;">
                             <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="shield-check"></i></div>
                             <div class="account-item-text">Rechtliches & Datenschutz</div>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
+                    <div class="account-item" onclick="renderDriveAuthSettings()" style="padding:12px 0;">
+                            <div class="account-item-icon" style="background:#E5E5EA; color:#8E8E93;"><i data-lucide="hard-drive"></i></div>
+                            <div class="account-item-text">Google Drive Integration</div>
                             <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
                     <div class="account-item" onclick="renderBackupManagement()" style="padding:12px 0;">

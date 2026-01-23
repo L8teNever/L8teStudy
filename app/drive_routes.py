@@ -199,37 +199,29 @@ def update_folder(folder_id):
 @drive_bp.route('/files', methods=['GET'])
 @login_required
 def get_files():
-    """Get files from all selected folders"""
+    """Get ALL files from the authenticated Google Drive account"""
     client = DriveOAuthClient()
     if not client.is_authenticated():
         return jsonify({'success': False, 'message': 'Not authenticated'}), 401
     
-    # Get all active folders
-    folders = DriveFolder.query.filter_by(is_active=True).all()
+    page_token = request.args.get('pageToken')
     
-    all_files = []
-    for folder in folders:
-        files, _ = client.list_files_in_folder(
-            folder.drive_folder_id,
-            include_subfolders=folder.include_subfolders
-        )
-        
-        if files:
-            for file in files:
-                file['folder_name'] = folder.folder_name
-                file['folder_id'] = folder.id
-                file['subject_id'] = folder.subject_id
-            all_files.extend(files)
+    # Get all files from entire Drive (not just specific folders)
+    files, next_page_token = client.list_all_files(page_token=page_token)
+    
+    if files is None:
+        return jsonify({'success': False, 'message': 'Failed to fetch files'}), 500
     
     return jsonify({
         'success': True,
-        'files': all_files
+        'files': files,
+        'nextPageToken': next_page_token
     })
 
 @drive_bp.route('/search', methods=['GET'])
 @login_required
 def search_files():
-    """Search files in Drive"""
+    """Search ALL files in the entire Drive"""
     query = request.args.get('q', '')
     
     if not query:
@@ -239,23 +231,11 @@ def search_files():
     if not client.is_authenticated():
         return jsonify({'success': False, 'message': 'Not authenticated'}), 401
     
-    # Get folder IDs to search in
-    folders = DriveFolder.query.filter_by(is_active=True).all()
-    folder_ids = [f.drive_folder_id for f in folders]
-    
-    files = client.search_files(query, folder_ids=folder_ids if folder_ids else None)
+    # Search in entire Drive (no folder restrictions)
+    files = client.search_files(query, folder_ids=None)
     
     if files is None:
         return jsonify({'success': False, 'message': 'Search failed'}), 500
-    
-    # Add folder info to results
-    for file in files:
-        # Find which folder this file belongs to
-        for folder in folders:
-            if folder.drive_folder_id in file.get('parents', []):
-                file['folder_name'] = folder.folder_name
-                file['subject_id'] = folder.subject_id
-                break
     
     return jsonify({
         'success': True,

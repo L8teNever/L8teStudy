@@ -175,6 +175,29 @@ class DriveOAuthClient:
             current_app.logger.error(f"Drive API error: {error}")
             return None, None
     
+    def list_all_files(self, page_size=100, page_token=None):
+        """List ALL files from the entire Drive (excluding folders and trashed files)"""
+        service = self.get_service()
+        if not service:
+            return None, None
+        
+        try:
+            # Query: All files that are not folders and not trashed
+            query = "mimeType!='application/vnd.google-apps.folder' and trashed=false"
+            
+            results = service.files().list(
+                q=query,
+                pageSize=page_size,
+                pageToken=page_token,
+                fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink, owners)",
+                orderBy="modifiedTime desc"
+            ).execute()
+            
+            return results.get('files', []), results.get('nextPageToken')
+        except HttpError as error:
+            current_app.logger.error(f"Drive API error: {error}")
+            return None, None
+    
     def search_files(self, query_text, folder_ids=None, page_size=50):
         """Search files by name or content"""
         service = self.get_service()

@@ -2,21 +2,15 @@
 
 ## Übersicht
 
-Die L8teStudy App nutzt jetzt **Google Drive OAuth 2.0** für die Integration mit Google Drive. Admins können Ordner auswählen, die allen Nutzern angezeigt werden, und die App nutzt die Google Drive API für Live-Zugriff und Suche.
+Die L8teStudy App nutzt **Google Drive OAuth 2.0** für direkten Zugriff auf Google Drive. Nach der OAuth-Anmeldung werden **automatisch ALLE Dateien** vom verbundenen Google Account angezeigt.
 
-## Änderungen gegenüber der vorherigen Version
+## ✨ Hauptmerkmale
 
-### Entfernt
-- ❌ Paperless-NGX Integration komplett entfernt
-- ❌ Service Account basierte Drive-Integration entfernt
-- ❌ Lokale Datei-Verschlüsselung und Caching entfernt
-
-### Neu hinzugefügt
-- ✅ Google Drive OAuth 2.0 Authentication
-- ✅ Admin-Interface zur Ordnerauswahl
-- ✅ Live-Zugriff auf Drive-Dateien über API
-- ✅ Google Drive Search API Integration (Name + Inhalt)
-- ✅ Subject-Mapping für Drive-Ordner
+- ✅ **Automatische Anzeige aller Drive-Dateien** - Keine manuelle Ordnerauswahl nötig
+- ✅ **Live-Zugriff** über Google Drive API
+- ✅ **Erweiterte Suche** - Suche nach Dateinamen UND Inhalten
+- ✅ **Pagination** - Effiziente Anzeige auch bei vielen Dateien
+- ✅ **Direkter Zugriff** - Dateien öffnen sich direkt in Google Drive
 
 ## Setup-Anleitung
 
@@ -58,7 +52,7 @@ DATABASE_URL=sqlite:///instance/l8testudy.db
 
 ### 3. Docker Compose Setup
 
-Die `docker-compose.yml` ist bereits aktualisiert. Stelle sicher, dass deine `.env` Datei die richtigen Werte enthält:
+Die `docker-compose.yml` ist bereits konfiguriert:
 
 ```yaml
 environment:
@@ -89,40 +83,23 @@ docker exec l8testudy flask db upgrade
 
 ## Verwendung
 
-### Als Super Admin
-
-#### 1. Google Drive verbinden
+### Als Super Admin - Einmalige Einrichtung
 
 1. Gehe zu **Einstellungen** → **Drive Integration**
 2. Klicke auf **"Mit Google Drive verbinden"**
 3. Ein Popup öffnet sich für die Google OAuth-Anmeldung
-4. Melde dich mit dem Google-Account an, der Zugriff auf die Drive-Dateien hat
+4. Melde dich mit dem Google-Account an, dessen Drive-Dateien angezeigt werden sollen
 5. Erlaube die benötigten Berechtigungen (Read-only Zugriff)
 6. Das Popup schließt sich automatisch nach erfolgreicher Authentifizierung
-
-#### 2. Ordner auswählen
-
-1. Nach erfolgreicher Verbindung kannst du Ordner auswählen
-2. Klicke auf **"Ordner hinzufügen"**
-3. Navigiere durch deine Drive-Struktur
-4. Wähle einen Ordner aus
-5. Optional: Weise dem Ordner ein Fach (Subject) zu
-6. Optional: Aktiviere "Unterordner einbeziehen"
-7. Klicke auf **"Hinzufügen"**
-
-#### 3. Ordner verwalten
-
-- **Bearbeiten**: Ändere Subject-Zuordnung oder Unterordner-Einstellung
-- **Deaktivieren**: Blende einen Ordner temporär aus
-- **Löschen**: Entferne einen Ordner komplett aus der Anzeige
+7. **Fertig!** Alle Dateien vom verbundenen Google Account sind jetzt verfügbar
 
 ### Als Schüler/Nutzer
 
 1. Gehe zur **Drive-Ansicht** im Hauptmenü
-2. Alle von Admins freigegebenen Dateien werden angezeigt
+2. **Alle Dateien** vom verbundenen Google Account werden angezeigt
 3. **Suche**: Nutze die Suchfunktion, um nach Dateinamen oder Inhalten zu suchen
-4. **Filter**: Filtere nach Fach (Subject)
-5. **Öffnen**: Klicke auf eine Datei, um sie in Google Drive zu öffnen
+4. **Öffnen**: Klicke auf eine Datei, um sie in Google Drive zu öffnen
+5. **Mehr laden**: Scrolle nach unten, um weitere Dateien zu laden (Pagination)
 
 ## API Endpoints
 
@@ -133,19 +110,19 @@ docker exec l8testudy flask db upgrade
 - `GET /api/drive/auth/callback` - OAuth Callback
 - `POST /api/drive/auth/revoke` - Trenne Verbindung
 
-### Folder Management (Admin only)
+### File Access
+
+- `GET /api/drive/files?pageToken=<token>` - Liste alle Dateien (mit Pagination)
+- `GET /api/drive/search?q=<query>` - Suche Dateien (Name + Inhalt)
+- `GET /api/drive/file/<file_id>` - Hole Datei-Metadaten
+
+### Folder Management (Optional, für zukünftige Erweiterungen)
 
 - `GET /api/drive/browse?parent_id=<id>` - Browse Drive-Ordner
 - `GET /api/drive/folders` - Liste ausgewählte Ordner
 - `POST /api/drive/folders` - Füge Ordner hinzu
 - `PUT /api/drive/folders/<id>` - Aktualisiere Ordner
 - `DELETE /api/drive/folders/<id>` - Entferne Ordner
-
-### File Access
-
-- `GET /api/drive/files` - Liste alle Dateien aus ausgewählten Ordnern
-- `GET /api/drive/search?q=<query>` - Suche Dateien (Name + Inhalt)
-- `GET /api/drive/file/<file_id>` - Hole Datei-Metadaten
 
 ## Sicherheit
 
@@ -155,9 +132,8 @@ Alle OAuth-Tokens (Access Token, Refresh Token) werden verschlüsselt in der Dat
 
 ### Berechtigungen
 
-- **Super Admin**: Kann OAuth verbinden/trennen und Ordner verwalten
-- **Admin**: Kann Ordner verwalten (aber nicht OAuth verbinden/trennen)
-- **Schüler**: Können nur Dateien ansehen und suchen
+- **Super Admin**: Kann OAuth verbinden/trennen
+- **Alle Nutzer**: Können Dateien ansehen, suchen und öffnen
 
 ### Google Drive Berechtigungen
 
@@ -195,21 +171,47 @@ Die App erneuert Access Tokens automatisch mit dem Refresh Token. Falls dies feh
 1. Trenne die Verbindung (Revoke)
 2. Verbinde erneut
 
+### Zu viele Dateien / Langsames Laden
+
+Die App nutzt Pagination (100 Dateien pro Seite). Bei sehr vielen Dateien:
+- Nutze die Suchfunktion, um spezifische Dateien zu finden
+- Die neuesten Dateien werden zuerst angezeigt
+
 ## Datenschutz
 
 - Die App speichert **keine Dateiinhalte** lokal
 - Alle Zugriffe erfolgen live über die Google Drive API
 - OAuth-Tokens werden verschlüsselt gespeichert
-- Nur Metadaten (Ordner-IDs, Namen) werden in der Datenbank gespeichert
+- Nur Metadaten werden temporär im Browser gecacht
 
-## Migration von alter Drive-Integration
+## Welcher Google Account?
 
-Falls du die alte Service Account basierte Integration genutzt hast:
+Die App zeigt die Dateien des Google Accounts an, mit dem der OAuth-Flow durchgeführt wurde. Dies ist typischerweise:
+- Ein Lehrer-Account mit Zugriff auf Unterrichtsmaterialien
+- Ein Schul-Account mit geteilten Ressourcen
+- Ein dedizierter Account nur für L8teStudy
 
-1. **Backup**: Erstelle ein Backup deiner Datenbank
-2. **Migration**: Die Migration entfernt automatisch alte Drive-Tabellen
-3. **Neu einrichten**: Folge der Setup-Anleitung oben
-4. **Ordner neu auswählen**: Wähle die gewünschten Ordner erneut aus
+**Tipp**: Erstelle einen separaten Google Account speziell für L8teStudy und teile die relevanten Ordner mit diesem Account.
+
+## FAQ
+
+### Können Schüler eigene Dateien hochladen?
+
+Nein, die App hat nur Lesezugriff. Schüler können Dateien ansehen und öffnen, aber nicht hochladen oder ändern.
+
+### Werden gelöschte Dateien angezeigt?
+
+Nein, Dateien im Papierkorb werden automatisch ausgeblendet.
+
+### Werden Google Docs/Sheets/Slides unterstützt?
+
+Ja! Alle Google Workspace Dateitypen werden angezeigt und können direkt in Google Drive geöffnet werden.
+
+### Kann ich mehrere Google Accounts verbinden?
+
+Aktuell wird nur ein Google Account gleichzeitig unterstützt. Um den Account zu wechseln:
+1. Trenne die aktuelle Verbindung
+2. Verbinde mit einem anderen Account
 
 ## Support
 
@@ -225,7 +227,7 @@ Bei Problemen:
 
 - ✅ Paperless-NGX Integration entfernt
 - ✅ Google Drive OAuth 2.0 Integration hinzugefügt
-- ✅ Admin Ordnerauswahl implementiert
+- ✅ **Automatische Anzeige aller Drive-Dateien**
 - ✅ Live Drive API Integration
 - ✅ Google Drive Search (Name + Inhalt)
-- ✅ Subject-Mapping für Drive-Ordner
+- ✅ Pagination Support

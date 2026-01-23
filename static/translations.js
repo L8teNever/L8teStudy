@@ -275,7 +275,8 @@ const translations = {
         new_mapping: "Neue Zuordnung",
         mapping_hint: "Ordne Ordnernamen (z.B. 'Ph') dem Fach 'Physik' zu.",
         found_in: "Gefunden in",
-        by: "von"
+        by: "von",
+        load_more: "Mehr laden"
     },
     en: {
         home: "Home",
@@ -553,6 +554,7 @@ const translations = {
         new_mapping: "New Mapping",
         mapping_hint: "Map folder names (e.g. 'Ph') to 'Physics'.",
         found_in: "Found in",
-        by: "by"
+        by: "by",
+        load_more: "Load more"
     }
 };

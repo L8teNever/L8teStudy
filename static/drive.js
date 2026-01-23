@@ -1,21 +1,18 @@
 /**
  * Google Drive OAuth Integration
- * Handles Drive authentication, folder selection, and file display
+ * Simplified: Shows ALL files from the authenticated Google Drive account
  */
 
 class DriveManager {
     constructor() {
         this.authenticated = false;
-        this.selectedFolders = [];
         this.files = [];
+        this.nextPageToken = null;
         this.init();
     }
 
     async init() {
         await this.checkAuthStatus();
-        if (this.authenticated) {
-            await this.loadSelectedFolders();
-        }
     }
 
     async checkAuthStatus() {
@@ -55,7 +52,6 @@ class DriveManager {
                         this.checkAuthStatus().then(() => {
                             if (this.authenticated) {
                                 showNotification('Google Drive erfolgreich verbunden!', 'success');
-                                this.loadSelectedFolders();
                             }
                         });
                     }
@@ -79,7 +75,6 @@ class DriveManager {
 
             if (response.ok) {
                 this.authenticated = false;
-                this.selectedFolders = [];
                 this.files = [];
                 showNotification('Google Drive Verbindung getrennt', 'success');
             }
@@ -89,114 +84,42 @@ class DriveManager {
         }
     }
 
-    async browseFolders(parentId = 'root') {
+    async loadFiles(pageToken = null) {
         try {
-            const response = await fetch(`/api/drive/browse?parent_id=${parentId}`);
+            let url = '/api/drive/files';
+            if (pageToken) {
+                url += `?pageToken=${pageToken}`;
+            }
+
+            const response = await fetch(url);
             const data = await response.json();
 
             if (data.success) {
-                return data.folders;
+                if (pageToken) {
+                    // Append to existing files (pagination)
+                    this.files = this.files.concat(data.files);
+                } else {
+                    // Replace files (initial load)
+                    this.files = data.files;
+                }
+                this.nextPageToken = data.nextPageToken;
+                return {
+                    files: this.files,
+                    nextPageToken: this.nextPageToken
+                };
             }
-            return [];
-        } catch (error) {
-            console.error('Browse failed:', error);
-            return [];
-        }
-    }
-
-    async loadSelectedFolders() {
-        try {
-            const response = await fetch('/api/drive/folders');
-            this.selectedFolders = await response.json();
-            return this.selectedFolders;
-        } catch (error) {
-            console.error('Failed to load folders:', error);
-            return [];
-        }
-    }
-
-    async addFolder(driveFolderId, folderName, subjectId = null, includeSubfolders = true) {
-        try {
-            const response = await fetch('/api/drive/folders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    drive_folder_id: driveFolderId,
-                    folder_name: folderName,
-                    subject_id: subjectId,
-                    include_subfolders: includeSubfolders
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                await this.loadSelectedFolders();
-                showNotification('Ordner hinzugefügt', 'success');
-                return true;
-            } else {
-                showNotification(data.message || 'Fehler beim Hinzufügen', 'error');
-                return false;
-            }
-        } catch (error) {
-            console.error('Add folder failed:', error);
-            showNotification('Fehler beim Hinzufügen', 'error');
-            return false;
-        }
-    }
-
-    async removeFolder(folderId) {
-        if (!confirm('Ordner wirklich entfernen?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/drive/folders/${folderId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                await this.loadSelectedFolders();
-                showNotification('Ordner entfernt', 'success');
-            }
-        } catch (error) {
-            console.error('Remove folder failed:', error);
-            showNotification('Fehler beim Entfernen', 'error');
-        }
-    }
-
-    async updateFolder(folderId, updates) {
-        try {
-            const response = await fetch(`/api/drive/folders/${folderId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updates)
-            });
-
-            if (response.ok) {
-                await this.loadSelectedFolders();
-                showNotification('Ordner aktualisiert', 'success');
-            }
-        } catch (error) {
-            console.error('Update folder failed:', error);
-            showNotification('Fehler beim Aktualisieren', 'error');
-        }
-    }
-
-    async loadFiles() {
-        try {
-            const response = await fetch('/api/drive/files');
-            const data = await response.json();
-
-            if (data.success) {
-                this.files = data.files;
-                return this.files;
-            }
-            return [];
+            return { files: [], nextPageToken: null };
         } catch (error) {
             console.error('Failed to load files:', error);
-            return [];
+            return { files: [], nextPageToken: null };
         }
+    }
+
+    async loadMoreFiles() {
+        if (!this.nextPageToken) {
+            return null;
+        }
+        return await this.loadFiles(this.nextPageToken);
     }
 
     async searchFiles(query) {
