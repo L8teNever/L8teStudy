@@ -277,6 +277,7 @@ const translations = {
         found_in: "Gefunden in",
         by: "von",
         load_more: "Mehr laden",
+        back_to_root: "Zurück zum Hauptverzeichnis",
         mealplan: "Essensplan",
         upload_mealplan_title: "Essensplan hochladen"
     },
@@ -558,6 +559,7 @@ const translations = {
         found_in: "Found in",
         by: "by",
         load_more: "Load more",
+        back_to_root: "Back to root",
         mealplan: "Meal Plan",
         upload_mealplan_title: "Upload Meal Plan"
     }

@@ -178,24 +178,26 @@ class DriveOAuthClient:
         
         return build('drive', 'v3', credentials=credentials)
     
-    def list_folders(self, parent_id='root', page_size=100):
-        """List folders in Drive"""
+    def list_items(self, parent_id='root', page_size=100, page_token=None):
+        """List both folders and files in a parent directory"""
         service = self.get_service()
         if not service:
-            return None
+            return None, None
         
         try:
-            query = f"'{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+            query = f"'{parent_id}' in parents and trashed=false"
             results = service.files().list(
                 q=query,
                 pageSize=page_size,
-                fields="files(id, name, parents, webViewLink, modifiedTime)"
+                pageToken=page_token,
+                fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink, owners)",
+                orderBy="folder, name"
             ).execute()
             
-            return results.get('files', [])
+            return results.get('files', []), results.get('nextPageToken')
         except HttpError as error:
             current_app.logger.error(f"Drive API error: {error}")
-            return None
+            return None, None
     
     def list_files_in_folder(self, folder_id, page_size=100, page_token=None, include_subfolders=True):
         """List all files in a folder (and optionally subfolders)"""

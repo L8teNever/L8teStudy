@@ -99,10 +99,15 @@ def browse_folders():
     if not client.is_authenticated():
         return jsonify({'success': False, 'message': 'Not authenticated'}), 401
     
-    folders = client.list_folders(parent_id)
+    # We use list_items now, but filter for folders if needed, 
+    # though usually browse is for picking folders anyway.
+    items, _ = client.list_items(parent_id)
     
-    if folders is None:
+    if items is None:
         return jsonify({'success': False, 'message': 'Failed to fetch folders'}), 500
+    
+    # Filter for folders only for the picker
+    folders = [i for i in items if i['mimeType'] == 'application/vnd.google-apps.folder']
     
     return jsonify({
         'success': True,
@@ -207,23 +212,35 @@ def update_folder(folder_id):
 @drive_bp.route('/files', methods=['GET'])
 @login_required
 def get_files():
-    """Get ALL files from the authenticated Google Drive account"""
+    """Get files and folders from the authenticated Google Drive account"""
     client = DriveOAuthClient()
     if not client.is_authenticated():
         return jsonify({'success': False, 'message': 'Not authenticated'}), 401
     
+    parent_id = request.args.get('parent_id', 'root')
     page_token = request.args.get('pageToken')
     
-    # Get all files from entire Drive (not just specific folders)
-    files, next_page_token = client.list_all_files(page_token=page_token)
+    # Get items in parent (or root)
+    items, next_page_token = client.list_items(parent_id=parent_id, page_token=page_token)
     
-    if files is None:
-        return jsonify({'success': False, 'message': 'Failed to fetch files'}), 500
+    if items is None:
+        return jsonify({'success': False, 'message': 'Failed to fetch items'}), 500
+    
+    # Get folder mappings from DB to provide "friendly names"
+    folders_db = DriveFolder.query.all()
+    mappings = {f.drive_folder_id: f.folder_name for f in folders_db}
+    
+    # Apply friendly names if available
+    for item in items:
+        if item['id'] in mappings:
+            item['original_name'] = item['name']
+            item['name'] = mappings[item['id']]
     
     return jsonify({
         'success': True,
-        'files': files,
-        'nextPageToken': next_page_token
+        'files': items, # Keep key name 'files' for frontend compatibility
+        'nextPageToken': next_page_token,
+        'parent_id': parent_id
     })
 
 @drive_bp.route('/search', methods=['GET'])
@@ -244,6 +261,16 @@ def search_files():
     
     if files is None:
         return jsonify({'success': False, 'message': 'Search failed'}), 500
+    
+    # Get folder mappings from DB to provide "friendly names"
+    folders_db = DriveFolder.query.all()
+    mappings = {f.drive_folder_id: f.folder_name for f in folders_db}
+    
+    # Apply friendly names if available
+    for item in files:
+        if item['id'] in mappings:
+            item['original_name'] = item['name']
+            item['name'] = mappings[item['id']]
     
     return jsonify({
         'success': True,

@@ -8,6 +8,8 @@ class DriveManager {
         this.authenticated = false;
         this.files = [];
         this.nextPageToken = null;
+        this.currentParentId = 'root';
+        this.history = []; // For breadcrumbs
         this.init();
     }
 
@@ -85,11 +87,12 @@ class DriveManager {
         }
     }
 
-    async loadFiles(pageToken = null) {
+    async loadFiles(parentId = 'root', pageToken = null) {
         try {
-            let url = '/api/drive/files';
+            this.currentParentId = parentId;
+            let url = `/api/drive/files?parent_id=${parentId}`;
             if (pageToken) {
-                url += `?pageToken=${pageToken}`;
+                url += `&pageToken=${pageToken}`;
             }
 
             const response = await fetch(url);
@@ -97,16 +100,15 @@ class DriveManager {
 
             if (data.success) {
                 if (pageToken) {
-                    // Append to existing files (pagination)
                     this.files = this.files.concat(data.files);
                 } else {
-                    // Replace files (initial load)
                     this.files = data.files;
                 }
                 this.nextPageToken = data.nextPageToken;
                 return {
                     files: this.files,
-                    nextPageToken: this.nextPageToken
+                    nextPageToken: this.nextPageToken,
+                    parentId: parentId
                 };
             }
             return { files: [], nextPageToken: null };
@@ -120,7 +122,7 @@ class DriveManager {
         if (!this.nextPageToken) {
             return null;
         }
-        return await this.loadFiles(this.nextPageToken);
+        return await this.loadFiles(this.currentParentId, this.nextPageToken);
     }
 
     async searchFiles(query) {

@@ -2534,6 +2534,9 @@
             const container = document.getElementById('app-container');
             container.innerHTML = `
                 <div class="floating-card" style="margin-bottom: 20px; padding: 12px 16px;">
+                    <div id="drive-breadcrumb" style="font-size: 13px; color: var(--text-sec); margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+                        <span onclick="loadInitialDriveFiles()" style="cursor:pointer; color:var(--accent); font-weight:600;">Drive</span>
+                    </div>
                     <div class="search-container active" style="width:100%; box-shadow:none; border:none; background:var(--tab-bg); height: 40px; min-height: 40px;">
                         <div class="search-icon-box" style="min-width: 40px; height: 40px;"><i data-lucide="search" style="width:18px"></i></div>
                         <input type="text" id="drive-search-input" class="search-input" style="opacity:1; transform:none; font-size: 15px;" placeholder="${t('search_drive')}" onkeyup="handleDriveSearch(event)">
@@ -2574,8 +2577,52 @@
 
         async function loadInitialDriveFiles() {
             const container = document.getElementById('drive-content-container');
-            const data = await driveManager.loadFiles();
+            const data = await driveManager.loadFiles('root');
+            driveManager.history = []; // Reset history at root
             renderDriveFileList(data.files, data.nextPageToken);
+            updateDriveBreadcrumb();
+        }
+
+        async function openDriveFolder(folderId, folderName) {
+            const btn = document.querySelector('#drive-load-more-container button');
+            if (btn) btn.disabled = true;
+
+            const data = await driveManager.loadFiles(folderId);
+
+            // Add to history
+            driveManager.history.push({ id: folderId, name: folderName });
+
+            renderDriveFileList(data.files, data.nextPageToken);
+            updateDriveBreadcrumb();
+
+            if (btn) btn.disabled = false;
+        }
+
+        function updateDriveBreadcrumb() {
+            const bc = document.getElementById('drive-breadcrumb');
+            if (!bc) return;
+
+            let html = `<span onclick="loadInitialDriveFiles()" style="cursor:pointer; color:var(--accent); font-weight:600;">Drive</span>`;
+
+            driveManager.history.forEach((crumb, idx) => {
+                html += ` <i data-lucide="chevron-right" style="width:12px; opacity:0.5"></i> `;
+                if (idx === driveManager.history.length - 1) {
+                    html += `<span style="font-weight:600;">${crumb.name}</span>`;
+                } else {
+                    html += `<span onclick="navigateToHistory(${idx})" style="cursor:pointer; color:var(--accent); font-weight:600;">${crumb.name}</span>`;
+                }
+            });
+
+            bc.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        async function navigateToHistory(index) {
+            const target = driveManager.history[index];
+            driveManager.history = driveManager.history.slice(0, index + 1);
+            const data = await driveManager.loadFiles(target.id);
+            renderDriveFileList(data.files, data.nextPageToken);
+            updateDriveBreadcrumb();
         }
 
         async function loadMoreDriveFiles() {
@@ -2583,35 +2630,49 @@
             if (btn) btn.disabled = true;
 
             const data = await driveManager.loadMoreFiles();
-            renderDriveFileList(data.files, data.nextPageToken);
+            renderDriveFileList(data.files, data.nextPageToken, true); // true means append
 
             if (btn) btn.disabled = false;
         }
 
-        function renderDriveFileList(files, nextPageToken) {
+        function renderDriveFileList(files, nextPageToken, append = false) {
             const container = document.getElementById('drive-content-container');
             const loadMoreContainer = document.getElementById('drive-load-more-container');
 
             if (!files || files.length === 0) {
-                container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_files_found')}</p></div>`;
+                if (!append) container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">${t('no_files_found')}</p></div>`;
                 loadMoreContainer.style.display = 'none';
                 return;
             }
 
-            container.innerHTML = files.map((f, idx) => `
-                <div class="list-item slide-in-bottom" style="animation-delay: ${idx * 0.02}s; animation-fill-mode: both;" onclick="window.open('${f.webViewLink}', '_blank')">
-                    <div class="account-item-icon" style="background:var(--tab-bg); color:var(--accent);">
-                        <span style="font-size:20px;">${driveManager.getFileIcon(f.mimeType)}</span>
-                    </div>
-                    <div class="item-content">
-                        <div class="item-title">${f.name}</div>
-                        <div class="item-sub">
-                            ${driveManager.formatDate(f.modifiedTime)} • ${driveManager.formatFileSize(f.size)}
+            const html = files.map((f, idx) => {
+                const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
+                const clickAction = isFolder
+                    ? `openDriveFolder('${f.id}', '${f.name.replace(/'/g, "\\'")}')`
+                    : `window.open('${f.webViewLink}', '_blank')`;
+                const icon = driveManager.getFileIcon(f.mimeType);
+
+                return `
+                    <div class="list-item slide-in-bottom" style="animation-delay: ${idx * 0.02}s; animation-fill-mode: both;" onclick="${clickAction}">
+                        <div class="account-item-icon" style="background:var(--tab-bg); color:var(--accent);">
+                            <span style="font-size:20px;">${icon}</span>
                         </div>
+                        <div class="item-content">
+                            <div class="item-title">${f.name}</div>
+                            <div class="item-sub">
+                                ${driveManager.formatDate(f.modifiedTime)} ${f.size ? `• ${driveManager.formatFileSize(f.size)}` : ''}
+                            </div>
+                        </div>
+                        <i data-lucide="${isFolder ? 'chevron-right' : 'external-link'}" style="width:16px; color:var(--text-sec); opacity:0.5;"></i>
                     </div>
-                    <i data-lucide="external-link" style="width:16px; color:var(--text-sec); opacity:0.5;"></i>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+
+            if (append) {
+                container.insertAdjacentHTML('beforeend', html);
+            } else {
+                container.innerHTML = html;
+            }
 
             if (nextPageToken) {
                 loadMoreContainer.style.display = 'block';
@@ -2693,6 +2754,16 @@
                     `}
                 </div>
 
+                <div id="drive-mappings-container" class="floating-card" style="margin-top:20px; padding:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h4 style="margin:0;">Ordner-Namen verknüpfen</h4>
+                        ${isAuth ? `<button class="ios-btn btn-small" onclick="openAddMappingSheet()">Verknüpfung hinzufügen</button>` : ''}
+                    </div>
+                    <div id="drive-mappings-list">
+                        <p class="item-sub" style="text-align:center; padding:20px;">Lade Verknüpfungen...</p>
+                    </div>
+                </div>
+
                 <div class="floating-card" style="margin-top:20px; padding:20px; background:rgba(255,159,10,0.05); border:1px solid rgba(255,159,10,0.2);">
                     <h4 style="margin:0 0 10px 0; color:#FF9F0A; display:flex; align-items:center; gap:8px;">
                         <i data-lucide="alert-triangle" style="width:18px;"></i>
@@ -2706,6 +2777,134 @@
                 </div>
             `;
             lucide.createIcons();
+            if (isAuth) renderDriveMappings();
+        }
+
+        async function renderDriveMappings() {
+            const list = document.getElementById('drive-mappings-list');
+            try {
+                const res = await fetch('/api/drive/folders');
+                const mappings = await res.json();
+
+                if (mappings.length === 0) {
+                    list.innerHTML = `<p class="item-sub" style="text-align:center; padding:20px;">Keine Verknüpfungen vorhanden. Alle Ordner werden mit ihrem Original-Namen angezeigt.</p>`;
+                    return;
+                }
+
+                list.innerHTML = mappings.map(m => `
+                    <div class="list-item" style="padding:12px 0;">
+                        <div class="account-item-icon" style="width:36px; height:36px; border-radius:10px;">
+                            <i data-lucide="folder" style="width:18px;"></i>
+                        </div>
+                        <div class="item-content">
+                            <div class="item-title" style="font-size:15px;">${m.folder_name}</div>
+                            <div class="item-sub" style="font-size:12px;">ID: ${m.drive_folder_id.substring(0, 10)}...</div>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="ios-btn btn-small btn-sec" style="padding:4px 10px; width:auto; font-size:12px;" onclick="deleteDriveMapping(${m.id})">Entfernen</button>
+                        </div>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } catch (e) {
+                list.innerHTML = `<p class="item-sub" style="color:var(--danger); text-align:center;">Fehler beim Laden.</p>`;
+            }
+        }
+
+        async function openAddMappingSheet(parentId = 'root') {
+            const html = `
+                <div class="sheet-header"><h3>Ordner verknüpfen</h3><div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div></div>
+                <div style="padding-bottom: 20px;">
+                    <p class="item-sub" style="margin-bottom:15px;">Wähle einen Ordner aus Google Drive aus, um ihm einen eigenen Namen zu geben.</p>
+                    <div id="mapping-browser" class="picker-options" style="display:block; max-height:300px; overflow-y:auto; margin-bottom:20px;">
+                        <div style="text-align:center; padding:20px;"><i data-lucide="loader-2" class="spin"></i></div>
+                    </div>
+                    <div id="mapping-form" style="display:none;">
+                        <label class="item-sub" style="display:block; margin-bottom:8px;">Name in der App:</label>
+                        <input type="text" id="mapping-display-name" class="ios-input" placeholder="Anzeigename">
+                        <input type="hidden" id="mapping-folder-id">
+                        <input type="hidden" id="mapping-original-name">
+                        <button class="ios-btn" onclick="submitDriveMapping()">Verknüpfung speichern</button>
+                    </div>
+                </div>
+            `;
+            openSheet(html);
+            lucide.createIcons();
+            loadMappingBrowser(parentId);
+        }
+
+        async function loadMappingBrowser(parentId) {
+            const browser = document.getElementById('mapping-browser');
+            try {
+                const res = await fetch(`/api/drive/browse?parent_id=${parentId}`);
+                const data = await res.json();
+
+                let html = '';
+                if (parentId !== 'root') {
+                    html += `<div class="picker-option" style="color:var(--accent); font-weight:600;" onclick="loadMappingBrowser('root')">
+                        <i data-lucide="arrow-left" style="width:16px;"></i> ${t('back_to_root')}
+                    </div>`;
+                }
+
+                if (data.folders.length === 0) {
+                    html += `<div class="picker-option">Keine Unterordner gefunden.</div>`;
+                } else {
+                    html += data.folders.map(f => `
+                        <div class="picker-option" style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="flex:1; display:flex; align-items:center; gap:10px;" onclick="loadMappingBrowser('${f.id}')">
+                                <i data-lucide="folder" style="width:18px;"></i> ${f.name}
+                            </div>
+                            <button class="ios-btn btn-small" style="padding:4px 10px; font-size:12px; width:auto;" onclick="selectFolderForMapping('${f.id}', '${f.name.replace(/'/g, "\\'")}')">Wählen</button>
+                        </div>
+                    `).join('');
+                }
+                browser.innerHTML = html;
+                lucide.createIcons();
+            } catch (e) {
+                browser.innerHTML = `<p class="item-sub">Fehler beim Laden.</p>`;
+            }
+        }
+
+        function selectFolderForMapping(id, name) {
+            document.getElementById('mapping-folder-id').value = id;
+            document.getElementById('mapping-original-name').value = name;
+            document.getElementById('mapping-display-name').value = name;
+            document.getElementById('mapping-form').style.display = 'block';
+            document.getElementById('mapping-browser').style.display = 'none';
+        }
+
+        async function submitDriveMapping() {
+            const drive_folder_id = document.getElementById('mapping-folder-id').value;
+            const folder_name = document.getElementById('mapping-display-name').value.trim();
+
+            if (!folder_name) return showToast("Bitte Namen eingeben", "error");
+
+            try {
+                const res = await fetch('/api/drive/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ drive_folder_id, folder_name })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Verknüpfung erstellt", "success");
+                    closeSheet();
+                    renderDriveMappings();
+                } else {
+                    showToast(data.message || "Fehler", "error");
+                }
+            } catch (e) { showToast("Verbindungsfehler", "error"); }
+        }
+
+        async function deleteDriveMapping(id) {
+            if (!confirm("Verknüpfung wirklich löschen? Der Ordner wird dann wieder mit seinem Original-Namen angezeigt.")) return;
+            try {
+                const res = await fetch(`/api/drive/folders/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast("Verknüpfung entfernt", "success");
+                    renderDriveMappings();
+                }
+            } catch (e) { showToast("Fehler", "error"); }
         }
 
         async function browseRootFolder(id, name, pushToHistory = true, googleFolderId = null) {
