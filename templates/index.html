@@ -1798,9 +1798,8 @@
                     data-lucide="utensils"></i><span>Essen</span></a>
         </div>
         <div class="nav-group">
-            <div class="nav-group">
-                <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
-            </div>
+            <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
+        </div>
     </nav>
 
     <header>
@@ -7447,7 +7446,9 @@
                                 if (f) {
                                     browseRootFolder(folderId, f.folder_name, false, googleId);
                                 }
-                            } catch (e) { console.error("Restore drive state failed", e); }
+                            } catch (e) {
+                                console.error("Restore drive state failed", e);
+                            }
                         });
                     } else {
                         renderDrive();
