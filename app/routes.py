@@ -2231,6 +2231,7 @@ def get_current_subject_from_untis():
 @api_bp.route('/mealplan', methods=['POST'])
 @login_required
 def upload_meal_plan():
+    from .ocr import get_ocr_service
     if 'image' not in request.files:
         return jsonify({'success': False, 'message': 'No image provided'}), 400
     

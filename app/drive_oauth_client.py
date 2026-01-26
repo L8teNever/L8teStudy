@@ -489,8 +489,15 @@ class DriveOAuthClient:
             
         # 1. List items (will automatically cache)
         items, _ = self.list_items(parent_id)
-        if not items:
+        if items is None:
+            current_app.logger.warning(f"Warmup: Failed to list items for {parent_id} (Auth error or folder inaccessible)")
             return
+            
+        if not items:
+            current_app.logger.info(f"Warmup: Folder {parent_id} is empty.")
+            return
+            
+        current_app.logger.info(f"Warmup: Cached {len(items)} items for {parent_id}")
             
         # 2. Recurse into folders
         if remaining_depth > 0:

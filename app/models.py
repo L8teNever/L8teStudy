@@ -310,3 +310,50 @@ class MealPlan(db.Model):
     extracted_text = db.Column(db.Text, nullable=True)
     week_start = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class DriveFolder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    folder_id = db.Column(db.String(256), nullable=False)
+    folder_name = db.Column(db.String(256), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
+    
+    # New columns from migration
+    is_active = db.Column(db.Boolean, default=True)
+    include_subfolders = db.Column(db.Boolean, default=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    # Statistics
+    file_count = db.Column(db.Integer, default=0)
+    last_sync_at = db.Column(db.DateTime, nullable=True)
+    
+    user = db.relationship('User', foreign_keys=[user_id], backref='managed_drive_folders')
+    creator = db.relationship('User', foreign_keys=[created_by_user_id])
+    subject_rel = db.relationship('Subject', backref='drive_folders')
+    school_class_rel = db.relationship('SchoolClass', backref='drive_folders_rel')
+
+class DriveFile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    drive_folder_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=False)
+    file_id = db.Column(db.String(256), nullable=False)
+    filename = db.Column(db.String(512), nullable=False)
+    encrypted_path = db.Column(db.String(512), nullable=True)
+    file_hash = db.Column(db.String(64), nullable=True)
+    file_size = db.Column(db.Integer, nullable=True)
+    mime_type = db.Column(db.String(128), nullable=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    folder = db.relationship('DriveFolder', backref=db.backref('files', lazy='dynamic'))
+    subject = db.relationship('Subject')
+
+class DriveFileContent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    drive_file_id = db.Column(db.Integer, db.ForeignKey('drive_file.id'), nullable=False, unique=True)
+    content_text = db.Column(db.Text, nullable=False)
+    page_count = db.Column(db.Integer, default=0)
+    ocr_completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    file = db.relationship('DriveFile', backref=db.backref('content', uselist=False))

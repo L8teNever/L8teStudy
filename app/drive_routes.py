@@ -153,8 +153,107 @@ def browse_folders():
 @drive_bp.route('/folders', methods=['GET'])
 @login_required
 def get_linked_folders():
-    """Placeholder for legacy synced folders route"""
-    return jsonify([])
+    """Get all linked Drive folders for the current class/user"""
+    from .models import DriveFolder
+    
+    admin_view = request.args.get('admin_view', 'false').lower() == 'true'
+    
+    query = DriveFolder.query
+    if current_user.is_admin and admin_view:
+        # Admin sees all folders in their class (or all if super admin)
+        if not current_user.is_super_admin:
+            query = query.filter_by(class_id=current_user.class_id)
+    else:
+        # regular user only sees their own or public ones? 
+        # For now, let's keep it simple: folders they own
+        query = query.filter_by(user_id=current_user.id)
+        
+    folders = query.all()
+    
+    return jsonify([{
+        'id': f.id,
+        'folder_id': f.folder_id,
+        'folder_name': f.folder_name,
+        'user_id': f.user_id,
+        'owner_name': f.user.username if f.user else 'Unknown',
+        'file_count': f.file_count,
+        'last_sync_at': f.last_sync_at.strftime('%Y-%m-%d %H:%M') if f.last_sync_at else None,
+        'subject_id': f.subject_id,
+        'subject_name': f.subject_rel.name if f.subject_rel else None
+    } for f in folders])
+
+@drive_bp.route('/folders', methods=['POST'])
+@login_required
+def add_linked_folder():
+    """Link a new Google Drive folder"""
+    from .models import DriveFolder, SchoolClass
+    data = request.get_json()
+    if not data or 'folder_id' not in data:
+        return jsonify({'success': False, 'message': 'Folder ID required'}), 400
+        
+    folder_id = data.get('folder_id')
+    folder_name = data.get('folder_name', 'New Folder')
+    subject_id = data.get('subject_id')
+    
+    # Check if already exists
+    existing = DriveFolder.query.filter_by(folder_id=folder_id, class_id=current_user.class_id).first()
+    if existing:
+        return jsonify({'success': False, 'message': 'Folder already linked'}), 400
+        
+    new_folder = DriveFolder(
+        folder_id=folder_id,
+        folder_name=folder_name,
+        user_id=current_user.id,
+        class_id=current_user.class_id,
+        subject_id=subject_id,
+        created_by_user_id=current_user.id
+    )
+    
+    db.session.add(new_folder)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'folder': {'id': new_folder.id, 'name': new_folder.folder_name}})
+
+@drive_bp.route('/folders/<int:id>', methods=['DELETE'])
+@login_required
+def delete_linked_folder(id):
+    """Delete a linked folder"""
+    from .models import DriveFolder
+    folder = DriveFolder.query.get_or_404(id)
+    
+    if folder.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    db.session.delete(folder)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@drive_bp.route('/admin/users', methods=['GET'])
+@login_required
+def get_admin_users():
+    """Get list of users for owner assignment (admin only)"""
+    if not current_user.is_admin:
+        return jsonify([]), 403
+    from .models import User
+    users = User.query.filter_by(class_id=current_user.class_id).all()
+    return jsonify([{'id': u.id, 'username': u.username} for u in users])
+
+@drive_bp.route('/folders/<int:id>', methods=['PATCH'])
+@login_required
+def update_linked_folder(id):
+    """Update folder properties (e.g. owner)"""
+    from .models import DriveFolder
+    folder = DriveFolder.query.get_or_404(id)
+    
+    if not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    data = request.get_json()
+    if 'user_id' in data:
+        folder.user_id = data['user_id']
+        
+    db.session.commit()
+    return jsonify({'success': True})
 
 @drive_bp.route('/files', methods=['GET'])
 @login_required

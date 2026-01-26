@@ -7128,9 +7128,16 @@
                 ` : '';
 
                 document.getElementById('app-container').innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding:0 5px;">
+                        <h2 style="margin:0; font-size:22px; font-weight:700;">Drive Ordner</h2>
+                        <button class="ios-btn btn-primary" style="width:auto; padding: 0 16px; height: 36px; border-radius: 18px; font-size:14px;" onclick="openAddDriveFolderSheet()">
+                            <i data-lucide="plus" style="width:18px; margin-right:4px;"></i> Hinzufügen
+                        </button>
+                    </div>
+
                     ${cacheHtml}
                     <div class="floating-card" style="padding:0 24px; margin-bottom: 20px;">
-                        ${listHtml || '<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine Ordner gefunden</div>'}
+                        ${listHtml || '<div style="padding:40px 20px; text-align:center; color:var(--text-sec);"><i data-lucide="folder-open" style="width:48px; height:48px; margin-bottom:10px; opacity:0.2;"></i><p>Keine Ordner verknüpft</p></div>'}
                     </div>
                 `;
                 lucide.createIcons();
@@ -7243,6 +7250,83 @@
                 }
             } catch (e) {
                 alert(t('connection_error'));
+            }
+        }
+
+        function openAddDriveFolderSheet() {
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h3 style="margin:0;">Ordner verknüpfen</h3>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:5px; display:block;">GOOGLE DRIVE ORDNER-ID</label>
+                    <input type="text" id="new-drive-folder-id" class="ios-input" placeholder="z.B. 1abcDEfg..." style="margin-bottom:15px;">
+                    <p style="font-size:12px; color:var(--text-sec); margin-bottom:20px;">
+                        Teile den Ordner zuerst mit der Service-Account E-Mail und kopiere dann die ID aus der URL.<br>
+                        (drive.google.com/drive/folders/<strong>ID-HIER</strong>)
+                    </p>
+                    
+                    <label style="font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:5px; display:block;">ANZEIGENAME (OPTIONAL)</label>
+                    <input type="text" id="new-drive-folder-name" class="ios-input" placeholder="Name wird automatisch geladen..." style="margin-bottom:20px;">
+
+                    <button class="ios-btn btn-primary" onclick="submitNewDriveFolder()" id="submit-drive-folder-btn">Verknüpfen</button>
+                </div>
+            `;
+            openSheetOverlay();
+            lucide.createIcons();
+        }
+
+        async function submitNewDriveFolder() {
+            const idInput = document.getElementById('new-drive-folder-id');
+            const nameInput = document.getElementById('new-drive-folder-name');
+            const btn = document.getElementById('submit-drive-folder-btn');
+
+            const folderId = idInput.value.trim();
+            let folderName = nameInput.value.trim();
+
+            if (!folderId) {
+                alert('Bitte eine Ordner-ID eingeben.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = 'Lade...';
+
+            try {
+                // If name is empty, try to fetch it first via API helper or let backend handle it
+                // We'll let backend handle/fetch name if needed, or we just send what we have.
+                // Actually, backend needs the name. Let's send a placeholder if empty, backend can fetch.
+
+                const res = await fetch('/api/drive/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        folder_id: folderId,
+                        folder_name: folderName || 'Neuer Ordner' // Backend can update this later
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    closeSheet();
+                    if (window.showToast) showToast('Ordner verknüpft', 'success');
+                    else alert('Ordner erfolgreich verknüpft.');
+                    renderDriveManagement();
+
+                    // Trigger a quick warmup for this folder
+                    fetch('/api/drive/warmup', { method: 'POST' });
+                } else {
+                    alert(data.message || 'Fehler beim Verknüpfen');
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Verknüpfen';
+                }
             }
         }
 
