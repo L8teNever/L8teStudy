@@ -1958,13 +1958,18 @@
                 sideNavLinks[2].innerText = t('calendar');
                 sideNavLinks[3].innerText = t('timetable');
                 sideNavLinks[4].innerText = t('grades');
-                if (sideNavLinks.length > 5) sideNavLinks[5].innerText = t('account');
+                // Drive (5), Mealplan (6), Blackboard (7)
+                if (sideNavLinks.length > 5) sideNavLinks[5].innerText = t('drive');
+                if (sideNavLinks.length > 6) sideNavLinks[6].innerText = t('mealplan');
+                if (sideNavLinks.length > 7) sideNavLinks[7].innerText = 'Infos';
+                // Account is in the second nav-group, so it's the last one
+                if (sideNavLinks.length > 8) sideNavLinks[sideNavLinks.length - 1].innerText = t('account');
             }
 
             // Update Header if on main view
             const titles = {
                 home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
-                account: 'account', settings: 'settings', sub_admin: 'admin'
+                account: 'account', settings: 'settings', sub_admin: 'admin', drive: 'drive', mealplan: 'mealplan', blackboard: 'Infos'
             };
             if (titles[currentView]) {
                 setPageTitle(t(titles[currentView]));
@@ -2085,6 +2090,11 @@
                     settings: '/settings',
                     account: '/account',
                     drive: '/drive',
+                    settings: '/settings',
+                    account: '/account',
+                    drive: '/drive',
+                    mealplan: '/mealplan',
+                    blackboard: '/blackboard',
                     sub_admin_menu: '/admin',
                     sub_users: '/admin/users',
                     sub_activity: '/admin/activity',
