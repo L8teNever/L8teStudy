@@ -2649,7 +2649,7 @@
                 const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
                 const clickAction = isFolder
                     ? `openDriveFolder('${f.id}', '${f.name.replace(/'/g, "\\'")}')`
-                    : `window.open('${f.webViewLink}', '_blank')`;
+                    : `window.open('/api/drive/file/${f.id}/download?inline=true', '_blank')`;
                 const icon = driveManager.getFileIcon(f.mimeType);
 
                 const owner = f.owners && f.owners.length > 0 ? f.owners[0].displayName : 'Unbekannt';

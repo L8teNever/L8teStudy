@@ -344,3 +344,32 @@ class DriveOAuthClient:
                     return True
         
         return self.get_credentials() is not None
+
+    def download_file(self, file_id, mime_type=None):
+        """Download file content or export Google Doc as PDF"""
+        service = self.get_service()
+        if not service:
+            return None
+        
+        try:
+            # If no mime_type provided, fetch metadata first
+            if not mime_type:
+                meta = self.get_file_metadata(file_id)
+                if not meta:
+                    return None
+                mime_type = meta.get('mimeType')
+
+            # Handle Google Apps files (export to PDF)
+            if mime_type.startswith('application/vnd.google-apps.'):
+                return service.files().export(
+                    fileId=file_id,
+                    mimeType='application/pdf'
+                ).execute()
+            else:
+                # Handle regular files (download as media)
+                return service.files().get_media(
+                    fileId=file_id
+                ).execute()
+        except HttpError as error:
+            current_app.logger.error(f"Drive download error: {error}")
+            return None

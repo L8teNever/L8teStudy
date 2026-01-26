@@ -2,11 +2,12 @@
 Google Drive OAuth Routes
 Handles OAuth flow and Drive file management
 """
-from flask import Blueprint, request, jsonify, redirect, url_for, session, current_app
+from flask import Blueprint, request, jsonify, redirect, url_for, session, current_app, send_file
 from flask_login import login_required, current_user
 from .models import DriveOAuthToken, db
 from .drive_oauth_client import DriveOAuthClient
 from datetime import datetime
+from io import BytesIO
 
 drive_bp = Blueprint('drive', __name__, url_prefix='/api/drive')
 
@@ -179,3 +180,39 @@ def get_file_metadata(file_id):
         'success': True,
         'file': file
     })
+
+@drive_bp.route('/file/<file_id>/download', methods=['GET'])
+@login_required
+def download_file(file_id):
+    """Download or view a file from Google Drive as PDF"""
+    client = DriveOAuthClient()
+    if not client.is_authenticated():
+        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    
+    # Get metadata to know the filename and mime type
+    meta = client.get_file_metadata(file_id)
+    if not meta:
+        return jsonify({'success': False, 'message': 'File not found'}), 404
+    
+    mime_type = meta.get('mimeType')
+    filename = meta.get('name')
+    
+    # Download/Export
+    content = client.download_file(file_id, mime_type)
+    if not content:
+        return jsonify({'success': False, 'message': 'Download failed'}), 500
+    
+    # If it was a Google Doc, we exported it as PDF
+    if mime_type.startswith('application/vnd.google-apps.'):
+        mime_type = 'application/pdf'
+        if not filename.endswith('.pdf'):
+            filename += '.pdf'
+    
+    inline = request.args.get('inline', 'true').lower() == 'true'
+    
+    return send_file(
+        BytesIO(content),
+        mimetype=mime_type,
+        as_attachment=not inline,
+        download_name=filename
+    )
