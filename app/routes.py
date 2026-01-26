@@ -1512,7 +1512,6 @@ def send_test_notification():
 
 @api_bp.route('/subjects', methods=['GET'])
 @login_required
-@login_required
 def get_subjects():
     class_id = request.args.get('class_id')
     target_class_id = None
