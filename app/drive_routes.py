@@ -18,7 +18,14 @@ def auth_status():
     is_authenticated = client.is_authenticated()
     
     # Check if specifically Service Account is used
-    is_sa = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO') is not None
+    sa_info = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO')
+    is_sa = False
+    if sa_info:
+        if isinstance(sa_info, dict):
+            is_sa = True
+        elif isinstance(sa_info, str):
+            clean_info = sa_info.strip()
+            is_sa = clean_info and not clean_info.startswith('${') and clean_info.lower() != 'none'
     
     return jsonify({
         'authenticated': is_authenticated,

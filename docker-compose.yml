@@ -11,14 +11,7 @@ services:
     environment:
       DATABASE_URL: sqlite:////data/l8testudy.db
       FLASK_ENV: production
-      # Google Drive OAuth Integration (referencing variables from .env)
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      DRIVE_ENCRYPTION_KEY: ${DRIVE_ENCRYPTION_KEY}
-      GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN}
-      GOOGLE_SERVICE_ACCOUNT_INFO: ${GOOGLE_SERVICE_ACCOUNT_INFO}
-      SECRET_KEY: ${SECRET_KEY}
-      # Upload
+      # Configuration is loaded via .env file
       UPLOAD_FOLDER: /data/uploads
       MAX_CONTENT_LENGTH: 104857600
       TZ: Europe/Berlin

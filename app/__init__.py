@@ -12,6 +12,7 @@ from flask_limiter.util import get_remote_address
 load_dotenv()
 
 from flask_migrate import Migrate
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -26,6 +27,9 @@ scheduler = APScheduler()
 
 def create_app():
     app = Flask(__name__, template_folder='../templates', static_folder='../static')
+    
+    # Handle Proxy headers (important for OAuth redirect URIs)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
     
     # Configuration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-prod')

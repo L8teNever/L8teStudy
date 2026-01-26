@@ -147,21 +147,29 @@ class DriveOAuthClient:
         """Get authenticated Drive service (Service Account or OAuth)"""
         # 1. Try Service Account (Priority)
         service_account_info = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO')
-        if service_account_info:
+        if service_account_info and isinstance(service_account_info, str):
+            # Check if it's a placeholder or empty
+            clean_info = service_account_info.strip()
+            if clean_info and not clean_info.startswith('${') and clean_info.lower() != 'none':
+                try:
+                    from google.oauth2 import service_account
+                    import json
+                    info = json.loads(clean_info)
+                    credentials = service_account.Credentials.from_service_account_info(
+                        info, scopes=SCOPES
+                    )
+                    return build('drive', 'v3', credentials=credentials)
+                except Exception as e:
+                    current_app.logger.warning(f"Note: Service Account loading failed (normal if not using SA): {e}")
+        elif service_account_info and isinstance(service_account_info, dict):
             try:
                 from google.oauth2 import service_account
-                import json
-                if isinstance(service_account_info, str):
-                    # Clean up possible formatting issues from env vars
-                    clean_info = service_account_info.strip()
-                    if clean_info:
-                        info = json.loads(clean_info)
-                        credentials = service_account.Credentials.from_service_account_info(
-                            info, scopes=SCOPES
-                        )
-                        return build('drive', 'v3', credentials=credentials)
+                credentials = service_account.Credentials.from_service_account_info(
+                    service_account_info, scopes=SCOPES
+                )
+                return build('drive', 'v3', credentials=credentials)
             except Exception as e:
-                current_app.logger.warning(f"Note: Service Account check failed (normal if not using SA): {e}")
+                current_app.logger.warning(f"Note: Service Account (dict) loading failed: {e}")
 
         # 2. Fallback to OAuth credentials
         credentials = self.get_credentials()

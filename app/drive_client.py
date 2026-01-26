@@ -41,20 +41,28 @@ class GoogleDriveClient:
         
         # 1. Try JSON Info (Direct string from Env)
         service_account_info = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO')
-        if service_account_info:
+        if service_account_info and isinstance(service_account_info, str):
+            # Check if it's a placeholder or empty
+            clean_info = service_account_info.strip()
+            if clean_info and not clean_info.startswith('${') and clean_info.lower() != 'none':
+                try:
+                    info = json.loads(clean_info)
+                    credentials = service_account.Credentials.from_service_account_info(
+                        info, scopes=self.SCOPES
+                    )
+                    self.service = build('drive', 'v3', credentials=credentials)
+                    return
+                except Exception as e:
+                    current_app.logger.warning(f"Failed to load Drive credentials from INFO (normal if not using SA): {e}")
+        elif service_account_info and isinstance(service_account_info, dict):
             try:
-                if isinstance(service_account_info, str):
-                    # Clean up possible formatting issues
-                    clean_info = service_account_info.strip()
-                    if clean_info:
-                        info = json.loads(clean_info)
-                        credentials = service_account.Credentials.from_service_account_info(
-                            info, scopes=self.SCOPES
-                        )
-                        self.service = build('drive', 'v3', credentials=credentials)
-                        return
+                credentials = service_account.Credentials.from_service_account_info(
+                    service_account_info, scopes=self.SCOPES
+                )
+                self.service = build('drive', 'v3', credentials=credentials)
+                return
             except Exception as e:
-                current_app.logger.warning(f"Failed to load Drive credentials from INFO (normal if not using SA): {e}")
+                current_app.logger.warning(f"Failed to load Drive credentials from INFO (dict): {e}")
 
         # 2. Try File Path
         if service_account_file is None:
