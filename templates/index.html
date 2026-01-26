@@ -7452,12 +7452,15 @@
                     } else {
                         renderDrive();
                     }
+                } else if (relevantPath === '/mealplan') {
+                    renderMealPlan();
+                } else {
+                    renderHome();
                 }
-                else if (relevantPath === '/mealplan') renderMealPlan();
-                else renderHome();
 
-                // Ensure icons are created after initial render
-                setTimeout(() => lucide.createIcons(), 50);
+                setTimeout(() => {
+                    if (window.lucide) lucide.createIcons();
+                }, 100);
             };
             console.log('Main Script Parsed Successfully');
     </script>

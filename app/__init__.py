@@ -95,7 +95,8 @@ def create_app():
             '\'self\'',
             '\'unsafe-inline\'',
             '\'unsafe-eval\'',
-            'https://unpkg.com'
+            'https://unpkg.com',
+            'https://static.cloudflareinsights.com',
         ],
         'style-src': [
             '\'self\'',
