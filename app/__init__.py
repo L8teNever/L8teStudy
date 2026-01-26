@@ -333,18 +333,29 @@ def create_app():
     scheduler.init_app(app)
     
     # Register Jobs
-    # Start scheduler for notifications
+    # Start scheduler for notifications & Drive Warmup
     from app.notifications import check_reminders
+    from app.drive_oauth_client import DriveOAuthClient
     
+    def run_drive_warmup():
+        with app.app_context():
+            client = DriveOAuthClient()
+            if client.is_authenticated():
+                client.warmup_cache(depth=3)
+
     # In Gunicorn/Docker, we want it to run. In dev with reloader, only in the main process.
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or os.environ.get('GUNICORN_VERSION'):
         try:
             if not scheduler.get_job('check_reminders'):
                 scheduler.add_job(id='check_reminders', func=check_reminders, trigger='interval', seconds=45)
             
+            # Run Drive Warmup once at startup (after a short delay to let worker boot)
+            scheduler.add_job(id='drive_warmup', func=run_drive_warmup, trigger='date', 
+                              run_date=datetime.now() + timedelta(seconds=10))
+            
             if not scheduler.running:
                 scheduler.start()
-                app.logger.info("--- Background Scheduler Started (Notifications) ---")
+                app.logger.info("--- Background Scheduler Started (Notifications & Warmup) ---")
         except Exception as e:
             app.logger.error(f"Failed to start scheduler: {e}")
 

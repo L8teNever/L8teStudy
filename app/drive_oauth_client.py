@@ -451,3 +451,27 @@ class DriveOAuthClient:
         except HttpError as error:
             current_app.logger.error(f"Drive download error: {error}")
             return None
+
+    def warmup_cache(self, depth=3):
+        """Warmup the RAM cache by pre-crawling the Drive structure"""
+        try:
+            current_app.logger.info(f"Starting Drive RAM Warmup (Depth: {depth})...")
+            self._warmup_recursive('root', depth)
+            current_app.logger.info("Drive RAM Warmup completed.")
+        except Exception as e:
+            current_app.logger.error(f"Cache Warmup failed: {e}")
+
+    def _warmup_recursive(self, parent_id, remaining_depth):
+        if remaining_depth < 0:
+            return
+            
+        # 1. List items (will automatically cache)
+        items, _ = self.list_items(parent_id)
+        if not items:
+            return
+            
+        # 2. Recurse into folders
+        if remaining_depth > 0:
+            for item in items:
+                if item['mimeType'] == 'application/vnd.google-apps.folder':
+                    self._warmup_recursive(item['id'], remaining_depth - 1)
