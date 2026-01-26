@@ -21,7 +21,8 @@ SCOPES = [
 # Simple Server-Side RAM Cache (Global within worker)
 # Format: { cache_key: (timestamp, data) }
 _DRIVE_RAM_CACHE = {}
-_CACHE_TTL = 300 # 5 minutes
+_CACHE_TTL = 86400 # 24 hours (for listings)
+_DRIVE_CONTENT_CACHE = {} # { file_id: (modifiedTime, checksum, bytes) }
 
 class DriveOAuthClient:
     """Client for Google Drive API using OAuth 2.0"""
@@ -196,8 +197,8 @@ class DriveOAuthClient:
     def _set_cache(self, key, data):
         """Internal helper to set item in RAM cache"""
         _DRIVE_RAM_CACHE[key] = (datetime.utcnow(), data)
-        # Prevent memory leaks: limit cache size
-        if len(_DRIVE_RAM_CACHE) > 500:
+        # Prevent memory leaks: allowed up to 10k items for large RAM usage
+        if len(_DRIVE_RAM_CACHE) > 10000:
             # Pop oldest (first entry)
             first_key = next(iter(_DRIVE_RAM_CACHE))
             del _DRIVE_RAM_CACHE[first_key]
@@ -399,30 +400,54 @@ class DriveOAuthClient:
         return self.get_credentials() is not None
 
     def download_file(self, file_id, mime_type=None):
-        """Download file content or export Google Doc as PDF"""
+        """Download file content or export Google Doc as PDF with RAM Caching and Validation"""
         service = self.get_service()
         if not service:
             return None
         
         try:
-            # If no mime_type provided, fetch metadata first
-            if not mime_type:
-                meta = self.get_file_metadata(file_id)
-                if not meta:
-                    return None
-                mime_type = meta.get('mimeType')
+            # 1. Fetch current minimal metadata for validation (Always-Validate)
+            # This is 1 small API call, much faster than a full download/export.
+            current_meta = service.files().get(
+                fileId=file_id,
+                fields="id, modifiedTime, md5Checksum, mimeType"
+            ).execute()
+            
+            m_time = current_meta.get('modifiedTime')
+            checksum = current_meta.get('md5Checksum', '')
+            mime_type = current_meta.get('mimeType')
+            
+            # 2. Check Content Cache
+            cache_key = f"content_{file_id}"
+            if cache_key in _DRIVE_CONTENT_CACHE:
+                cached_mtime, cached_checksum, cached_data = _DRIVE_CONTENT_CACHE[cache_key]
+                # Compare modified time and checksum (checksum is empty for Google Apps files)
+                if cached_mtime == m_time and (not checksum or cached_checksum == checksum):
+                    current_app.logger.info(f"Serving file from RAM cache: {file_id}")
+                    return cached_data
 
-            # Handle Google Apps files (export to PDF)
+            # 3. If not in cache or changed, Download/Export
+            current_app.logger.info(f"Downloading/Exporting file (not in cache or outdated): {file_id}")
             if mime_type.startswith('application/vnd.google-apps.'):
-                return service.files().export(
+                content = service.files().export(
                     fileId=file_id,
                     mimeType='application/pdf'
                 ).execute()
             else:
-                # Handle regular files (download as media)
-                return service.files().get_media(
+                content = service.files().get_media(
                     fileId=file_id
                 ).execute()
+
+            # 4. Update Cache
+            _DRIVE_CONTENT_CACHE[cache_key] = (m_time, checksum, content)
+            
+            # Simple LRU-ish: Limit to 500 files or ~4-6 GB (assuming avg file size)
+            if len(_DRIVE_CONTENT_CACHE) > 500:
+                # Remove oldest entry
+                _DRIVE_CONTENT_CACHE.pop(next(iter(_DRIVE_CONTENT_CACHE)))
+                
+            return content
+            
         except HttpError as error:
             current_app.logger.error(f"Drive download error: {error}")
             return None

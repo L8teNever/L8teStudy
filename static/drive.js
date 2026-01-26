@@ -14,7 +14,7 @@ class DriveManager {
 
         // RAM Cache
         this.cache = new Map();
-        this.cacheDuration = 1000 * 60 * 5; // 5 minutes cache
+        this.cacheDuration = 1000 * 60 * 60 * 24; // 24 hours cache
 
         this.init();
     }

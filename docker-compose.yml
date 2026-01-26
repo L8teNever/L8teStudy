@@ -18,5 +18,11 @@ services:
       # Gunicorn Timeout Fix (for slow DB migrations)
       GUNICORN_CMD_ARGS: "--timeout 120 --workers 2"
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 8192M
+        reservations:
+          memory: 1024M
 
 networks: {}

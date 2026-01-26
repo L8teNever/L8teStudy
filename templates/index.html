@@ -2577,6 +2577,9 @@
 
         async function loadInitialDriveFiles() {
             const container = document.getElementById('drive-content-container');
+            container.innerHTML = `<div style="text-align:center; padding:40px;"><i data-lucide="loader-2" class="spin" style="width:32px; color:var(--accent);"></i><p class="item-sub" style="margin-top:12px;">Lade Dateien...</p></div>`;
+            lucide.createIcons();
+
             const data = await driveManager.loadFiles('root');
             driveManager.history = []; // Reset history at root
             renderDriveFileList(data.files, data.nextPageToken);
@@ -2584,8 +2587,13 @@
         }
 
         async function openDriveFolder(folderId, folderName) {
+            const container = document.getElementById('drive-content-container');
             const btn = document.querySelector('#drive-load-more-container button');
             if (btn) btn.disabled = true;
+
+            // Show loading state in container
+            container.innerHTML = `<div style="text-align:center; padding:40px;"><i data-lucide="loader-2" class="spin" style="width:32px; color:var(--accent);"></i><p class="item-sub" style="margin-top:12px;">Lade ${folderName}...</p></div>`;
+            lucide.createIcons();
 
             const data = await driveManager.loadFiles(folderId);
 
