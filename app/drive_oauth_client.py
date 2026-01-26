@@ -333,7 +333,14 @@ class DriveOAuthClient:
     
     def is_authenticated(self):
         """Check if we have valid credentials (SA or OAuth)"""
-        # Service Account is considered "always authenticated" if config exists
-        if current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO'):
-            return True
+        # Service Account is considered "always authenticated" if config exists and is valid
+        sa_info = current_app.config.get('GOOGLE_SERVICE_ACCOUNT_INFO')
+        if sa_info:
+            if isinstance(sa_info, dict):
+                return True
+            if isinstance(sa_info, str):
+                clean_info = sa_info.strip()
+                if clean_info and not clean_info.startswith('${') and clean_info.lower() != 'none':
+                    return True
+        
         return self.get_credentials() is not None
