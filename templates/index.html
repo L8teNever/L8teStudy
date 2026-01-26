@@ -2652,6 +2652,8 @@
                     : `window.open('${f.webViewLink}', '_blank')`;
                 const icon = driveManager.getFileIcon(f.mimeType);
 
+                const owner = f.owners && f.owners.length > 0 ? f.owners[0].displayName : 'Unbekannt';
+
                 return `
                     <div class="list-item slide-in-bottom" style="animation-delay: ${idx * 0.02}s; animation-fill-mode: both;" onclick="${clickAction}">
                         <div class="account-item-icon" style="background:var(--tab-bg); color:var(--accent);">
@@ -2660,7 +2662,7 @@
                         <div class="item-content">
                             <div class="item-title">${f.name}</div>
                             <div class="item-sub">
-                                ${driveManager.formatDate(f.modifiedTime)} ${f.size ? `• ${driveManager.formatFileSize(f.size)}` : ''}
+                                ${driveManager.formatDate(f.modifiedTime)} ${f.size ? `• ${driveManager.formatFileSize(f.size)}` : ''} • Von: ${owner}
                             </div>
                         </div>
                         <i data-lucide="${isFolder ? 'chevron-right' : 'external-link'}" style="width:16px; color:var(--text-sec); opacity:0.5;"></i>

@@ -185,7 +185,12 @@ class DriveOAuthClient:
             return None, None
         
         try:
-            query = f"'{parent_id}' in parents and trashed=false"
+            if parent_id == 'root':
+                # Show items in root AND items shared with the account
+                query = "('root' in parents or sharedWithMe = true) and trashed=false"
+            else:
+                query = f"'{parent_id}' in parents and trashed=false"
+            
             results = service.files().list(
                 q=query,
                 pageSize=page_size,
