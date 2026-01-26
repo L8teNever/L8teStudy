@@ -4630,6 +4630,11 @@
                         <div class="account-item-text">Untis Konfiguration</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    <div class="account-item" onclick="renderDriveManagement()">
+                        <div class="account-item-icon" style="background:#34C759; color:white;"><i data-lucide="cloud"></i></div>
+                        <div class="account-item-text">Drive Verwaltung</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
                     ` : ''}
                     ${window.currentUser.class_id ? `
                     <div class="account-item" onclick="renderClassSettings(${window.currentUser.class_id})">
