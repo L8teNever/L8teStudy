@@ -4,7 +4,7 @@ Handles OAuth flow and Drive file management
 """
 from flask import Blueprint, request, jsonify, redirect, url_for, session, current_app
 from flask_login import login_required, current_user
-from .models import DriveFolder, DriveOAuthToken, Subject, db
+from .models import DriveOAuthToken, db
 from .drive_oauth_client import DriveOAuthClient
 from datetime import datetime
 
@@ -114,101 +114,6 @@ def browse_folders():
         'folders': folders
     })
 
-@drive_bp.route('/folders', methods=['GET'])
-@login_required
-def get_selected_folders():
-    """Get admin-selected folders"""
-    folders = DriveFolder.query.filter_by(is_active=True).all()
-    
-    return jsonify([{
-        'id': f.id,
-        'drive_folder_id': f.drive_folder_id,
-        'folder_name': f.folder_name,
-        'folder_path': f.folder_path,
-        'subject_id': f.subject_id,
-        'include_subfolders': f.include_subfolders,
-        'created_at': f.created_at.isoformat() if f.created_at else None
-    } for f in folders])
-
-@drive_bp.route('/folders', methods=['POST'])
-@login_required
-def add_folder():
-    """Add a folder to display (admin only)"""
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-    
-    data = request.json
-    drive_folder_id = data.get('drive_folder_id')
-    folder_name = data.get('folder_name')
-    
-    if not drive_folder_id or not folder_name:
-        return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    
-    # Check if folder already exists
-    existing = DriveFolder.query.filter_by(drive_folder_id=drive_folder_id).first()
-    if existing:
-        return jsonify({'success': False, 'message': 'Folder already added'}), 400
-    
-    # Get folder path
-    client = DriveOAuthClient()
-    folder_path = client.get_folder_path(drive_folder_id)
-    
-    folder = DriveFolder(
-        drive_folder_id=drive_folder_id,
-        folder_name=folder_name,
-        folder_path=folder_path,
-        subject_id=data.get('subject_id'),
-        include_subfolders=data.get('include_subfolders', True),
-        created_by_user_id=current_user.id
-    )
-    
-    db.session.add(folder)
-    db.session.commit()
-    
-    return jsonify({
-        'success': True,
-        'folder': {
-            'id': folder.id,
-            'drive_folder_id': folder.drive_folder_id,
-            'folder_name': folder.folder_name,
-            'folder_path': folder.folder_path
-        }
-    })
-
-@drive_bp.route('/folders/<int:folder_id>', methods=['DELETE'])
-@login_required
-def remove_folder(folder_id):
-    """Remove a folder from display (admin only)"""
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-    
-    folder = DriveFolder.query.get_or_404(folder_id)
-    db.session.delete(folder)
-    db.session.commit()
-    
-    return jsonify({'success': True})
-
-@drive_bp.route('/folders/<int:folder_id>', methods=['PUT'])
-@login_required
-def update_folder(folder_id):
-    """Update folder settings (admin only)"""
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-    
-    folder = DriveFolder.query.get_or_404(folder_id)
-    data = request.json
-    
-    if 'subject_id' in data:
-        folder.subject_id = data['subject_id']
-    if 'include_subfolders' in data:
-        folder.include_subfolders = data['include_subfolders']
-    if 'is_active' in data:
-        folder.is_active = data['is_active']
-    
-    db.session.commit()
-    
-    return jsonify({'success': True})
-
 @drive_bp.route('/files', methods=['GET'])
 @login_required
 def get_files():
@@ -225,16 +130,6 @@ def get_files():
     
     if items is None:
         return jsonify({'success': False, 'message': 'Failed to fetch items'}), 500
-    
-    # Get folder mappings from DB to provide "friendly names"
-    folders_db = DriveFolder.query.all()
-    mappings = {f.drive_folder_id: f.folder_name for f in folders_db}
-    
-    # Apply friendly names if available
-    for item in items:
-        if item['id'] in mappings:
-            item['original_name'] = item['name']
-            item['name'] = mappings[item['id']]
     
     return jsonify({
         'success': True,
@@ -261,16 +156,6 @@ def search_files():
     
     if files is None:
         return jsonify({'success': False, 'message': 'Search failed'}), 500
-    
-    # Get folder mappings from DB to provide "friendly names"
-    folders_db = DriveFolder.query.all()
-    mappings = {f.drive_folder_id: f.folder_name for f in folders_db}
-    
-    # Apply friendly names if available
-    for item in files:
-        if item['id'] in mappings:
-            item['original_name'] = item['name']
-            item['name'] = mappings[item['id']]
     
     return jsonify({
         'success': True,

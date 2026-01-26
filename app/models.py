@@ -173,20 +173,6 @@ class SubjectTeacher(db.Model):
         db.UniqueConstraint('subject_id', 'class_id', name='_subject_class_teacher_uc'),
     )
 
-class SubjectMapping(db.Model):
-    """Maps informal/messy folder names to official subjects"""
-    id = db.Column(db.Integer, primary_key=True)
-    informal_name = db.Column(db.String(128), nullable=False)  # e.g., "Ph", "GdT", "Technik"
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)  # Optional: class-specific mapping
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Who created this mapping
-    is_global = db.Column(db.Boolean, default=False)  # If true, applies to all users in class
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Ensure unique informal names per scope (global or per-user)
-    __table_args__ = (
-        db.UniqueConstraint('informal_name', 'class_id', 'user_id', name='_informal_name_scope_uc'),
-    )
 
 class TaskMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -315,80 +301,7 @@ class DriveOAuthToken(db.Model):
             return self.refresh_token
 
 
-class DriveFolder(db.Model):
-    """Admin-selected folders to display from Google Drive"""
-    id = db.Column(db.Integer, primary_key=True)
-    
-    # Drive folder info
-    drive_folder_id = db.Column(db.String(256), nullable=False, unique=True)
-    folder_name = db.Column(db.String(500), nullable=False)
-    folder_path = db.Column(db.String(1000), nullable=True)  # Full path for display
-    
-    # Ownership and Hierarchy
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    is_root = db.Column(db.Boolean, default=False)
-    parent_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=True)
-    
-    # Subject mapping (optional)
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
-    
-    # Settings and Privacy
-    privacy_level = db.Column(db.String(20), default='private')
-    is_active = db.Column(db.Boolean, default=True) # Legacy UI
-    sync_enabled = db.Column(db.Boolean, default=True)
-    include_subfolders = db.Column(db.Boolean, default=True)
-    
-    # Sync Status
-    last_sync_at = db.Column(db.DateTime)
-    sync_status = db.Column(db.String(50), default='pending')
-    sync_error = db.Column(db.Text)
-    
-    # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # Legacy UI
-    
-    # Relationships
-    subject = db.relationship('Subject', backref='drive_folders')
-    created_by = db.relationship('User', foreign_keys=[created_by_user_id], backref='created_drive_folders')
-    user = db.relationship('User', foreign_keys=[user_id], backref='owned_drive_folders')
-    parent = db.relationship('DriveFolder', remote_side=[id], backref=db.backref('subfolders', cascade='all, delete-orphan'))
 
-
-class DriveFile(db.Model):
-    """Stores metadata for Drive files (sync/caching)"""
-    id = db.Column(db.Integer, primary_key=True)
-    drive_folder_id = db.Column(db.Integer, db.ForeignKey('drive_folder.id'), nullable=True)
-    file_id = db.Column(db.String(256), nullable=False, unique=True)
-    filename = db.Column(db.String(500), nullable=False)
-    mime_type = db.Column(db.String(128))
-    file_size = db.Column(db.BigInteger)
-    file_hash = db.Column(db.String(128))
-    encrypted_path = db.Column(db.String(1000))
-    parent_folder_name = db.Column(db.String(512))
-    
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=True)
-    auto_mapped = db.Column(db.Boolean, default=False)
-    
-    ocr_completed = db.Column(db.Boolean, default=False)
-    ocr_error = db.Column(db.Text)
-    
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    subject = db.relationship('Subject', backref='drive_files')
-    folder = db.relationship('DriveFolder', backref=db.backref('files', cascade='all, delete-orphan'))
-
-
-class DriveFileContent(db.Model):
-    """Stores OCR-extracted text for FTS search"""
-    id = db.Column(db.Integer, primary_key=True)
-    drive_file_id = db.Column(db.Integer, db.ForeignKey('drive_file.id'), nullable=False, unique=True)
-    content_text = db.Column(db.Text)
-    page_count = db.Column(db.Integer, default=0)
-    ocr_completed_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    file = db.relationship('DriveFile', backref=db.backref('content', uselist=False, cascade='all, delete-orphan'))
 
 class MealPlan(db.Model):
     __tablename__ = 'meal_plan'
