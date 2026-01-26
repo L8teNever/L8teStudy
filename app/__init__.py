@@ -328,162 +328,23 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Schema migration (notify_chat_message) error: {e}")
 
-        # Schema Update: Drive Folder Enhancements (is_root, parent_id, privacy_level, sync columns)
-        if 'drive_folder' in inspector.get_table_names():
-            cols = [c.get('name') for c in inspector.get_columns('drive_folder')]
-            
-            def add_col_if_missing(table, col, type_sql):
-                try:
-                    # Re-inspect inside the function to handle concurrent workers
-                    from sqlalchemy import inspect
-                    inspector = inspect(db.engine)
-                    current_cols = [c.get('name') for c in inspector.get_columns(table)]
-                    
-                    if col not in current_cols:
-                        with db.engine.connect() as conn:
-                            app.logger.info(f"Migrating: Adding {col} to {table}")
-                            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {type_sql}"))
-                            conn.commit()
-                        app.logger.info(f"Successfully added {col} to {table}")
-                except Exception as ex:
-                    if "duplicate column name" in str(ex).lower():
-                        return # Safe to ignore
-                    app.logger.warning(f"Failed to add column {col} to {table}: {ex}")
-
-            # Special case for core drive_folder_id renaming
-            if 'drive_folder_id' not in cols and 'folder_id' in cols:
-                try:
-                    with db.engine.connect() as conn:
-                        app.logger.info("Migrating: Renaming folder_id to drive_folder_id")
-                        conn.execute(text("ALTER TABLE drive_folder RENAME COLUMN folder_id TO drive_folder_id"))
-                        conn.commit()
-                except Exception as ex:
-                    app.logger.warning(f"Rename failed, adding instead: {ex}")
-                    add_col_if_missing('drive_folder', 'drive_folder_id', 'VARCHAR(256)')
-            elif 'drive_folder_id' not in cols:
-                add_col_if_missing('drive_folder', 'drive_folder_id', 'VARCHAR(256)')
-
-            add_col_if_missing('drive_folder', 'folder_name', 'VARCHAR(500)')
-            add_col_if_missing('drive_folder', 'folder_path', 'VARCHAR(1000)')
-            add_col_if_missing('drive_folder', 'user_id', 'INTEGER REFERENCES user(id)')
-            add_col_if_missing('drive_folder', 'is_root', 'BOOLEAN DEFAULT 0')
-            add_col_if_missing('drive_folder', 'parent_id', 'INTEGER REFERENCES drive_folder(id)')
-            add_col_if_missing('drive_folder', 'privacy_level', 'VARCHAR(20) DEFAULT \'private\'')
-            add_col_if_missing('drive_folder', 'sync_enabled', 'BOOLEAN DEFAULT 1')
-            add_col_if_missing('drive_folder', 'last_sync_at', 'DATETIME')
-            add_col_if_missing('drive_folder', 'sync_status', 'VARCHAR(50) DEFAULT \'pending\'')
-            add_col_if_missing('drive_folder', 'sync_error', 'TEXT')
-            add_col_if_missing('drive_folder', 'subject_id', 'INTEGER REFERENCES subject(id)')
-            add_col_if_missing('drive_folder', 'is_active', 'BOOLEAN DEFAULT 1')
-            add_col_if_missing('drive_folder', 'include_subfolders', 'BOOLEAN DEFAULT 1')
-            add_col_if_missing('drive_folder', 'created_at', 'DATETIME')
-            add_col_if_missing('drive_folder', 'created_by_user_id', 'INTEGER REFERENCES user(id)')
-
-        if 'drive_file' in inspector.get_table_names():
-            cols = [c.get('name') for c in inspector.get_columns('drive_file')]
-            
-            def add_fcol_if_missing(col, type_sql):
-                try:
-                    from sqlalchemy import inspect
-                    inspector = inspect(db.engine)
-                    current_cols = [c.get('name') for c in inspector.get_columns('drive_file')]
-                    if col not in current_cols:
-                        with db.engine.connect() as conn:
-                            app.logger.info(f"Migrating: Adding {col} to drive_file")
-                            conn.execute(text(f"ALTER TABLE drive_file ADD COLUMN {col} {type_sql}"))
-                            conn.commit()
-                except Exception as ex:
-                    if "duplicate column name" in str(ex).lower():
-                        return
-                    app.logger.warning(f"Failed to add drive_file column {col}: {ex}")
-
-            if 'file_id' not in cols and 'google_file_id' in cols:
-                try:
-                    with db.engine.connect() as conn:
-                        app.logger.info("Migrating: Renaming google_file_id to file_id")
-                        conn.execute(text("ALTER TABLE drive_file RENAME COLUMN google_file_id TO file_id"))
-                        conn.commit()
-                except Exception:
-                    add_fcol_if_missing('file_id', 'VARCHAR(256)')
-                add_fcol_if_missing('file_id', 'VARCHAR(256)')
-            
-            add_fcol_if_missing('drive_folder_id', 'INTEGER REFERENCES drive_folder(id)')
-
-            add_fcol_if_missing('filename', 'VARCHAR(500)')
-            add_fcol_if_missing('mime_type', 'VARCHAR(128)')
-            add_fcol_if_missing('file_size', 'BIGINTEGER')
-            add_fcol_if_missing('file_hash', 'VARCHAR(128)')
-            add_fcol_if_missing('encrypted_path', 'VARCHAR(1000)')
-            add_fcol_if_missing('subject_id', 'INTEGER REFERENCES subject(id)')
-            add_fcol_if_missing('auto_mapped', 'BOOLEAN DEFAULT 0')
-            add_fcol_if_missing('ocr_completed', 'BOOLEAN DEFAULT 0')
-            add_fcol_if_missing('ocr_error', 'TEXT')
-            add_fcol_if_missing('parent_folder_name', 'VARCHAR(512)')
-            add_fcol_if_missing('created_at', 'DATETIME')
-            add_fcol_if_missing('updated_at', 'DATETIME')
-
-        # Schema Update: Drive File Content Enhancement (page_count)
-        try:
-            if 'drive_file_content' in inspector.get_table_names():
-                cols = [c['name'] for c in inspector.get_columns('drive_file_content')]
-                if 'page_count' not in cols:
-                    app.logger.info("Migrating: Adding page_count to drive_file_content")
-                    with db.engine.connect() as conn:
-                        conn.execute(text("ALTER TABLE drive_file_content ADD COLUMN page_count INTEGER DEFAULT 0"))
-                        conn.commit()
-                
-                # Add other missing columns for drive_file_content
-                def add_cfcol_if_missing(col, type_sql):
-                    try:
-                        from sqlalchemy import inspect
-                        inspector = inspect(db.engine)
-                        # We need to refresh cols locally
-                        current_cols = [c['name'] for c in inspector.get_columns('drive_file_content')]
-                        if col not in current_cols:
-                            with db.engine.connect() as conn:
-                                app.logger.info(f"Migrating: Adding {col} to drive_file_content")
-                                conn.execute(text(f"ALTER TABLE drive_file_content ADD COLUMN {col} {type_sql}"))
-                                conn.commit()
-                    except Exception as ex:
-                        if "duplicate column name" in str(ex).lower():
-                            return
-                        app.logger.warning(f"Failed to add drive_file_content column {col}: {ex}")
-
-                add_cfcol_if_missing('drive_file_id', 'INTEGER REFERENCES drive_file(id)')
-                add_cfcol_if_missing('content_text', 'TEXT')
-                add_cfcol_if_missing('ocr_completed_at', 'DATETIME')
-        except Exception as e:
-            app.logger.error(f"Drive file content schema migration error: {e}")
 
     # Initialize Scheduler
     scheduler.init_app(app)
     
     # Register Jobs
-    # Start scheduler for notifications and drive sync
+    # Start scheduler for notifications
     from app.notifications import check_reminders
-    from app.drive_sync import get_drive_sync_service
     
-    def drive_sync_job():
-        with app.app_context():
-            try:
-                sync_service = get_drive_sync_service()
-                sync_service.sync_all_folders()
-            except Exception as e:
-                app.logger.error(f"Background drive sync failed: {e}")
-
     # In Gunicorn/Docker, we want it to run. In dev with reloader, only in the main process.
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or os.environ.get('GUNICORN_VERSION'):
         try:
             if not scheduler.get_job('check_reminders'):
                 scheduler.add_job(id='check_reminders', func=check_reminders, trigger='interval', seconds=45)
             
-            # Drive Sync every 15 minutes
-            if not scheduler.get_job('drive_sync'):
-                scheduler.add_job(id='drive_sync', func=drive_sync_job, trigger='interval', minutes=15)
-                
             if not scheduler.running:
                 scheduler.start()
-                app.logger.info("--- Background Scheduler Started (Notifications & Drive) ---")
+                app.logger.info("--- Background Scheduler Started (Notifications) ---")
         except Exception as e:
             app.logger.error(f"Failed to start scheduler: {e}")
 
