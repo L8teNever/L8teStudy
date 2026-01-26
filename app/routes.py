@@ -2231,7 +2231,7 @@ def get_current_subject_from_untis():
 @api_bp.route('/mealplan', methods=['POST'])
 @login_required
 def upload_meal_plan():
-    from .ocr import get_ocr_service
+
     if 'image' not in request.files:
         return jsonify({'success': False, 'message': 'No image provided'}), 400
     
@@ -2244,10 +2244,6 @@ def upload_meal_plan():
             filename = secure_filename(f"mealplan_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
             upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(upload_path)
-            
-            # OCR
-            ocr = get_ocr_service()
-            text = ocr.extract_text_from_image(upload_path)
             
             # Save to DB
             today = date.today()
@@ -2262,7 +2258,7 @@ def upload_meal_plan():
             plan = MealPlan(
                 class_id=class_id,
                 image_path=filename,
-                extracted_text=text,
+                extracted_text=None,
                 week_start=monday
             )
             db.session.add(plan)
@@ -2270,7 +2266,7 @@ def upload_meal_plan():
             
             return jsonify({
                 'success': True, 
-                'text': text, 
+                'text': None, 
                 'image_url': f'/uploads/{filename}'
             })
         except Exception as e:
