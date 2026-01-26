@@ -280,7 +280,7 @@ class DriveOAuthClient:
             results = service.files().list(
                 q=query,
                 pageSize=page_size,
-                fields="files(id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink)",
+                fields="files(id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink, owners)",
                 orderBy="modifiedTime desc"
             ).execute()
             
