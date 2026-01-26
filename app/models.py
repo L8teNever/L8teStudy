@@ -158,7 +158,6 @@ class Subject(db.Model):
     
     tasks = db.relationship('Task', backref='subject_rel', lazy='dynamic')
     events = db.relationship('Event', backref='subject_rel', lazy='dynamic')
-    mappings = db.relationship('SubjectMapping', backref='official_subject', lazy='dynamic')
     teachers = db.relationship('SubjectTeacher', backref='subject', lazy='dynamic')
 
 class SubjectTeacher(db.Model):
