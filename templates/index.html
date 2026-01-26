@@ -2415,11 +2415,11 @@
 
         async function renderMealPlan() {
             currentView = 'mealplan';
-            setPageTitle('Essensplan');
+            setPageTitle(t('mealplan'));
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card" style="padding: 20px; text-align:center;">
-                     <div id="mealplan-content">Lade Plan...</div>
+                     <div id="mealplan-content">${t('loading')}</div>
                 </div>
             `;
 
@@ -2434,31 +2434,31 @@
                          <div style="position:relative; margin-bottom: 20px;">
                             <img src="${data.image_url}" style="width:100%; border-radius:10px; cursor:pointer;" onclick="window.open('${data.image_url}', '_blank')">
                             <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.6); color:white; padding:4px 8px; border-radius:6px; font-size:11px;">
-                                Klicken zum Vergrößern
+                                ${t('view_details') || 'Ansehen'}
                             </div>
                          </div>
                          
                          <div style="text-align:left;">
-                            <h3 style="margin-top:0;">Erkannter Text</h3>
-                            <div style="white-space: pre-wrap; background:var(--tab-bg); padding:15px; border-radius:10px; font-size:14px;">${data.text || 'Kein Text erkannt.'}</div>
+                            <h3 style="margin-top:0;">Text</h3>
+                            <div style="white-space: pre-wrap; background:var(--tab-bg); padding:15px; border-radius:10px; font-size:14px;">${data.text || t('no_results')}</div>
                          </div>
                          
                          <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
-                             <button class="ios-btn btn-sec" onclick="openUploadMealPlan()">Neuen Plan hochladen</button>
+                             <button class="ios-btn btn-sec" onclick="openUploadMealPlan()">${t('upload_mealplan_title')}</button>
                          </div>
                      `;
                 } else {
                     container.innerHTML = `
                         <div style="padding: 30px 0;">
                             <i data-lucide="utensils" style="width:48px; height:48px; color:var(--text-sec); opacity:0.3; margin-bottom:15px;"></i>
-                            <p class="item-sub">Noch kein Essensplan für diese Woche.</p>
-                            <button class="ios-btn" style="margin-top:15px;" onclick="openUploadMealPlan()">Plan hochladen</button>
+                            <p class="item-sub">${t('no_results')}</p>
+                            <button class="ios-btn" style="margin-top:15px;" onclick="openUploadMealPlan()">${t('upload_mealplan_title')}</button>
                         </div>
                      `;
                 }
             } catch (e) {
                 console.error(e);
-                document.getElementById('mealplan-content').innerText = "Fehler beim Laden.";
+                document.getElementById('mealplan-content').innerText = t('error_loading');
             }
             lucide.createIcons();
         }
@@ -2466,12 +2466,12 @@
         function openUploadMealPlan() {
             const html = `
                 <div class="sheet-header">
-                    <h3 style="margin:0;">Essensplan hochladen</h3>
+                    <h3 style="margin:0;">${t('upload_mealplan_title')}</h3>
                     <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
                 </div>
                 <div style="padding: 10px 0;">
                     <input type="file" id="mealplan-file" accept="image/*" class="ios-input">
-                    <button class="ios-btn" onclick="uploadMealPlanFile()">Hochladen</button>
+                    <button class="ios-btn" onclick="uploadMealPlanFile()">${t('upload_mealplan_title')}</button>
                 </div>
             `;
             openSheet(html);
@@ -7452,6 +7452,7 @@
                         renderDrive();
                     }
                 }
+                else if (relevantPath === '/mealplan') renderMealPlan();
                 else renderHome();
             };
             console.log('Main Script Parsed Successfully');

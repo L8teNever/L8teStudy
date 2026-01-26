@@ -276,7 +276,9 @@ const translations = {
         mapping_hint: "Ordne Ordnernamen (z.B. 'Ph') dem Fach 'Physik' zu.",
         found_in: "Gefunden in",
         by: "von",
-        load_more: "Mehr laden"
+        load_more: "Mehr laden",
+        mealplan: "Essensplan",
+        upload_mealplan_title: "Essensplan hochladen"
     },
     en: {
         home: "Home",
@@ -555,6 +557,8 @@ const translations = {
         mapping_hint: "Map folder names (e.g. 'Ph') to 'Physics'.",
         found_in: "Found in",
         by: "by",
-        load_more: "Load more"
+        load_more: "Load more",
+        mealplan: "Meal Plan",
+        upload_mealplan_title: "Upload Meal Plan"
     }
 };
