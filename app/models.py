@@ -389,3 +389,12 @@ class DriveFileContent(db.Model):
     ocr_completed_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     file = db.relationship('DriveFile', backref=db.backref('content', uselist=False))
+
+class MealPlan(db.Model):
+    __tablename__ = 'meal_plan'
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)
+    image_path = db.Column(db.String(512), nullable=False)
+    extracted_text = db.Column(db.Text, nullable=True)
+    week_start = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

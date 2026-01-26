@@ -5,8 +5,9 @@ from .models import (
     PushSubscription, Subject, SubjectMapping, TaskMessage, TaskChatRead, 
     GlobalSetting, SchoolClass, TaskCompletion, UserRole,
     DriveOAuthToken, DriveFolder, SubjectTeacher,
-    subject_classes, db
+    subject_classes, db, MealPlan
 )
+from app.ocr_service import get_ocr_service
 from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
 import os
@@ -3166,3 +3167,77 @@ def delete_drive_subject_mapping(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+
+# --- Meal Plan Routes ---
+
+@api_bp.route('/mealplan', methods=['POST'])
+@login_required
+def upload_meal_plan():
+    if 'image' not in request.files:
+        return jsonify({'success': False, 'message': 'No image provided'}), 400
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'No selected file'}), 400
+        
+    if file:
+        try:
+            filename = secure_filename(f"mealplan_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
+            upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+            file.save(upload_path)
+            
+            # OCR
+            ocr = get_ocr_service()
+            text = ocr.extract_text_from_image(upload_path)
+            
+            # Save to DB
+            today = date.today()
+            # Calculate start of week (Monday)
+            monday = today - timedelta(days=today.weekday())
+            
+            class_id = current_user.class_id
+            if not class_id and current_user.is_super_admin:
+                 # Super admin might not have a class, maybe handle specific logic or allow NULL
+                 class_id = None 
+
+            plan = MealPlan(
+                class_id=class_id,
+                image_path=filename,
+                extracted_text=text,
+                week_start=monday
+            )
+            db.session.add(plan)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True, 
+                'text': text, 
+                'image_url': f'/uploads/{filename}'
+            })
+        except Exception as e:
+            current_app.logger.error(f"Meal plan upload error: {e}")
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+@api_bp.route('/mealplan/latest', methods=['GET'])
+@login_required
+def get_latest_meal_plan():
+    # Get latest for user's class
+    # If user has no class (e.g. super admin specific case), we might show global or none
+    # Ideally super admin sees all or selects, but sticking to simple context
+    query = MealPlan.query
+    if current_user.class_id:
+        query = query.filter_by(class_id=current_user.class_id)
+    
+    plan = query.order_by(MealPlan.created_at.desc()).first()
+    
+    if not plan:
+        return jsonify({'success': False, 'found': False})
+        
+    return jsonify({
+        'success': True,
+        'found': True,
+        'image_url': f'/uploads/{plan.image_path}',
+        'text': plan.extracted_text,
+        'week_start': plan.week_start.isoformat(),
+        'created_at': plan.created_at.isoformat()
+    })

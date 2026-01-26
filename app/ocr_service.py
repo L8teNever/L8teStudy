@@ -9,6 +9,10 @@ from typing import Optional, Tuple
 import pdfplumber
 import PyPDF2
 from PIL import Image
+try:
+    import pytesseract
+except ImportError:
+    pytesseract = None
 
 
 class OCRError(Exception):
@@ -264,6 +268,35 @@ class OCRService:
         cleaned = re.sub(r' +', ' ', cleaned)
         
         return cleaned
+
+    def extract_text_from_image(self, image_path: str) -> str:
+        """
+        Extract text from an image using Tesseract OCR
+        
+        Args:
+            image_path: Path to the image file
+            
+        Returns:
+            Extracted text
+        """
+        if not pytesseract:
+            return "OCR module (pytesseract) not installed."
+            
+        try:
+            img = Image.open(image_path)
+            # Use German language by default if available, else English
+            # Assuming 'deu' is installed, otherwise fallback might be needed or just default
+            # We try default first.
+            text = pytesseract.image_to_string(img, lang='deu') 
+            return text
+        except Exception as e:
+            print(f"OCR Error: {e}")
+            # Try English/default if German fails or just return error
+            try:
+                text = pytesseract.image_to_string(img)
+                return text
+            except:
+                return f"Error extracting text: {str(e)}"
 
 
 # Utility function
