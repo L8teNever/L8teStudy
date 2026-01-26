@@ -2811,13 +2811,21 @@ def delete_drive_folder(id):
         if not can_delete:
             return jsonify({'success': False, 'message': 'Not authorized'}), 403
         
-        # Delete encrypted files from disk
+        # Delete encrypted files from disk (recursively)
         from .drive_encryption import get_drive_encryption_manager
         encryption_manager = get_drive_encryption_manager()
         
-        for file in folder.files:
+        def collect_files_recursive(fld):
+            all_files = list(fld.files)
+            for sub in fld.subfolders:
+                all_files.extend(collect_files_recursive(sub))
+            return all_files
+
+        all_files_to_delete = collect_files_recursive(folder)
+        for file in all_files_to_delete:
             try:
-                encryption_manager.delete_encrypted_file(file.encrypted_path)
+                if file.encrypted_path:
+                    encryption_manager.delete_encrypted_file(file.encrypted_path)
             except:
                 pass
         

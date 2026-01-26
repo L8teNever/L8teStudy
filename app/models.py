@@ -351,7 +351,7 @@ class DriveFolder(db.Model):
     subject = db.relationship('Subject', backref='drive_folders')
     created_by = db.relationship('User', foreign_keys=[created_by_user_id], backref='created_drive_folders')
     user = db.relationship('User', foreign_keys=[user_id], backref='owned_drive_folders')
-    parent = db.relationship('DriveFolder', remote_side=[id], backref='subfolders')
+    parent = db.relationship('DriveFolder', remote_side=[id], backref=db.backref('subfolders', cascade='all, delete-orphan'))
 
 
 class DriveFile(db.Model):
@@ -377,7 +377,7 @@ class DriveFile(db.Model):
     
     # Relationships
     subject = db.relationship('Subject', backref='drive_files')
-    folder = db.relationship('DriveFolder', backref='files')
+    folder = db.relationship('DriveFolder', backref=db.backref('files', cascade='all, delete-orphan'))
 
 
 class DriveFileContent(db.Model):
@@ -388,7 +388,7 @@ class DriveFileContent(db.Model):
     page_count = db.Column(db.Integer, default=0)
     ocr_completed_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    file = db.relationship('DriveFile', backref=db.backref('content', uselist=False))
+    file = db.relationship('DriveFile', backref=db.backref('content', uselist=False, cascade='all, delete-orphan'))
 
 class MealPlan(db.Model):
     __tablename__ = 'meal_plan'
