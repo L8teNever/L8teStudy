@@ -7104,12 +7104,12 @@
                 `).join('');
 
                 const cacheHtml = stats ? `
-                    <div class="floating-card" style="margin-bottom: 20px; border-left: 4px solid var(--accent);">
-                        <div style="font-weight:700; font-size:16px; margin-bottom:12px; display:flex; justify-content:space-between;">
+                    <div class="floating-card" style="margin-bottom: 20px; border-left: 4px solid var(--accent); position: relative;">
+                        <div style="font-weight:700; font-size:16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
                             <span>📦 RAM Cache Status</span>
-                            <span style="color:var(--accent);">${stats.total_size_mb} MB / ${stats.limit_mb} MB</span>
+                            <span style="color:var(--accent); font-size:14px;">${stats.total_size_mb} MB / ${stats.limit_mb} MB</span>
                         </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:13px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:13px; margin-bottom:15px;">
                             <div style="background:var(--tab-bg); padding:10px; border-radius:12px;">
                                 <div style="color:var(--text-sec);">Dateien (Content)</div>
                                 <div style="font-weight:700;">${stats.content_count} Dateien</div>
@@ -7121,6 +7121,9 @@
                                 <div style="font-size:11px; opacity:0.7;">${stats.metadata_size_mb} MB</div>
                             </div>
                         </div>
+                        <button class="ios-btn" style="margin:0; padding:10px; font-size:13px; font-weight:700; background:rgba(0,113,227,0.1); color:var(--accent); border:none; display:flex; align-items:center; justify-content:center; gap:8px;" id="warmup-btn" onclick="startDriveWarmup()">
+                            <i data-lucide="refresh-cw" style="width:16px;"></i> Cache manuell vorladen (Sync)
+                        </button>
                     </div>
                 ` : '';
 
@@ -7134,6 +7137,34 @@
             } catch (e) {
                 console.error(e);
                 document.getElementById('app-container').innerHTML = `<div class="floating-card" style="color:var(--danger)">${t('error')}</div>`;
+            }
+        }
+
+        async function startDriveWarmup() {
+            const btn = document.getElementById('warmup-btn');
+            const originalHtml = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="spinner-icon" style="width:16px;"></i> Synchronisiere...';
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/drive/warmup', { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    if (window.showToast) showToast("Synchronisierung abgeschlossen", "success");
+                    else alert("Synchronisierung abgeschlossen!");
+                } else {
+                    alert(data.message || "Fehler beim Synchronisieren");
+                }
+            } catch (e) {
+                alert("Verbindungsfehler bei der Synchronisierung");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                lucide.createIcons();
+                renderDriveManagement(); // Refresh stats
             }
         }
 

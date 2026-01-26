@@ -47,6 +47,27 @@ def get_cache_stats():
         'stats': stats
     })
 
+@drive_bp.route('/warmup', methods=['POST'])
+@login_required
+def run_warmup():
+    """Manually trigger Drive cache warmup"""
+    if not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    client = DriveOAuthClient()
+    if not client.is_authenticated():
+        return jsonify({'success': False, 'message': 'Drive not authenticated'}), 401
+    
+    # Run warmup (async-like behavior by not waiting for full depth if it's too much? 
+    # No, we'll just run it, maybe with smaller depth for manual trigger if needed)
+    try:
+        # We use a slightly smaller depth for manual trigger to avoid timeout, 
+        # but 3 is usually fast enough for a چند hundred folders.
+        client.warmup_cache(depth=3)
+        return jsonify({'success': True, 'message': 'Warmup initiated successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @drive_bp.route('/auth/start', methods=['GET'])
 @login_required
 def start_auth():
