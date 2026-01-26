@@ -26,8 +26,7 @@ class SchoolClass(db.Model):
     events = db.relationship('Event', backref='school_class', lazy='dynamic')
     # Use relationship through junction table for shared subjects
     audit_logs = db.relationship('AuditLog', backref='school_class', lazy='dynamic')
-
-
+    subject_teachers = db.relationship('SubjectTeacher', backref='school_class', lazy='dynamic')
 
 class UserRole:
     STUDENT = 'student'
@@ -160,6 +159,19 @@ class Subject(db.Model):
     tasks = db.relationship('Task', backref='subject_rel', lazy='dynamic')
     events = db.relationship('Event', backref='subject_rel', lazy='dynamic')
     mappings = db.relationship('SubjectMapping', backref='official_subject', lazy='dynamic')
+    teachers = db.relationship('SubjectTeacher', backref='subject', lazy='dynamic')
+
+class SubjectTeacher(db.Model):
+    """Stores teacher info (email) for a specific subject in a specific class"""
+    id = db.Column(db.Integer, primary_key=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=False)
+    teacher_email = db.Column(db.String(120), nullable=True)
+    teacher_name = db.Column(db.String(120), nullable=True)
+    
+    __table_args__ = (
+        db.UniqueConstraint('subject_id', 'class_id', name='_subject_class_teacher_uc'),
+    )
 
 class SubjectMapping(db.Model):
     """Maps informal/messy folder names to official subjects"""

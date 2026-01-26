@@ -4,7 +4,7 @@ from .models import (
     User, Task, TaskImage, Event, Grade, NotificationSetting, 
     PushSubscription, Subject, SubjectMapping, TaskMessage, TaskChatRead, 
     GlobalSetting, SchoolClass, TaskCompletion, UserRole,
-    DriveOAuthToken, DriveFolder,
+    DriveOAuthToken, DriveFolder, SubjectTeacher,
     subject_classes, db
 )
 from app.notifications import notify_new_task, notify_new_event
@@ -1516,6 +1516,7 @@ def get_subjects():
     if current_user.is_super_admin:
         if class_id:
             from .models import SchoolClass
+            target_class_id = class_id # CAPTURE TARGET CLASS
             subjects = Subject.query.join(Subject.classes).filter(SchoolClass.id == class_id).order_by(Subject.name).all()
         else:
             subjects = Subject.query.order_by(Subject.name).all()
@@ -1528,15 +1529,31 @@ def get_subjects():
                 (Subject.classes.any(id=current_user.class_id)) | 
                 (~Subject.classes.any())
             ).order_by(Subject.name).all()
+    
+    # Ensure target_class_id is int if present (for super_admin passed as string)
+    if target_class_id:
+        try:
+            target_class_id = int(target_class_id)
+        except:
+            target_class_id = None
         
     if not subjects and not class_id and current_user.is_super_admin:
        defaults = ['Mathematik', 'Deutsch', 'Englisch', 'Physik', 'Biologie', 'Geschichte', 'Kunst', 'Sport', 'Chemie', 'Religion']
        return jsonify([{'id': i, 'name': n, 'class_names': []} for i, n in enumerate(defaults)])
        
+    # Fetch Teacher Info if we have a target class
+    teacher_map = {}
+    if target_class_id:
+        st_entries = SubjectTeacher.query.filter_by(class_id=target_class_id).all()
+        for st in st_entries:
+            teacher_map[st.subject_id] = {'email': st.teacher_email, 'name': st.teacher_name}
+
     return jsonify([{
         'id': s.id, 
         'name': s.name, 
-        'class_names': [c.name for c in s.classes]
+        'class_names': [c.name for c in s.classes],
+        'teacher_email': teacher_map.get(s.id, {}).get('email'),
+        'teacher_name': teacher_map.get(s.id, {}).get('name')
     } for s in subjects])
 
 @api_bp.route('/subjects', methods=['POST'])
@@ -1576,6 +1593,35 @@ def delete_subject(id):
             return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
     db.session.delete(subject)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/subjects/<int:id>/teacher', methods=['POST'])
+@login_required
+def update_subject_teacher(id):
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    data = request.json
+    email = data.get('teacher_email')
+    name = data.get('teacher_name')
+    
+    # Determine class context. Admin edits for their own class, Super Admin can specify.
+    class_id = current_user.class_id
+    if current_user.is_super_admin and data.get('class_id'):
+        class_id = data.get('class_id')
+        
+    if not class_id:
+        return jsonify({'success': False, 'message': 'Class context required'}), 400
+
+    from .models import SubjectTeacher
+    st = SubjectTeacher.query.filter_by(subject_id=id, class_id=class_id).first()
+    if not st:
+        st = SubjectTeacher(subject_id=id, class_id=class_id)
+        db.session.add(st)
+        
+    st.teacher_email = email
+    st.teacher_name = name
     db.session.commit()
     return jsonify({'success': True})
 

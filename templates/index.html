@@ -1794,6 +1794,8 @@
                     data-lucide="bar-chart-3"></i><span>Noten</span></a>
             <a class="nav-link" id="nav-drive-side" onclick="navigate('drive', this, 'Drive')"><i
                     data-lucide="hard-drive"></i><span>Drive</span></a>
+            <a class="nav-link" onclick="navigate('subjects', this, 'Fächer')"><i
+                    data-lucide="book-open"></i><span>Fächer</span></a>
         </div>
         <div class="nav-group">
             <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
@@ -1822,6 +1824,9 @@
         </div>
         <div class="more-menu-item" onclick="navigate('drive', null, 'Drive'); toggleMoreMenu()">
             <i data-lucide="hard-drive"></i><span>Drive</span>
+        </div>
+        <div class="more-menu-item" onclick="navigate('subjects', null, 'Fächer'); toggleMoreMenu()">
+            <i data-lucide="book-open"></i><span>Fächer</span>
         </div>
     </div>
 
@@ -2104,6 +2109,7 @@
                 else if (view === 'settings') renderSettingsPage();
                 else if (view === 'account') renderAccountHub();
                 else if (view === 'drive') renderDrive(); // Google Drive OAuth Integration
+                else if (view === 'subjects') renderSubjects();
                 else if (view === 'sub_admin') renderAdminContent();
 
                 const fab = document.getElementById('main-fab');
@@ -2133,6 +2139,7 @@
             else if (currentView === 'calendar') await renderCalendar(currentCalendarTab);
             else if (currentView === 'grades') await renderGrades();
             else if (currentView === 'drive') await renderDrive(); // Google Drive OAuth Integration
+            else if (currentView === 'subjects') await renderSubjects();
             else if (currentView === 'drive_folder') {
                 // Legacy drive_folder view - redirect to documents
                 await renderDrive();
@@ -2306,6 +2313,96 @@
                 toast.style.transform = 'translateX(-50%) translateY(20px)';
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        }
+
+        /* --- SUBJECT TEACHER LOGIC --- */
+        async function renderSubjects() {
+            currentView = 'subjects';
+            setPageTitle('Fächer');
+            const container = document.getElementById('app-container');
+            container.innerHTML = `<div class="loading"></div>`;
+            
+            try {
+                const res = await fetch('/api/subjects');
+                const subjects = await res.json();
+                
+                if (!subjects || subjects.length === 0) {
+                     container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Keine Fächer gefunden.</p></div>`;
+                     return;
+                }
+
+                container.innerHTML = `
+                    <div class="floating-card" style="padding: 0;">
+                        ${subjects.map((s, idx) => `
+                        <div class="list-item" style="padding: 16px; border-bottom: 0.5px solid var(--border);" onclick="openSubjectDetails(${s.id}, '${s.name.replace(/'/g, "\\'")}', '${s.teacher_email || ''}', '${(s.teacher_name || '').replace(/'/g, "\\'")}')">
+                             <div class="item-content">
+                                <div class="item-title">${s.name}</div>
+                                <div class="item-sub" style="margin-top: 4px;">
+                                    ${s.teacher_name ? `<span style="color: var(--accent); font-weight: 500;">${s.teacher_name}</span>` : ''}
+                                    ${s.teacher_email ? `<span style="font-family: monospace; background: var(--tab-bg); padding: 2px 6px; border-radius: 4px; margin-left: ${s.teacher_name ? '6px' : '0'};">${s.teacher_email}</span>` : (!s.teacher_name ? '<span style="opacity: 0.5;">-</span>' : '')}
+                                </div>
+                             </div>
+                             <i data-lucide="chevron-right" style="width: 16px; color: var(--text-sec);"></i>
+                        </div>
+                        `).join('')}
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch(e) { 
+                console.error(e); 
+                container.innerHTML = `<div class="floating-card" style="text-align:center; padding:40px;"><p class="item-sub">Fehler beim Laden.</p></div>`;
+            }
+        }
+        
+        function openSubjectDetails(id, name, email, teacherName) {
+            const isAdmin = window.currentUser.is_admin || window.currentUser.is_super_admin;
+            
+            const html = `
+                <div class="sheet-header">
+                    <h3 style="margin:0;">${name}</h3>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <div class="item-sub" style="margin-bottom: 8px; text-transform: uppercase; font-weight: 700; font-size: 11px;">Lehrer Name</div>
+                    <div style="font-size: 16px; font-weight: 500; margin-bottom: 15px;">${teacherName || '-'}</div>
+                    
+                    <div class="item-sub" style="margin-bottom: 8px; text-transform: uppercase; font-weight: 700; font-size: 11px;">E-Mail Adresse</div>
+                    <div style="font-size: 16px; margin-bottom: 5px; ${email ? 'color: var(--accent); cursor:pointer;' : ''}" onclick="${email ? `window.location.href='mailto:${email}'` : ''}">${email || '-'}</div>
+                </div>
+                
+                ${isAdmin ? `
+                <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 10px;">
+                    <h4 style="margin: 0 0 15px 0;">Bearbeiten</h4>
+                    <input type="text" id="edit-teacher-name" class="ios-input" placeholder="Name des Lehrers" value="${teacherName}">
+                    <input type="email" id="edit-teacher-email" class="ios-input" placeholder="E-Mail Adresse" value="${email}">
+                    <button class="ios-btn" onclick="saveSubjectTeacher(${id})">Speichern</button>
+                </div>
+                ` : ''}
+            `;
+            openSheet(html);
+        }
+        
+        async function saveSubjectTeacher(id) {
+            const email = document.getElementById('edit-teacher-email').value;
+            const name = document.getElementById('edit-teacher-name').value;
+            
+            try {
+                const res = await fetch(\`/api/subjects/\${id}/teacher\`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ teacher_email: email, teacher_name: name })
+                });
+                if(res.ok) {
+                    closeSheet();
+                    renderSubjects(); 
+                    showToast('Gespeichert', 'success');
+                } else {
+                    showToast('Fehler beim Speichern', 'error');
+                }
+            } catch(e) {
+                showToast('Fehler beim Speichern', 'error');
+            }
         }
 
         /* --- API LOGIC INTEGRATED --- */
