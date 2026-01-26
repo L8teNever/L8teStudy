@@ -18,6 +18,11 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive.metadata.readonly'
 ]
 
+# Simple Server-Side RAM Cache (Global within worker)
+# Format: { cache_key: (timestamp, data) }
+_DRIVE_RAM_CACHE = {}
+_CACHE_TTL = 300 # 5 minutes
+
 class DriveOAuthClient:
     """Client for Google Drive API using OAuth 2.0"""
     
@@ -178,8 +183,36 @@ class DriveOAuthClient:
         
         return build('drive', 'v3', credentials=credentials)
     
+    def _get_cache(self, key):
+        """Internal helper to get item from RAM cache"""
+        if key in _DRIVE_RAM_CACHE:
+            timestamp, data = _DRIVE_RAM_CACHE[key]
+            if (datetime.utcnow() - timestamp).total_seconds() < _CACHE_TTL:
+                return data
+            else:
+                del _DRIVE_RAM_CACHE[key]
+        return None
+
+    def _set_cache(self, key, data):
+        """Internal helper to set item in RAM cache"""
+        _DRIVE_RAM_CACHE[key] = (datetime.utcnow(), data)
+        # Prevent memory leaks: limit cache size
+        if len(_DRIVE_RAM_CACHE) > 500:
+            # Pop oldest (first entry)
+            first_key = next(iter(_DRIVE_RAM_CACHE))
+            del _DRIVE_RAM_CACHE[first_key]
+
     def list_items(self, parent_id='root', page_size=100, page_token=None):
         """List both folders and files in a parent directory"""
+        # Cache key includes parent_id and token hash (to separate users)
+        creds = self.get_credentials()
+        creds_hash = hash(creds.token) if creds and creds.token else "no_auth"
+        cache_key = f"list_{parent_id}_{page_token}_{creds_hash}"
+        
+        cached = self._get_cache(cache_key)
+        if cached:
+            return cached[0], cached[1]
+
         service = self.get_service()
         if not service:
             return None, None
@@ -199,7 +232,11 @@ class DriveOAuthClient:
                 orderBy="folder, name"
             ).execute()
             
-            return results.get('files', []), results.get('nextPageToken')
+            items = results.get('files', [])
+            next_token = results.get('nextPageToken')
+            
+            self._set_cache(cache_key, (items, next_token))
+            return items, next_token
         except HttpError as error:
             current_app.logger.error(f"Drive API error: {error}")
             return None, None
@@ -256,6 +293,14 @@ class DriveOAuthClient:
     
     def search_files(self, query_text, folder_ids=None, page_size=50):
         """Search files by name or content"""
+        creds = self.get_credentials()
+        creds_hash = hash(creds.token) if creds and creds.token else "no_auth"
+        cache_key = f"search_{query_text}_{folder_ids}_{creds_hash}"
+        
+        cached = self._get_cache(cache_key)
+        if cached:
+            return cached
+
         service = self.get_service()
         if not service:
             return None
@@ -284,13 +329,20 @@ class DriveOAuthClient:
                 orderBy="modifiedTime desc"
             ).execute()
             
-            return results.get('files', [])
+            items = results.get('files', [])
+            self._set_cache(cache_key, items)
+            return items
         except HttpError as error:
             current_app.logger.error(f"Drive API error: {error}")
             return None
     
     def get_file_metadata(self, file_id):
         """Get metadata for a specific file"""
+        cache_key = f"meta_{file_id}"
+        cached = self._get_cache(cache_key)
+        if cached:
+            return cached
+
         service = self.get_service()
         if not service:
             return None
@@ -301,6 +353,7 @@ class DriveOAuthClient:
                 fields="id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink, description"
             ).execute()
             
+            self._set_cache(cache_key, file)
             return file
         except HttpError as error:
             current_app.logger.error(f"Drive API error: {error}")

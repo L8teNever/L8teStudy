@@ -1,6 +1,7 @@
 /**
  * Google Drive OAuth Integration
  * Simplified: Shows ALL files from the authenticated Google Drive account
+ * Added: RAM Caching for faster navigation
  */
 
 class DriveManager {
@@ -10,6 +11,11 @@ class DriveManager {
         this.nextPageToken = null;
         this.currentParentId = 'root';
         this.history = []; // For breadcrumbs
+
+        // RAM Cache
+        this.cache = new Map();
+        this.cacheDuration = 1000 * 60 * 5; // 5 minutes cache
+
         this.init();
     }
 
@@ -55,6 +61,7 @@ class DriveManager {
                         this.checkAuthStatus().then(() => {
                             if (this.authenticated) {
                                 showNotification('Google Drive erfolgreich verbunden!', 'success');
+                                this.clearCache(); // Clear cache after new auth
                             }
                         });
                     }
@@ -79,6 +86,7 @@ class DriveManager {
             if (response.ok) {
                 this.authenticated = false;
                 this.files = [];
+                this.clearCache();
                 showNotification('Google Drive Verbindung getrennt', 'success');
             }
         } catch (error) {
@@ -87,7 +95,28 @@ class DriveManager {
         }
     }
 
+    clearCache() {
+        this.cache.clear();
+    }
+
     async loadFiles(parentId = 'root', pageToken = null) {
+        // Check cache first (only for first page of a folder)
+        if (!pageToken) {
+            const cached = this.cache.get(parentId);
+            if (cached && (Date.now() - cached.timestamp < this.cacheDuration)) {
+                console.log('Loading from RAM cache:', parentId);
+                this.currentParentId = parentId;
+                this.files = cached.data.files;
+                this.nextPageToken = cached.data.nextPageToken;
+                return {
+                    files: this.files,
+                    nextPageToken: this.nextPageToken,
+                    parentId: parentId,
+                    cached: true
+                };
+            }
+        }
+
         try {
             this.currentParentId = parentId;
             let url = `/api/drive/files?parent_id=${parentId}`;
@@ -103,6 +132,14 @@ class DriveManager {
                     this.files = this.files.concat(data.files);
                 } else {
                     this.files = data.files;
+                    // Save to cache
+                    this.cache.set(parentId, {
+                        timestamp: Date.now(),
+                        data: {
+                            files: data.files,
+                            nextPageToken: data.nextPageToken
+                        }
+                    });
                 }
                 this.nextPageToken = data.nextPageToken;
                 return {
@@ -126,11 +163,23 @@ class DriveManager {
     }
 
     async searchFiles(query) {
+        // Search is usually too dynamic for simple caching, 
+        // but we could cache the exact query if needed.
+        const cacheKey = `search_${query}`;
+        const cached = this.cache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < this.cacheDuration)) {
+            return cached.data;
+        }
+
         try {
             const response = await fetch(`/api/drive/search?q=${encodeURIComponent(query)}`);
             const data = await response.json();
 
             if (data.success) {
+                this.cache.set(cacheKey, {
+                    timestamp: Date.now(),
+                    data: data.files
+                });
                 return data.files;
             }
             return [];
