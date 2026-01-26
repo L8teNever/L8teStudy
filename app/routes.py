@@ -280,6 +280,10 @@ def login():
     if user and user.check_password(password):
         session.permanent = True
         login_user(user, remember=True)
+        # Audit Log
+        from .models import AuditLog
+        db.session.add(AuditLog(user_id=user.id, class_id=user.class_id, action="Logged in"))
+        db.session.commit()
         return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
 
@@ -541,7 +545,7 @@ def delete_task(id):
     # Audit Log
     from .models import AuditLog
     target_class_id = current_user.class_id or task.class_id
-    log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted task: {task.id}")
+    log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted task: {task.title}")
     db.session.add(log)
 
     db.session.commit()
@@ -921,7 +925,7 @@ def delete_event(id):
         # Audit Log
         from .models import AuditLog
         target_class_id = current_user.class_id or event.class_id
-        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted event: {event.id}")
+        log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted event: {event.title}")
         db.session.add(log)
         
         db.session.commit()
@@ -1023,7 +1027,7 @@ def delete_grade(id):
     # Audit Log
     from .models import AuditLog
     target_class_id = current_user.class_id
-    log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted grade: {grade.id}")
+    log = AuditLog(user_id=current_user.id, class_id=target_class_id, action=f"Deleted grade: {grade.subject} ({grade.value})")
     db.session.add(log)
     
     db.session.commit()

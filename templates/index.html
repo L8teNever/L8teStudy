@@ -42,6 +42,7 @@
                 return originalFetch(input, init);
             };
         })();
+        window.appVersion = "{{ version }}";
     </script>
     <style>
         :root {
@@ -4779,15 +4780,57 @@
             const apiUrl = filterClassId ? `/api/admin/activity?class_id=${filterClassId}` : '/api/admin/activity';
 
             document.getElementById('app-container').innerHTML = `
-                <div class="controls-row search-active">
+                <div class="floating-card" style="padding: 24px; border-bottom: 4px solid var(--accent); background: linear-gradient(135deg, var(--card-bg) 0%, rgba(0, 113, 227, 0.03) 100%);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 113, 227, 0.2);">
+                                <i data-lucide="cpu" style="width: 22px;"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin:0; font-size: 18px; font-weight: 800;">System Umgebung</h3>
+                                <p style="margin:0; font-size: 12px; color: var(--text-sec); font-weight: 500;">Environment Dashboard</p>
+                            </div>
+                        </div>
+                        <div style="background: rgba(52, 199, 89, 0.1); color: #34C759; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 5px;">
+                            <span style="width: 6px; height: 6px; background: #34C759; border-radius: 50%;"></span> ONLINE
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="background: var(--tab-bg); padding: 12px; border-radius: 16px; border: 1px solid var(--border);">
+                            <div style="font-size: 10px; color: var(--text-sec); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Software Version</div>
+                            <div style="font-size: 15px; font-weight: 700;">L8teStudy v${window.appVersion || '2.1.1'}</div>
+                        </div>
+                        <div style="background: var(--tab-bg); padding: 12px; border-radius: 16px; border: 1px solid var(--border);">
+                            <div style="font-size: 10px; color: var(--text-sec); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Engine</div>
+                            <div style="font-size: 15px; font-weight: 700;">Python 3.11</div>
+                        </div>
+                        <div style="background: var(--tab-bg); padding: 12px; border-radius: 16px; border: 1px solid var(--border);">
+                            <div style="font-size: 10px; color: var(--text-sec); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Platform</div>
+                            <div style="font-size: 15px; font-weight: 700;">Linux / Docker</div>
+                        </div>
+                        <div style="background: var(--tab-bg); padding: 12px; border-radius: 16px; border: 1px solid var(--border);">
+                            <div style="font-size: 10px; color: var(--text-sec); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Security</div>
+                            <div style="font-size: 15px; font-weight: 700; color:var(--accent);">CSRF Enabled</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls-row search-active" style="margin-top: 25px;">
                     <div class="search-container active" style="position:relative; flex:1; width:auto; margin-left:0; cursor:text;" onclick="document.querySelector('.sub-search-input').focus()">
                         <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
                         <input type="text" class="search-input sub-search-input" placeholder="${t('activity_search')}" oninput="filterActivityLog()" style="opacity:1; transform:none;">
                     </div>
+                    <div style="width:48px; height:48px; border-radius:16px; background:var(--tab-bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="openActivityFilterMenu()">
+                        <i data-lucide="filter" style="width:20px; color:var(--text-sec)"></i>
+                    </div>
                 </div>
                 <div id="filter-status" style="display:none; padding: 0 5px 15px 5px; gap:10px; flex-wrap:wrap;"></div>
                 <div id="activity-list-container">
-                    <div style="text-align:center; padding:20px; color:var(--text-sec)">${t('loading')}</div>
+                    <div style="text-align:center; padding:40px; color:var(--text-sec)">
+                         <i data-lucide="loader-2" class="spinner-icon" style="width:32px; height:32px; margin-bottom:10px;"></i>
+                         <p style="margin:0">${t('loading')}</p>
+                    </div>
                 </div>
              `;
             lucide.createIcons();
@@ -4803,7 +4846,10 @@
                 renderActivityLogList(cachedActivityLogs);
             } catch (e) {
                 const container = document.getElementById('activity-list-container');
-                if (container) container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger)">${t('error_loading')}</div>`;
+                if (container) container.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger)">
+                    <i data-lucide="alert-circle" style="width:40px; height:40px; margin-bottom:10px;"></i>
+                    <p style="margin:0">${t('error_loading')}</p>
+                </div>`;
             }
         }
 
@@ -4849,23 +4895,62 @@
         }
 
         function renderActivityLogList(logs) {
-            const listHtml = logs.map(l => `
-                <div class="list-item" style="align-items:flex-start;">
-                    <div class="item-content">
-                        <div class="item-title" style="font-size:14px; font-weight:600;">${l.user}</div>
-                        <div class="item-sub" style="margin-top:2px;">${l.action}</div>
+            let currentDayStr = "";
+            const listHtml = logs.map(l => {
+                let icon = 'activity';
+                let iconColor = 'var(--accent)';
+                let iconBg = 'rgba(0, 113, 227, 0.1)';
+
+                const actionLower = l.action.toLowerCase();
+                if (actionLower.includes('created')) { icon = 'plus-circle'; iconColor = '#34C759'; iconBg = 'rgba(52, 199, 89, 0.1)'; }
+                else if (actionLower.includes('deleted')) { icon = 'trash-2'; iconColor = '#FF3B30'; iconBg = 'rgba(255, 59, 48, 0.1)'; }
+                else if (actionLower.includes('updated') || actionLower.includes('changed') || actionLower.includes('edit')) { icon = 'edit-3'; iconColor = '#5856D6'; iconBg = 'rgba(88, 86, 214, 0.1)'; }
+                else if (actionLower.includes('login')) { icon = 'log-in'; iconColor = '#FF9500'; iconBg = 'rgba(255, 149, 0, 0.1)'; }
+                else if (actionLower.includes('task')) { icon = 'check-square'; }
+                else if (actionLower.includes('event')) { icon = 'calendar'; }
+                else if (actionLower.includes('grade')) { icon = 'award'; }
+
+                // Group by date
+                const datePart = l.timestamp.split(' ')[0];
+                let dateDivider = "";
+                if (datePart !== currentDayStr) {
+                    currentDayStr = datePart;
+                    dateDivider = `<div style="padding: 20px 0 10px 0; font-size: 13px; font-weight: 800; color: var(--text-sec); display: flex; align-items: center; gap: 10px;">
+                        <span>${currentDayStr}</span>
+                        <div style="flex: 1; height: 1px; background: var(--border); opacity: 0.5;"></div>
+                    </div>`;
+                }
+
+                return `
+                    ${dateDivider}
+                    <div class="list-item" style="padding: 16px 0; border: none; align-items: flex-start;">
+                        <div style="width: 42px; height: 42px; border-radius: 12px; background: ${iconBg}; color: ${iconColor}; display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0; position: relative;">
+                            <i data-lucide="${icon}" style="width: 20px;"></i>
+                            <div style="position: absolute; bottom: -8px; left: 50%; width: 2px; height: 16px; background: var(--border); opacity: 0.3;"></div>
+                        </div>
+                        <div class="item-content">
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                                <div class="item-title" style="font-size: 15px; font-weight: 700; color: var(--text-main);">${l.user}</div>
+                                <div style="font-size: 11px; color: var(--text-sec); font-weight: 600; font-variant-numeric: tabular-nums;">${l.timestamp.split(' ')[1]}</div>
+                            </div>
+                            <div class="item-sub" style="font-size: 14px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">${l.action}</div>
+                        </div>
                     </div>
-                    <div style="font-size:11px; color:var(--text-sec); white-space:nowrap;">${l.timestamp}</div>
-                </div>
-             `).join('');
+                `;
+            }).join('');
 
             const listContainer = document.getElementById('activity-list-container');
             if (!listContainer) return;
             listContainer.innerHTML = `
-                <div class="floating-card" style="padding:0 15px; margin-bottom:40px;">
-                    ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">${t('no_results')}</div>`}
+                <div class="floating-card" style="padding: 0 20px 20px 20px; margin-bottom: 40px;">
+                    ${listHtml || `<div style="padding: 60px 20px; text-align: center; color: var(--text-sec);">
+                        <i data-lucide="search-x" style="width: 48px; height: 48px; margin-bottom: 15px; opacity: 0.2;"></i>
+                        <p style="margin: 0; font-size: 15px; font-weight: 500;">${t('no_results')}</p>
+                        <button class="ios-btn btn-sec" style="width: auto; margin-top: 15px; padding: 8px 20px;" onclick="document.querySelector('.sub-search-input').value=''; filterActivityLog();">${t('all')}</button>
+                    </div>`}
                 </div>
              `;
+            lucide.createIcons();
         }
 
         function filterActivityLog() {
