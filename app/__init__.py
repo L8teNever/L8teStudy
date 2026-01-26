@@ -329,6 +329,34 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Schema migration (notify_chat_message) error: {e}")
 
+        # Schema Update: Fix DriveFolder table (add missing columns)
+        try:
+            if 'drive_folder' in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns('drive_folder')]
+                with db.engine.connect() as conn:
+                    if 'class_id' not in cols:
+                        app.logger.info("Migrating: Adding class_id to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN class_id INTEGER REFERENCES school_class(id)"))
+                    if 'folder_id' not in cols:
+                         # folder_id might be needed if re-creating
+                         app.logger.info("Migrating: Adding folder_id to drive_folder")
+                         conn.execute(text("ALTER TABLE drive_folder ADD COLUMN folder_id VARCHAR(256)"))
+                    if 'file_count' not in cols:
+                        app.logger.info("Migrating: Adding file_count to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN file_count INTEGER DEFAULT 0"))
+                    if 'is_active' not in cols:
+                        app.logger.info("Migrating: Adding is_active to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+                    if 'include_subfolders' not in cols:
+                        app.logger.info("Migrating: Adding include_subfolders to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN include_subfolders BOOLEAN DEFAULT 1"))
+                    if 'created_by_user_id' not in cols:
+                        app.logger.info("Migrating: Adding created_by_user_id to drive_folder")
+                        conn.execute(text("ALTER TABLE drive_folder ADD COLUMN created_by_user_id INTEGER REFERENCES user(id)"))
+                    conn.commit()
+        except Exception as e:
+            app.logger.error(f"DriveFolder schema migration error: {e}")
+
 
     # Initialize Scheduler
     scheduler.init_app(app)
