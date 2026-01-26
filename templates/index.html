@@ -1794,12 +1794,11 @@
                     data-lucide="bar-chart-3"></i><span>Noten</span></a>
             <a class="nav-link" id="nav-drive-side" onclick="navigate('drive', this, 'Drive')"><i
                     data-lucide="hard-drive"></i><span>Drive</span></a>
-            <a class="nav-link" onclick="navigate('subjects', this, 'Fächer')"><i
-                    data-lucide="book-open"></i><span>Fächer</span></a>
         </div>
         <div class="nav-group">
-            <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
-        </div>
+            <div class="nav-group">
+                <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
+            </div>
     </nav>
 
     <header>
@@ -1824,9 +1823,6 @@
         </div>
         <div class="more-menu-item" onclick="navigate('drive', null, 'Drive'); toggleMoreMenu()">
             <i data-lucide="hard-drive"></i><span>Drive</span>
-        </div>
-        <div class="more-menu-item" onclick="navigate('subjects', null, 'Fächer'); toggleMoreMenu()">
-            <i data-lucide="book-open"></i><span>Fächer</span>
         </div>
     </div>
 
@@ -2109,7 +2105,6 @@
                 else if (view === 'settings') renderSettingsPage();
                 else if (view === 'account') renderAccountHub();
                 else if (view === 'drive') renderDrive(); // Google Drive OAuth Integration
-                else if (view === 'subjects') renderSubjects();
                 else if (view === 'sub_admin') renderAdminContent();
 
                 const fab = document.getElementById('main-fab');
@@ -2139,7 +2134,6 @@
             else if (currentView === 'calendar') await renderCalendar(currentCalendarTab);
             else if (currentView === 'grades') await renderGrades();
             else if (currentView === 'drive') await renderDrive(); // Google Drive OAuth Integration
-            else if (currentView === 'subjects') await renderSubjects();
             else if (currentView === 'drive_folder') {
                 // Legacy drive_folder view - redirect to documents
                 await renderDrive();
@@ -3683,7 +3677,7 @@
             } catch (e) { console.error(e); }
         }
 
-        function renderSubjectDetails(subject, avg, gradesJson, pushToHistory = true) {
+        async function renderSubjectDetails(subject, avg, gradesJson, pushToHistory = true) {
             if (pushToHistory) {
                 let url = `/subject/${encodeURIComponent(subject)}`;
                 if (window.currentUser?.className) url = `/${window.currentUser.className}${url}`;
@@ -3705,12 +3699,46 @@
                     <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec); margin-left:10px;"></i>
                 </div>`).join('');
 
+            // Fetch Teacher Info
+            let teacherHtml = '';
+            let subjectId = null;
+            let teacherEditHtml = '';
+            try {
+                // Ensure class context for superadmin
+                const cid = window.currentUser?.class_id || '';
+                const res = await fetch(`/api/subjects?class_id=${cid}`);
+                const subjects = await res.json();
+                const matchedSub = subjects.find(s => s.name === subject);
+
+                if (matchedSub) {
+                    subjectId = matchedSub.id;
+                    const teacherName = matchedSub.teacher_name || '-';
+                    const email = matchedSub.teacher_email || '';
+
+                    teacherHtml = `
+                       <div class="floating-card" style="padding: 15px 20px; margin-top: -15px; margin-bottom: 25px; display:flex; align-items:center; justify-content:space-between;">
+                           <div>
+                               <div style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-sec); margin-bottom:4px;">${t('teacher') || 'LEHRER'}</div>
+                               <div style="font-weight:600; font-size:15px;">${teacherName}</div>
+                               ${email ? `<div style="font-size:13px; color:var(--accent); margin-top:2px; cursor:pointer;" onclick="window.location.href='mailto:${email}'">${email}</div>` : ''}
+                           </div>
+                           ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `<button class="ios-btn btn-small btn-sec" style="width:auto;" onclick="openEditTeacherSheet(${subjectId}, '${teacherName.replace(/'/g, "\\'")}', '${email}')"><i data-lucide="edit-3" style="width:16px;"></i></button>` : ''}
+                       </div>
+                   `;
+                } else if (window.currentUser.is_admin || window.currentUser.is_super_admin) {
+                    // Subject exists in grades but not in official subjects list. Admin could potentially link it or create it, 
+                    // but for now we just show nothing or a subtle hint.
+                }
+            } catch (e) { console.error(e); }
+
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card" style="text-align:center; padding: 25px 20px;">
                     <div style="font-size:14px; color:var(--text-sec); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">${subject}</div>
                     <div style="color:var(--accent); font-size:48px; font-weight:800; line-height:1;">${avg}</div>
                     <div style="font-size:13px; color:var(--text-sec); margin-top:10px;">Durschnitt</div>
                 </div>
+                
+                ${teacherHtml}
                 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin:25px 5px 15px 5px;">
                     <h3 style="margin:0; font-size:18px; font-weight:700;">${t('single_grades')}</h3>
@@ -3726,6 +3754,50 @@
             document.getElementById('header-back-btn').style.display = 'block';
             document.getElementById('header-back-btn').onclick = () => window.history.back();
             lucide.createIcons();
+        }
+
+        function openEditTeacherSheet(id, name, email) {
+            name = name === '-' ? '' : name;
+            const html = `
+                <div class="sheet-header">
+                    <h3 style="margin:0;">Lehrer bearbeiten</h3>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <input type="text" id="edit-teacher-name" class="ios-input" placeholder="Name des Lehrers" value="${name}">
+                    <input type="email" id="edit-teacher-email" class="ios-input" placeholder="E-Mail Adresse" value="${email}">
+                    <button class="ios-btn" onclick="saveSubjectTeacher(${id})">Speichern</button>
+                </div>
+            `;
+            openSheet(html);
+        }
+
+        async function saveSubjectTeacher(id) {
+            const email = document.getElementById('edit-teacher-email').value;
+            const name = document.getElementById('edit-teacher-name').value;
+            const classId = window.currentUser?.class_id;
+
+            try {
+                const res = await fetch(`/api/subjects/${id}/teacher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ teacher_email: email, teacher_name: name, class_id: classId })
+                });
+                if (res.ok) {
+                    closeSheet();
+                    // Refresh the view to show new data
+                    if (currentView === 'sub_subject_details' && window.history.state) {
+                        const s = window.history.state;
+                        renderSubjectDetails(s.subject, s.avg, s.gradesJson, false);
+                    }
+                    showToast('Gespeichert', 'success');
+                } else {
+                    showToast('Fehler beim Speichern', 'error');
+                }
+            } catch (e) {
+                showToast('Fehler beim Speichern', 'error');
+            }
         }
 
         // --- Account & Settings Logic ---
