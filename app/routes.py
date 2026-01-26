@@ -2296,3 +2296,119 @@ def get_latest_meal_plan():
         'week_start': plan.week_start.isoformat(),
         'created_at': plan.created_at.isoformat()
     })
+
+# --- Blackboard Routes ---
+
+@api_bp.route('/blackboard', methods=['GET'])
+@login_required
+def get_blackboard_items():
+    try:
+        from .models import BlackboardItem, SubjectTeacher, Subject
+        
+        # 1. Fetch Manual Items
+        query = BlackboardItem.query
+        if current_user.class_id:
+            # Show global (class_id=None) AND class specific
+            query = query.filter(db.or_(BlackboardItem.class_id == None, BlackboardItem.class_id == current_user.class_id))
+        else:
+            # Super admin or no class user: Show global + all? 
+            # Or just global? Let's show global if no class.
+            query = query.filter(BlackboardItem.class_id == None)
+            
+        items = query.order_by(BlackboardItem.sort_order, BlackboardItem.title).all()
+        
+        results = [{
+            'id': i.id,
+            'title': i.title,
+            'content': i.content,
+            'type': i.item_type,
+            'category': i.category,
+            'is_manual': True
+        } for i in items]
+        
+        # 2. Fetch Teachers (Auto-generated contacts)
+        if current_user.class_id:
+            teachers = db.session.query(SubjectTeacher, Subject.name)\
+                .join(Subject, SubjectTeacher.subject_id == Subject.id)\
+                .filter(SubjectTeacher.class_id == current_user.class_id).all()
+                
+            # Deduplicate by email/name
+            teacher_map = {}
+            for st, sub_name in teachers:
+                key = st.teacher_email or st.teacher_name
+                if not key: continue
+                
+                if key not in teacher_map:
+                    teacher_map[key] = {
+                        'id': f"teacher_{st.id}",
+                        'title': st.teacher_name or "Unbekannt",
+                        'content': st.teacher_email,
+                        'type': 'contact_email',
+                        'category': 'Lehrer',
+                        'subjects': [sub_name],
+                        'is_manual': False
+                    }
+                else:
+                    if sub_name not in teacher_map[key]['subjects']:
+                        teacher_map[key]['subjects'].append(sub_name)
+            
+            # Add to results
+            for t in teacher_map.values():
+                t['description'] = ", ".join(t['subjects']) # Show subjects as description
+                results.append(t)
+                
+        return jsonify(results)
+    except Exception as e:
+        current_app.logger.error(f"Blackboard error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/blackboard', methods=['POST'])
+@login_required
+def create_blackboard_item():
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+        
+    data = request.json
+    try:
+        from .models import BlackboardItem
+        
+        # Determine Class ID
+        target_class_id = current_user.class_id
+        if current_user.is_super_admin and 'class_id' in data:
+            target_class_id = data['class_id'] # Can be None for global or specific ID
+            
+        item = BlackboardItem(
+            class_id=target_class_id,
+            title=data.get('title'),
+            content=data.get('content'),
+            item_type=data.get('type', 'info'),
+            category=data.get('category'),
+            sort_order=data.get('sort_order', 0)
+        )
+        db.session.add(item)
+        db.session.commit()
+        return jsonify({'success': True, 'id': item.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+@api_bp.route('/blackboard/<int:id>', methods=['DELETE'])
+@login_required
+def delete_blackboard_item(id):
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'success': False}), 403
+        
+    try:
+        from .models import BlackboardItem
+        item = BlackboardItem.query.get_or_404(id)
+        
+        # Check permissions (Class Admin can only delete own class items)
+        if not current_user.is_super_admin and item.class_id != current_user.class_id:
+            return jsonify({'success': False}), 403
+            
+        db.session.delete(item)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500

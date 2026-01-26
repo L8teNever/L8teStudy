@@ -357,3 +357,17 @@ class DriveFileContent(db.Model):
     ocr_completed_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     file = db.relationship('DriveFile', backref=db.backref('content', uselist=False))
+
+class BlackboardItem(db.Model):
+    """Items for the 'Blackboard' (Schwarzes Brett) feature"""
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True) # Null = Global for all classes
+    title = db.Column(db.String(128), nullable=False)
+    content = db.Column(db.Text, nullable=True) # Email, Phone, or Template Text
+    item_type = db.Column(db.String(50), default='info') # contact_email, contact_phone, template, info, link
+    category = db.Column(db.String(64), nullable=True) # e.g. "Sekretariat", "Lehrer", "Vorlagen"
+    sort_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    school_class = db.relationship('SchoolClass', backref='blackboard_items')
+
