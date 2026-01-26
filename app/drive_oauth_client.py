@@ -452,14 +452,36 @@ class DriveOAuthClient:
             current_app.logger.error(f"Drive download error: {error}")
             return None
 
-    def warmup_cache(self, depth=3):
-        """Warmup the RAM cache by pre-crawling the Drive structure"""
+    def warmup_cache(self, depth=10):
+        """Warmup the RAM cache by pre-crawling the Drive structure (deeper)"""
         try:
-            current_app.logger.info(f"Starting Drive RAM Warmup (Depth: {depth})...")
+            current_app.logger.info(f"Starting deep Drive RAM Warmup (Depth: {depth})...")
             self._warmup_recursive('root', depth)
-            current_app.logger.info("Drive RAM Warmup completed.")
+            current_app.logger.info("Deep Drive RAM Warmup completed.")
         except Exception as e:
             current_app.logger.error(f"Cache Warmup failed: {e}")
+
+    def get_cache_stats(self):
+        """Calculate RAM usage of the caches"""
+        import sys
+        
+        # 1. Content Cache (File Bytes)
+        content_count = len(_DRIVE_CONTENT_CACHE)
+        content_bytes = sum(len(data[2]) for data in _DRIVE_CONTENT_CACHE.values())
+        
+        # 2. Metadata Cache (Listings)
+        listing_count = len(_DRIVE_RAM_CACHE)
+        # Estimate size of listings (rough estimate as sys.getsizeof isn't recursive)
+        listing_bytes = sum(sys.getsizeof(data[1]) for data in _DRIVE_RAM_CACHE.values())
+        
+        return {
+            'content_count': content_count,
+            'content_size_mb': round(content_bytes / (1024 * 1024), 2),
+            'metadata_count': listing_count,
+            'metadata_size_mb': round(listing_bytes / (1024 * 1024), 2),
+            'total_size_mb': round((content_bytes + listing_bytes) / (1024 * 1024), 2),
+            'limit_mb': 8192
+        }
 
     def _warmup_recursive(self, parent_id, remaining_depth):
         if remaining_depth < 0:

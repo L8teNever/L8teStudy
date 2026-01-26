@@ -33,6 +33,20 @@ def auth_status():
         'method': 'service_account' if is_sa else 'oauth'
     })
 
+@drive_bp.route('/cache-stats', methods=['GET'])
+@login_required
+def get_cache_stats():
+    """Get RAM cache statistics for admin"""
+    if not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+    client = DriveOAuthClient()
+    stats = client.get_cache_stats()
+    return jsonify({
+        'success': True,
+        'stats': stats
+    })
+
 @drive_bp.route('/auth/start', methods=['GET'])
 @login_required
 def start_auth():
