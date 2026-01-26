@@ -129,6 +129,12 @@ def browse_folders():
         'folders': folders
     })
 
+@drive_bp.route('/folders', methods=['GET'])
+@login_required
+def get_linked_folders():
+    """Placeholder for legacy synced folders route"""
+    return jsonify([])
+
 @drive_bp.route('/files', methods=['GET'])
 @login_required
 def get_files():
