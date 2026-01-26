@@ -1512,16 +1512,20 @@ def send_test_notification():
 
 @api_bp.route('/subjects', methods=['GET'])
 @login_required
+@login_required
 def get_subjects():
     class_id = request.args.get('class_id')
+    target_class_id = None
+    
     if current_user.is_super_admin:
         if class_id:
             from .models import SchoolClass
-            target_class_id = class_id # CAPTURE TARGET CLASS
+            target_class_id = class_id 
             subjects = Subject.query.join(Subject.classes).filter(SchoolClass.id == class_id).order_by(Subject.name).all()
         else:
             subjects = Subject.query.order_by(Subject.name).all()
     else:
+        target_class_id = current_user.class_id
         from .models import SchoolClass
         if not current_user.class_id:
             subjects = Subject.query.filter(~Subject.classes.any()).order_by(Subject.name).all()
