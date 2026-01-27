@@ -1366,12 +1366,7 @@ def export_backup():
     filename = f"l8testudy_full_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/zip')
 
-@api_bp.route('/admin/restore', methods=['POST'])
-@login_required
-def import_restore():
-    if not current_user.is_super_admin:
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-    
+
 def perform_restore(file, app_config):
     """Reusable restore logic for both Admin and Setup"""
     filename = file.filename.lower()
