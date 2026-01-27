@@ -747,6 +747,8 @@
             cursor: pointer;
             transition: all 0.2s;
             position: relative;
+            flex-direction: column;
+            /* Ensure day-number and dots stack correctly on mobile */
         }
 
         .calendar-day.selected {
@@ -781,6 +783,11 @@
             width: 5px;
             height: 5px;
             border-radius: 50%;
+        }
+
+        .event-labels-container {
+            display: none;
+            /* Hidden on mobile */
         }
 
         .ios-btn {
@@ -1530,6 +1537,9 @@
             }
 
             .calendar-days-grid {
+                display: grid;
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+                /* STRICT equal width */
                 grid-auto-rows: 1fr;
                 gap: 1px;
                 background: var(--border);
@@ -1537,13 +1547,18 @@
                 border-radius: 16px;
                 overflow: hidden;
                 text-align: left;
+                width: 100%;
             }
 
             .day-label {
                 background: var(--card-bg);
-                padding: 10px 0;
+                padding: 12px 4px;
                 margin-bottom: 0;
                 border-bottom: 1px solid var(--border);
+                font-size: 12px;
+                text-align: center;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .calendar-day {
@@ -1555,6 +1570,9 @@
                 align-items: flex-start;
                 padding: 8px;
                 border-radius: 0;
+                min-width: 0;
+                /* Prevents stretching */
+                overflow: hidden;
             }
 
             .calendar-day:hover {
