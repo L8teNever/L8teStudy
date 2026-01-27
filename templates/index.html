@@ -7578,6 +7578,7 @@
                 const items = await res.json();
                 // Global for filtering
                 window.blackboardItems = items;
+                window.blackboardCache = items;
 
                 displayBlackboardItems(items, searchHtml);
 
@@ -7624,8 +7625,15 @@
                     // Description handling
                     const desc = item.description || (item.subjects ? item.subjects.join(', ') : '');
 
+
+                    // Enable Context Menu for Manual Items (Admin only)
+                    let contextAttr = '';
+                    if (item.is_manual && (window.currentUser.is_admin || window.currentUser.is_super_admin)) {
+                        contextAttr = `oncontextmenu="handleBlackboardContext(event, ${item.id})"`;
+                    }
+
                     html += `
-                        <div class="account-item" ${action} style="padding:15px; ${isLast ? 'border-bottom:none' : ''}">
+                        <div class="account-item" ${action} ${contextAttr} style="padding:15px; ${isLast ? 'border-bottom:none' : ''}">
                             <div class="account-item-icon"><i data-lucide="${icon}"></i></div>
                             <div class="account-item-text">
                                 <div style="font-weight:600;">${item.title}</div>
@@ -7809,6 +7817,12 @@
 
             document.getElementById('app-container').innerHTML = html;
             lucide.createIcons();
+        }
+
+        function handleBlackboardContext(e, id) {
+            e.preventDefault();
+            if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
+            openBlackboardItemEditor(id);
         }
 
         function filterBlackboard() {
