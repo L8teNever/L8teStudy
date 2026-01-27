@@ -1529,6 +1529,41 @@
                 display: none;
             }
 
+            .calendar-day {
+                aspect-ratio: auto;
+                min-height: 80px;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: flex-start;
+                padding: 10px;
+            }
+
+            .event-dots-container {
+                display: none;
+                /* Hide dots on desktop as we show text */
+            }
+
+            .event-labels-container {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                width: 100%;
+                margin-top: 8px;
+                overflow: hidden;
+            }
+
+            .event-label {
+                font-size: 10px;
+                font-weight: 600;
+                padding: 3px 6px;
+                border-radius: 6px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 100%;
+                text-align: left;
+            }
+
             .more-menu.active {
                 transform: scale(1) translateY(0);
             }
@@ -3587,17 +3622,29 @@
                 const hasEvent = dayEvents.length > 0;
 
                 let dotsHtml = '';
+                let labelsHtml = '';
                 if (hasEvent) {
                     dotsHtml = '<div class="event-dots-container">';
-                    // Limit to 3 dots to prevent overflow, but show color for each
-                    dayEvents.slice(0, 3).forEach(e => {
+                    labelsHtml = '<div class="event-labels-container">';
+
+                    dayEvents.forEach((e, idx) => {
                         const visuals = getEventVisuals(e.title);
-                        dotsHtml += `<div class="event-dot" style="background: ${visuals.color}"></div>`;
+                        // Dots for mobile
+                        if (idx < 3) dotsHtml += `<div class="event-dot" style="background: ${visuals.color}"></div>`;
+
+                        // Labels for Tablet/Desktop
+                        labelsHtml += `<div class="event-label" style="background: ${visuals.bg}; color: ${visuals.color}">${e.title}</div>`;
                     });
+
                     dotsHtml += '</div>';
+                    labelsHtml += '</div>';
                 }
 
-                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasEvent ? 'has-event' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotsHtml}</div>`;
+                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasEvent ? 'has-event' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">
+                    <span class="day-number">${i}</span>
+                    ${dotsHtml}
+                    ${labelsHtml}
+                </div>`;
             }
         }
 
