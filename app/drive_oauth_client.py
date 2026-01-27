@@ -207,7 +207,16 @@ class DriveOAuthClient:
         """List both folders and files in a parent directory"""
         # Cache key includes parent_id and token hash (to separate users)
         creds = self.get_credentials()
-        creds_hash = hash(creds.token) if creds and creds.token else "no_auth"
+        # Fix: Use stable identifier for cache key instead of rotating access token
+        if creds:
+            if hasattr(creds, 'refresh_token') and creds.refresh_token:
+                creds_hash = hash(creds.refresh_token)
+            elif hasattr(creds, 'service_account_email'):
+                creds_hash = hash(creds.service_account_email)
+            else:
+                creds_hash = hash(creds.token) if creds.token else "no_auth"
+        else:
+            creds_hash = "no_auth"
         cache_key = f"list_{parent_id}_{page_token}_{creds_hash}"
         
         cached = self._get_cache(cache_key)
@@ -295,7 +304,16 @@ class DriveOAuthClient:
     def search_files(self, query_text, folder_ids=None, page_size=50):
         """Search files by name or content"""
         creds = self.get_credentials()
-        creds_hash = hash(creds.token) if creds and creds.token else "no_auth"
+        # Fix: Use stable identifier for cache key
+        if creds:
+            if hasattr(creds, 'refresh_token') and creds.refresh_token:
+                creds_hash = hash(creds.refresh_token)
+            elif hasattr(creds, 'service_account_email'):
+                creds_hash = hash(creds.service_account_email)
+            else:
+                creds_hash = hash(creds.token) if creds.token else "no_auth"
+        else:
+            creds_hash = "no_auth"
         cache_key = f"search_{query_text}_{folder_ids}_{creds_hash}"
         
         cached = self._get_cache(cache_key)
@@ -495,12 +513,39 @@ class DriveOAuthClient:
             
         if not items:
             current_app.logger.info(f"Warmup: Folder {parent_id} is empty.")
+            # Even if empty, we should update the DB stats
+            self._update_folder_stats(parent_id, 0)
             return
             
         current_app.logger.info(f"Warmup: Cached {len(items)} items for {parent_id}")
+        
+        # 2. Update DB Stats for this folder
+        # Count non-folder items (files)
+        file_count = sum(1 for i in items if i['mimeType'] != 'application/vnd.google-apps.folder')
+        self._update_folder_stats(parent_id, file_count)
             
-        # 2. Recurse into folders
+        # 3. Recurse into folders
         if remaining_depth > 0:
             for item in items:
                 if item['mimeType'] == 'application/vnd.google-apps.folder':
                     self._warmup_recursive(item['id'], remaining_depth - 1)
+
+    def _update_folder_stats(self, folder_id, file_count):
+        """Helper to update stats in DB for all DriveFolder entries linking this folder_id"""
+        try:
+            from .models import DriveFolder
+            # Find all linked folders with this ID (could be linked by multiple classes/users)
+            folders = DriveFolder.query.filter_by(folder_id=folder_id).all()
+            
+            if folders:
+                count_updated = 0
+                for folder in folders:
+                    folder.file_count = file_count
+                    folder.last_sync_at = datetime.utcnow()
+                    count_updated += 1
+                
+                db.session.commit()
+                current_app.logger.info(f"Warmup: Updated DB stats for {count_updated} linked folders (ID: {folder_id}, Files: {file_count})")
+        except Exception as e:
+            current_app.logger.error(f"Warmup DB Sync failed for {folder_id}: {e}")
+            db.session.rollback()

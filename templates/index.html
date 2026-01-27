@@ -7388,12 +7388,22 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    if (window.showToast) showToast("Synchronisierung abgeschlossen", "success");
-                    else alert("Synchronisierung abgeschlossen!");
+                    if (window.showToast) showToast("Synchronisierung und Cache-Update erfolgreich", "success");
+                    else alert("Synchronisierung erfolgreich!");
+
+                    // Clear frontend cache to force fresh load
+                    if (window.driveManager) window.driveManager.clearCache();
+
+                    // Reload current view stats
+                    if (typeof renderDriveManagement === 'function' && currentView === 'sub_drive_mgmt') {
+                        // Small delay to allow DB commit
+                        setTimeout(renderDriveManagement, 500);
+                    }
                 } else {
                     alert(data.message || "Fehler beim Synchronisieren");
                 }
             } catch (e) {
+                console.error(e);
                 alert("Verbindungsfehler bei der Synchronisierung");
             } finally {
                 btn.disabled = false;
