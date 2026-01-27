@@ -154,7 +154,7 @@ def create_app():
         # Permissions Policy - restrict browser features
         response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
         # Prevent caching of sensitive pages
-        if request.endpoint and 'api' in request.endpoint:
+        if request.endpoint and 'api' in request.endpoint and 'mealplan' not in request.endpoint:
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'

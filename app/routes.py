@@ -2241,9 +2241,21 @@ def upload_meal_plan():
         
     if file:
         try:
-            filename = secure_filename(f"mealplan_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
+            from PIL import Image
+            filename = secure_filename(f"mealplan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg")
             upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            file.save(upload_path)
+            
+            img = Image.open(file)
+            if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+            
+            # Resize/Compress
+            if img.width > 2000:
+                ratio = 2000 / img.width
+                new_h = int(img.height * ratio)
+                img = img.resize((2000, new_h), Image.Resampling.LANCZOS)
+                
+            img.save(upload_path, quality=60, optimize=True)
+             
             
             # Save to DB
             today = date.today()
