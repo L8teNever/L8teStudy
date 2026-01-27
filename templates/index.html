@@ -1486,19 +1486,32 @@
 
             .skip-link {
                 position: absolute;
-                top: -100px;
-                left: 20px;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border-width: 0;
                 background: var(--accent);
                 color: white;
-                padding: 10px 20px;
                 z-index: 2000;
                 text-decoration: none;
                 border-radius: 12px;
-                transition: top 0.3s;
+                transition: transform 0.3s;
             }
 
             .skip-link:focus {
+                width: auto;
+                height: auto;
+                padding: 10px 20px;
+                margin: 0;
+                clip: auto;
+                white-space: normal;
                 top: 20px;
+                left: 20px;
+                position: fixed;
             }
 
 
