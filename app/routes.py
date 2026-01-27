@@ -4,13 +4,15 @@ from .models import (
     User, Task, TaskImage, Event, Grade, NotificationSetting, 
     PushSubscription, Subject, TaskMessage, TaskChatRead, 
     GlobalSetting, SchoolClass, TaskCompletion, UserRole,
-    DriveOAuthToken, SubjectTeacher,
+    DriveOAuthToken, SubjectTeacher, UntisCredential, DriveFolder, 
+    DriveFile, DriveFileContent, BlackboardItem, AuditLog,
     subject_classes, db, MealPlan
 )
 from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
 import os
 import json
+import zipfile
 from io import BytesIO
 from datetime import datetime, date, timedelta
 import webuntis
@@ -1210,29 +1212,67 @@ def export_backup():
                 data[col.name] = val
         return data
 
+    # 1. Gather Database Data
     backup_data = {
-        'version': '1.0',
+        'version': '2.0',
         'timestamp': datetime.utcnow().isoformat(),
+        
+        # Core
         'school_classes': [serialize(c) for c in SchoolClass.query.all()],
         'users': [serialize(u) for u in User.query.all()],
         'subjects': [serialize(s) for s in Subject.query.all()],
         'subject_classes': [{'subject_id': a.subject_id, 'class_id': a.class_id} for a in db.session.query(subject_classes).all()],
+        
+        # Tasks & Events
         'tasks': [serialize(t) for t in Task.query.all()],
         'task_completions': [serialize(tc) for tc in TaskCompletion.query.all()],
+        'task_images': [serialize(ti) for ti in TaskImage.query.all()],
         'events': [serialize(e) for e in Event.query.all()],
-        'grades': [serialize(g) for g in Grade.query.all()],
-        'global_settings': [serialize(gs) for gs in GlobalSetting.query.all()],
-        'notification_settings': [serialize(ns) for ns in NotificationSetting.query.all()],
+        
+        # Communication
         'task_messages': [serialize(tm) for tm in TaskMessage.query.all()],
-        'task_chat_reads': [serialize(tcr) for tcr in TaskChatRead.query.all()]
+        'task_chat_reads': [serialize(tcr) for tcr in TaskChatRead.query.all()],
+        'blackboard_items': [serialize(bi) for bi in BlackboardItem.query.all()],
+        
+        # Grades & User Data
+        'grades': [serialize(g) for g in Grade.query.all()],
+        'notification_settings': [serialize(ns) for ns in NotificationSetting.query.all()],
+        'push_subscriptions': [serialize(ps) for ps in PushSubscription.query.all()],
+        'audit_logs': [serialize(al) for al in AuditLog.query.all()],
+        'meal_plans': [serialize(mp) for mp in MealPlan.query.all()],
+        
+        # Settings & Integrations
+        'global_settings': [serialize(gs) for gs in GlobalSetting.query.all()],
+        'subject_teachers': [serialize(st) for st in SubjectTeacher.query.all()],
+        'untis_credentials': [serialize(uc) for uc in UntisCredential.query.all()],
+        
+        # Drive Integration
+        'drive_oauth_tokens': [serialize(dot) for dot in DriveOAuthToken.query.all()],
+        'drive_folders': [serialize(df) for df in DriveFolder.query.all()],
+        'drive_files': [serialize(df) for df in DriveFile.query.all()],
+        'drive_file_contents': [serialize(dfc) for dfc in DriveFileContent.query.all()],
     }
 
+    # 2. Create ZIP
     buffer = BytesIO()
-    buffer.write(json.dumps(backup_data, indent=4).encode('utf-8'))
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Add Database JSON
+        zf.writestr('database.json', json.dumps(backup_data, indent=4))
+        
+        # Add Uploaded Files
+        upload_folder = current_app.config.get('UPLOAD_FOLDER')
+        if upload_folder and os.path.exists(upload_folder):
+            for root, dirs, files in os.walk(upload_folder):
+                for file in files:
+                    abs_path = os.path.join(root, file)
+                    # Use 'uploads/' prefix in zip
+                    rel_path = os.path.relpath(abs_path, upload_folder)
+                    zf.write(abs_path, arcname=os.path.join('uploads', rel_path))
+
     buffer.seek(0)
     
-    filename = f"l8testudy_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/json')
+    filename = f"l8testudy_full_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/zip')
 
 @api_bp.route('/admin/restore', methods=['POST'])
 @login_required
@@ -1240,17 +1280,52 @@ def import_restore():
     if not current_user.is_super_admin:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
-    if 'file' not in request.files:
-        return jsonify({'success': False, 'message': 'No file uploaded'}), 400
+def perform_restore(file, app_config):
+    """Reusable restore logic for both Admin and Setup"""
+    filename = file.filename.lower()
+    data = None
+    is_zip = filename.endswith('.zip')
     
-    file = request.files['file']
     try:
-        data = json.load(file)
+        if is_zip:
+            with zipfile.ZipFile(file) as zf:
+                # 1. Read Database JSON
+                if 'database.json' not in zf.namelist():
+                    return False, 'Invalid backup: missing database.json'
+                
+                with zf.open('database.json') as f:
+                    data = json.load(f)
+                
+                # 2. Restore Uploads
+                upload_folder = app_config['UPLOAD_FOLDER']
+                os.makedirs(upload_folder, exist_ok=True)
+                
+                for member in zf.namelist():
+                    if member.startswith('uploads/') and not member.endswith('/'):
+                        content = zf.read(member)
+                        rel_path = member[8:] 
+                        target_path = os.path.join(upload_folder, rel_path)
+                        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                        with open(target_path, 'wb') as f_out:
+                            f_out.write(content)
+        else:
+            data = json.load(file)
+            
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Invalid JSON: {str(e)}'}), 400
+        return False, f'Invalid file format: {str(e)}'
 
     try:
-        # Clear existing data in correct order to avoid FK issues
+        # Clear existing data
+        db.session.query(DriveFileContent).delete()
+        db.session.query(DriveFile).delete()
+        db.session.query(DriveFolder).delete()
+        db.session.query(UntisCredential).delete()
+        db.session.query(SubjectTeacher).delete()
+        db.session.query(MealPlan).delete()
+        db.session.query(AuditLog).delete()
+        db.session.query(DriveOAuthToken).delete()
+        db.session.query(BlackboardItem).delete()
+        
         db.session.query(TaskChatRead).delete()
         db.session.query(TaskMessage).delete()
         db.session.query(TaskCompletion).delete()
@@ -1270,63 +1345,93 @@ def import_restore():
         # Helper to parse dates
         def parse_val(val):
             if isinstance(val, str) and (len(val) >= 10):
-                try: return datetime.fromisoformat(val)
-                except: pass
+                if val.count('-') == 2:
+                    try: return datetime.fromisoformat(val)
+                    except: 
+                        try: return datetime.strptime(val, '%Y-%m-%d').date()
+                        except: pass
             return val
 
+        def restore_table(model, key):
+            for d in data.get(key, []):
+                obj = model()
+                for k, v in d.items():
+                     if hasattr(obj, k):
+                        setattr(obj, k, parse_val(v))
+                db.session.add(obj)
+            db.session.flush()
+
         # Restore sequence
-        for d in data.get('school_classes', []):
-            sc = SchoolClass()
-            for k, v in d.items(): setattr(sc, k, parse_val(v))
-            db.session.add(sc)
-        db.session.flush()
-
-        for d in data.get('users', []):
-            u = User()
-            for k, v in d.items(): setattr(u, k, parse_val(v))
-            db.session.add(u)
-        db.session.flush()
-
-        for d in data.get('subjects', []):
-            s = Subject()
-            for k, v in d.items(): setattr(s, k, parse_val(v))
-            db.session.add(s)
-        db.session.flush()
-
+        restore_table(SchoolClass, 'school_classes')
+        restore_table(User, 'users')
+        restore_table(Subject, 'subjects')
+        restore_table(GlobalSetting, 'global_settings')
+        
         for d in data.get('subject_classes', []):
             db.session.execute(subject_classes.insert().values(subject_id=d['subject_id'], class_id=d['class_id']))
 
-        # Remaining models
-        for d in data.get('tasks', []):
-            t = Task(); [setattr(t, k, parse_val(v)) for k, v in d.items()]
-            db.session.add(t)
-        for d in data.get('task_completions', []):
-            tc = TaskCompletion(); [setattr(tc, k, parse_val(v)) for k, v in d.items()]
-            db.session.add(tc)
-        for d in data.get('events', []):
-            e = Event(); [setattr(e, k, parse_val(v)) for k, v in d.items()]
-            db.session.add(e)
-        for d in data.get('grades', []):
-            g = Grade(); [setattr(g, k, parse_val(v)) for k, v in d.items()]
-            db.session.add(g)
-        for d in data.get('global_settings', []):
-            gs = GlobalSetting(); [setattr(gs, k, parse_val(v)) for k, v in d.items()]
-            db.session.add(gs)
-        for d in data.get('notification_settings', []):
-            ns = NotificationSetting(); [setattr(ns, k, parse_val(v)) for k, v in d.items()]
-            db.session.add(ns)
-        for d in data.get('task_messages', []):
-            tm = TaskMessage(); [setattr(tm, k, parse_val(v)) for k, v in d.items()]
-            db.session.add(tm)
-        for d in data.get('task_chat_reads', []):
-            tcr = TaskChatRead(); [setattr(tcr, k, parse_val(v)) for k, v in d.items()]
-            db.session.add(tcr)
+        restore_table(Task, 'tasks')
+        restore_table(TaskImage, 'task_images')
+        restore_table(TaskCompletion, 'task_completions')
+        restore_table(Event, 'events')
+        restore_table(Grade, 'grades')
+        restore_table(NotificationSetting, 'notification_settings')
+        restore_table(PushSubscription, 'push_subscriptions')
+        restore_table(TaskMessage, 'task_messages')
+        restore_table(TaskChatRead, 'task_chat_reads')
+        
+        restore_table(BlackboardItem, 'blackboard_items')
+        restore_table(AuditLog, 'audit_logs')
+        restore_table(MealPlan, 'meal_plans')
+        restore_table(SubjectTeacher, 'subject_teachers')
+        restore_table(UntisCredential, 'untis_credentials')
+        restore_table(DriveOAuthToken, 'drive_oauth_tokens')
+        restore_table(DriveFolder, 'drive_folders')
+        restore_table(DriveFile, 'drive_files')
+        restore_table(DriveFileContent, 'drive_file_contents')
 
         db.session.commit()
-        return jsonify({'success': True})
+        return True, "Restore successful"
+        
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'message': f'Restore failed: {str(e)}'}), 500
+        current_app.logger.error(f"Restore failed: {e}")
+        return False, f'Restore failed: {str(e)}'
+
+@api_bp.route('/admin/restore', methods=['POST'])
+@login_required
+def import_restore():
+    if not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'No file uploaded'}), 400
+    
+    file = request.files['file']
+    success, message = perform_restore(file, current_app.config)
+    
+    if success:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': message}), 500
+
+@api_bp.route('/setup/restore', methods=['POST'])
+def setup_restore():
+    """Unauthenticated restore point ONLY for initial setup (when no users exist)"""
+    if User.query.first():
+        return jsonify({'success': False, 'message': 'Setup already completed'}), 403
+        
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'No file uploaded'}), 400
+        
+    file = request.files['file']
+    success, message = perform_restore(file, current_app.config)
+    
+    if success:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': message}), 500
+
 
 @api_bp.route('/admin/users/<int:id>', methods=['DELETE'])
 @login_required

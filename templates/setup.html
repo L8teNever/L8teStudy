@@ -112,13 +112,28 @@
 </head>
 
 <body>
-    <div class="setup-card" id="step-1">
+    <div class="setup-card" id="step-0" style="max-width: 450px;">
+        <div
+            style="width:60px; height:60px; background:var(--bg); border:1px solid var(--border); border-radius:18px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto;">
+            <i data-lucide="blocks" style="color:var(--text); width:30px; height:30px;"></i>
+        </div>
+        <h1>L8teStudy Setup</h1>
+        <p>Willkommen! Möchtest du eine neue Instanz aufsetzen oder ein Backup wiederherstellen?</p>
+
+        <button onclick="showNewInstall()" style="margin-bottom: 12px;">Neue Installation</button>
+        <button onclick="document.getElementById('backup-file').click()"
+            style="background:transparent; color:var(--text); border:1px solid var(--border)"> Backup
+            wiederherstellen</button>
+        <input type="file" id="backup-file" style="display:none" onchange="handleRestore(this)">
+    </div>
+
+    <div class="setup-card" id="step-1" style="display:none;">
         <div
             style="width:60px; height:60px; background:var(--accent); border-radius:18px; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto;">
             <i data-lucide="sparkles" style="color:white; width:30px; height:30px;"></i>
         </div>
-        <h1>Willkommen!</h1>
-        <p>Lass uns deinen Super-Admin Account erstellen, um L8teStudy einzurichten.</p>
+        <h1>Admin Account</h1>
+        <p>Erstelle deinen Super-Admin Account.</p>
 
         <div class="input-group">
             <label>Dein Name</label>
@@ -130,6 +145,10 @@
         </div>
 
         <button onclick="createAdmin()">Account erstellen</button>
+        <div style="margin-top:15px; font-size:13px; color:var(--text-sec); cursor:pointer;"
+            onclick="location.reload()">
+            Zurück
+        </div>
     </div>
 
     <div class="setup-card" id="step-2" style="display:none;">
@@ -150,6 +169,53 @@
 
     <script>
         lucide.createIcons();
+
+        function showNewInstall() {
+            document.getElementById('step-0').style.display = 'none';
+            document.getElementById('step-1').style.display = 'block';
+        }
+
+        async function handleRestore(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+
+            if (!confirm(`Möchtest du das Backup "${file.name}" wirklich laden? Dies überschreibt alle aktuellen Daten.`)) {
+                input.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Show loading state
+            const btn = document.querySelector('button[onclick*="backup-file"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Stelle wieder her...';
+            btn.disabled = true;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/setup/restore', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert("Backup erfolgreich wiederhergestellt! Du wirst jetzt zum Login weitergeleitet.");
+                    window.location.href = '/login-page';
+                } else {
+                    alert("Fehler: " + (data.message || "Unbekannter Fehler"));
+                    input.value = '';
+                }
+            } catch (e) {
+                alert("Verbindungsfehler beim Upload");
+                input.value = '';
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
 
         async function createAdmin() {
             const username = document.getElementById('admin-name').value;
@@ -200,6 +266,22 @@
             }
         }
     </script>
+    <style>
+        .spin {
+            animation: spin 1s linear infinite;
+            width: 16px;
+            height: 16px;
+            margin-right: 5px;
+            vertical-align: middle;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </body>
 
 </html>
