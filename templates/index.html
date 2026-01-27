@@ -1463,8 +1463,9 @@
 
             .app-blur {
                 filter: blur(5px);
+                -webkit-filter: blur(5px);
                 pointer-events: none;
-                transition: filter 0.3s ease;
+                transition: filter 0.3s ease, -webkit-filter 0.3s ease;
             }
 
             .more-menu {
@@ -2039,10 +2040,13 @@
                 // Hide FAB when menu is open
                 if (fab) fab.style.display = 'none';
                 document.getElementById('app-container').classList.add('app-blur');
+                const header = document.querySelector('header');
+                if (header) header.classList.add('app-blur');
 
                 const closeHandler = () => {
                     menu.classList.remove('active');
                     document.getElementById('app-container').classList.remove('app-blur');
+                    if (header) header.classList.remove('app-blur');
                     if (fab) fab.style.display = 'flex'; // Show FAB again
                     document.removeEventListener('click', closeHandler);
                 };
@@ -2050,6 +2054,8 @@
             } else {
                 if (fab) fab.style.display = 'flex';
                 document.getElementById('app-container').classList.remove('app-blur');
+                const header = document.querySelector('header');
+                if (header) header.classList.remove('app-blur');
             }
         }
 
