@@ -1479,6 +1479,10 @@
                 transform: scale(0.9) translateY(10px);
             }
 
+            #more-stundenplan {
+                display: none;
+            }
+
             .more-menu.active {
                 transform: scale(1) translateY(0);
             }
@@ -1842,7 +1846,8 @@
 
     <!-- MEHR DROPDOWN (Nur Mobil - Enthält nur Noten & Stundenplan) -->
     <div id="more-menu" class="more-menu">
-        <div class="more-menu-item" onclick="navigate('stundenplan', null, 'Stundenplan'); toggleMoreMenu()">
+        <div class="more-menu-item" id="more-stundenplan"
+            onclick="navigate('stundenplan', null, 'Stundenplan'); toggleMoreMenu()">
             <i data-lucide="clock-4"></i><span>Stundenplan</span>
         </div>
         <div class="more-menu-item" onclick="navigate('grades', null, 'Noten'); toggleMoreMenu()">
