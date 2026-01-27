@@ -1289,6 +1289,13 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
+        .app-blur {
+            filter: blur(5px);
+            -webkit-filter: blur(5px);
+            pointer-events: none;
+            transition: filter 0.3s ease, -webkit-filter 0.3s ease;
+        }
+
         /* --- Desktop Responsive --- */
         @media (min-width: 768px) {
             body {
@@ -1461,19 +1468,7 @@
                 position: relative;
             }
 
-            .app-blur {
-                filter: blur(5px);
-                -webkit-filter: blur(5px);
-                pointer-events: none;
-                transition: filter 0.3s ease, -webkit-filter 0.3s ease;
-            }
 
-            .app-blur {
-                filter: blur(5px);
-                -webkit-filter: blur(5px);
-                pointer-events: none;
-                transition: filter 0.3s ease, -webkit-filter 0.3s ease;
-            }
 
             .more-menu {
                 bottom: 40px;
