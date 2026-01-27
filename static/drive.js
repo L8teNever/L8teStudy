@@ -189,6 +189,24 @@ class DriveManager {
         }
     }
 
+    async getLinkedFolders() {
+        try {
+            const response = await fetch('/api/drive/folders');
+            const data = await response.json();
+            // Transform to match Drive File format
+            return data.map(f => ({
+                id: f.folder_id,
+                name: f.folder_name,
+                mimeType: 'application/vnd.google-apps.folder',
+                isLinked: true,
+                dbId: f.id // internal DB id
+            }));
+        } catch (error) {
+            console.error('Failed to get linked folders:', error);
+            return [];
+        }
+    }
+
     getFileIcon(mimeType) {
         const iconMap = {
             'application/pdf': '📄',

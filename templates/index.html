@@ -2628,9 +2628,20 @@
             container.innerHTML = `<div style="text-align:center; padding:40px;"><i data-lucide="loader-2" class="spin" style="width:32px; color:var(--accent);"></i><p class="item-sub" style="margin-top:12px;">Lade Dateien...</p></div>`;
             lucide.createIcons();
 
-            const data = await driveManager.loadFiles('root');
+            let files = [];
+            let nextPageToken = null;
+
+            if (window.currentUser.is_admin) {
+                const data = await driveManager.loadFiles('root');
+                files = data.files;
+                nextPageToken = data.nextPageToken;
+            } else {
+                // Non-admins see a portal of linked folders
+                files = await driveManager.getLinkedFolders();
+            }
+
             driveManager.history = []; // Reset history at root
-            renderDriveFileList(data.files, data.nextPageToken);
+            renderDriveFileList(files, nextPageToken);
             updateDriveBreadcrumb();
         }
 
@@ -2643,13 +2654,18 @@
             container.innerHTML = `<div style="text-align:center; padding:40px;"><i data-lucide="loader-2" class="spin" style="width:32px; color:var(--accent);"></i><p class="item-sub" style="margin-top:12px;">Lade ${folderName}...</p></div>`;
             lucide.createIcons();
 
-            const data = await driveManager.loadFiles(folderId);
+            try {
+                const data = await driveManager.loadFiles(folderId);
 
-            // Add to history
-            driveManager.history.push({ id: folderId, name: folderName });
+                // Add to history
+                driveManager.history.push({ id: folderId, name: folderName });
 
-            renderDriveFileList(data.files, data.nextPageToken);
-            updateDriveBreadcrumb();
+                renderDriveFileList(data.files, data.nextPageToken);
+                updateDriveBreadcrumb();
+            } catch (error) {
+                showNotification('Fehler beim Öffnen des Ordners', 'error');
+                loadInitialDriveFiles();
+            }
 
             if (btn) btn.disabled = false;
         }
@@ -2753,6 +2769,10 @@
 
             container.innerHTML = `<div style="text-align:center; padding:20px;"><i data-lucide="loader-2" class="spin"></i></div>`;
             lucide.createIcons();
+
+            // Clear history when searching to avoid confusion
+            driveManager.history = [];
+            updateDriveBreadcrumb();
 
             const files = await driveManager.searchFiles(query);
             renderDriveFileList(files, null);

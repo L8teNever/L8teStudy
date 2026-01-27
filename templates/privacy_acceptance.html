@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>L8teStudy - Datenschutz Zustimmung</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --text-main: #000000;
+            --text-sec: #5a5a5e;
+            --accent: #0071e3;
+            --danger: #ff3b30;
+            --glass-blur: blur(25px);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+            --border: rgba(255, 255, 255, 0.4);
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #000000 0%, #1c1c1e 100%);
+            --card-bg: rgba(28, 28, 30, 0.6);
+            --text-main: #f5f5f7;
+            --text-sec: #86868b;
+            --accent: #0a84ff;
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            background-size: cover;
+            color: var(--text-main);
+            padding-top: 40px;
+            padding-bottom: 40px;
+            transition: all 0.4s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .floating-card {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            text-align: center;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon-box {
+            width: 80px;
+            height: 80px;
+            background: var(--accent);
+            color: white;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            box-shadow: 0 10px 20px rgba(0, 113, 227, 0.2);
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        p {
+            color: var(--text-sec);
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        .policy-container {
+            text-align: left;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 16px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 30px;
+            font-size: 14px;
+            border: 1px solid var(--border);
+        }
+
+        [data-theme="dark"] .policy-container {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .ios-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .ios-btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .ios-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            text-align: left;
+            margin-bottom: 25px;
+            cursor: pointer;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .checkbox.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .checkbox i {
+            color: white;
+            width: 16px;
+            height: 16px;
+            display: none;
+        }
+
+        .checkbox.active i {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="floating-card">
+        <div class="icon-box">
+            <i data-lucide="shield-check" style="width: 40px; height: 40px;"></i>
+        </div>
+        <h1>Datenschutz-Update</h1>
+        <p>Um L8teStudy weiterhin nutzen zu können, lies bitte unsere aktualisierte Datenschutzerklärung und stimme der
+            Datenverarbeitung zu.</p>
+
+        <div class="policy-container">
+            {{ policy_html | safe }}
+        </div>
+
+        <div class="checkbox-container" onclick="toggleAccept()">
+            <div id="accept-checkbox" class="checkbox">
+                <i data-lucide="check"></i>
+            </div>
+            <div style="font-size: 14px; line-height: 1.4;">
+                Ich habe die <a href="/privacy-policy" target="_blank"
+                    style="color:var(--accent); text-decoration:none;">Datenschutzerklärung</a> gelesen und stimme der
+                Verarbeitung meiner Daten (Benutzerprofil, Aufgaben, etc.) zu.
+            </div>
+        </div>
+
+        <button id="accept-btn" class="ios-btn" disabled onclick="submitAcceptance()">
+            Zustimmen & Weiter
+            <i data-lucide="arrow-right" style="width: 18px;"></i>
+        </button>
+
+        <div style="margin-top: 20px;">
+            <a href="/logout" style="color: var(--text-sec); font-size: 14px; text-decoration: none;">Abmelden</a>
+        </div>
+    </div>
+
+    <script>
+        let accepted = false;
+
+        function toggleAccept() {
+            accepted = !accepted;
+            document.getElementById('accept-checkbox').classList.toggle('active', accepted);
+            document.getElementById('accept-btn').disabled = !accepted;
+        }
+
+        async function submitAcceptance() {
+            const btn = document.getElementById('accept-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Verarbeite...';
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/api/accept-privacy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    alert('Fehler: ' + (data.message || 'Unbekannter Fehler'));
+                    btn.disabled = false;
+                    btn.innerHTML = 'Zustimmen & Weiter <i data-lucide="arrow-right" style="width: 18px;"></i>';
+                    lucide.createIcons();
+                }
+            } catch (e) {
+                alert('Verbindungsfehler. Bitte erneut versuchen.');
+                btn.disabled = false;
+                btn.innerHTML = 'Zustimmen & Weiter <i data-lucide="arrow-right" style="width: 18px;"></i>';
+                lucide.createIcons();
+            }
+        }
+
+        // Apply theme
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        lucide.createIcons();
+
+        // Prevent back navigation
+        history.pushState(null, null, location.href);
+        window.onpopstate = function () {
+            history.go(1);
+        };
+    </script>
+</body>
+
+</html>

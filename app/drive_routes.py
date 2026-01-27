@@ -33,6 +33,63 @@ def auth_status():
         'method': 'service_account' if is_sa else 'oauth'
     })
 
+def verify_drive_access(folder_or_file_id):
+    """
+    Verify if the current user has access to a specific Drive item.
+    Access is granted if:
+    1. User is an admin (access to all linked folders in class)
+    2. Item is one of the folders linked to the user's class
+    3. Item is a child (at any depth) of a folder linked to the user's class
+    """
+    if current_user.is_super_admin:
+        return True
+        
+    from .models import DriveFolder
+    # Get all folders linked to this user's class
+    authorized_roots = DriveFolder.query.filter_by(class_id=current_user.class_id).all()
+    if not authorized_roots:
+        return False
+        
+    root_ids = {f.folder_id for f in authorized_roots}
+    
+    if folder_or_file_id in root_ids:
+        return True
+        
+    # Check lineage via API
+    client = DriveOAuthClient()
+    current_id = folder_or_file_id
+    
+    # We allow a max depth to prevent infinite loops or huge API usage
+    # Usually class structures aren't 20 levels deep.
+    max_depth = 10
+    
+    visited = {current_id}
+    
+    while current_id and max_depth > 0:
+        meta = client.get_file_metadata(current_id)
+        if not meta:
+            return False
+            
+        parents = meta.get('parents', [])
+        if not parents:
+            break
+            
+        # Check if any parent is an authorized root
+        for p_id in parents:
+            if p_id in root_ids:
+                return True
+            if p_id not in visited:
+                current_id = p_id
+                visited.add(p_id)
+                break
+        else:
+            # If no new parents to visit
+            break
+            
+        max_depth -= 1
+        
+    return False
+
 @drive_bp.route('/cache-stats', methods=['GET'])
 @login_required
 def get_cache_stats():
@@ -265,7 +322,15 @@ def get_files():
     
     parent_id = request.args.get('parent_id', 'root')
     page_token = request.args.get('pageToken')
+
+    # Security Check: Non-admins cannot browse 'root'
+    if not current_user.is_admin and parent_id == 'root':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
     
+    # Access Verification
+    if not current_user.is_admin and not verify_drive_access(parent_id):
+        return jsonify({'success': False, 'message': 'Access denied: Folder not linked to class'}), 403
+
     # Get items in parent (or root)
     items, next_page_token = client.list_items(parent_id=parent_id, page_token=page_token)
     
@@ -282,7 +347,7 @@ def get_files():
 @drive_bp.route('/search', methods=['GET'])
 @login_required
 def search_files():
-    """Search ALL files in the entire Drive"""
+    """Search files in Drive (scoped to linked folders for non-admins)"""
     query = request.args.get('q', '')
     
     if not query:
@@ -292,8 +357,24 @@ def search_files():
     if not client.is_authenticated():
         return jsonify({'success': False, 'message': 'Not authenticated'}), 401
     
-    # Search in entire Drive (no folder restrictions)
-    files = client.search_files(query, folder_ids=None)
+    folder_ids = None
+    if not current_user.is_admin:
+        # Get all linked folders for this user
+        from .models import DriveFolder
+        # Users see folders for their class
+        linked = DriveFolder.query.filter_by(class_id=current_user.class_id).all()
+        # And potentially their own personal folders if we support that later (user_id=current_user.id)
+        # Combine
+        linked_personal = DriveFolder.query.filter_by(user_id=current_user.id).all()
+        
+        all_linked = set(linked + linked_personal)
+        if not all_linked:
+            return jsonify({'success': True, 'files': []}) # No folders, no results
+            
+        folder_ids = [f.folder_id for f in all_linked]
+
+    # Search
+    files = client.search_files(query, folder_ids=folder_ids)
     
     if files is None:
         return jsonify({'success': False, 'message': 'Search failed'}), 500
@@ -307,6 +388,9 @@ def search_files():
 @login_required
 def get_file_metadata(file_id):
     """Get metadata for a specific file"""
+    if not current_user.is_admin and not verify_drive_access(file_id):
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+
     client = DriveOAuthClient()
     if not client.is_authenticated():
         return jsonify({'success': False, 'message': 'Not authenticated'}), 401
@@ -325,6 +409,9 @@ def get_file_metadata(file_id):
 @login_required
 def download_file(file_id):
     """Download or view a file from Google Drive as PDF"""
+    if not current_user.is_admin and not verify_drive_access(file_id):
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+
     client = DriveOAuthClient()
     if not client.is_authenticated():
         return jsonify({'success': False, 'message': 'Not authenticated'}), 401

@@ -184,6 +184,50 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(drive_bp)
 
+    @app.before_request
+    def require_login():
+        # List of endpoints that do not require login
+        public_endpoints = [
+            'auth.login',
+            'auth.login_page', 
+            'static',
+            'main.sw',
+            'main.manifest',
+            'main.setup',
+            'api.setup_create_admin',
+            'drive.oauth_callback',
+            'main.privacy_policy',
+            'main.imprint'
+        ]
+        
+        # Also allow if it's a request to static folder directly (outside of blueprint)
+        if request.endpoint and 'static' in request.endpoint:
+            return
+
+        if request.endpoint and request.endpoint not in public_endpoints:
+            # Check if user is authenticated
+            from flask_login import current_user
+            if not current_user.is_authenticated:
+                # If API request, return 401
+                if request.is_json or request.path.startswith('/api/'):
+                    return jsonify({'success': False, 'message': 'Authentication required'}), 401
+                # Otherwise redirect to login
+                return redirect(url_for('auth.login_page', next=request.url))
+            
+            # Check Privacy Policy acceptance
+            # Exempt the acceptance route itself and logouts/privacy settings
+            privacy_exempt = [
+                'main.privacy_acceptance',
+                'api.accept_privacy',
+                'auth.logout',
+                'main.privacy_policy',
+                'main.imprint'
+            ]
+            if not current_user.has_accepted_privacy and request.endpoint not in privacy_exempt:
+                if request.is_json or request.path.startswith('/api/'):
+                    return jsonify({'success': False, 'message': 'Privacy policy acceptance required', 'require_privacy': True}), 403
+                return redirect(url_for('main.privacy_acceptance'))
+
     @app.context_processor
     def utility_processor():
         def t(key):
@@ -301,6 +345,9 @@ def create_app():
                     if 'has_seen_tutorial' not in cols:
                         app.logger.info("Migrating: Adding has_seen_tutorial to user")
                         conn.execute(text("ALTER TABLE user ADD COLUMN has_seen_tutorial BOOLEAN DEFAULT 0"))
+                    if 'has_accepted_privacy' not in cols:
+                        app.logger.info("Migrating: Adding has_accepted_privacy to user")
+                        conn.execute(text("ALTER TABLE user ADD COLUMN has_accepted_privacy BOOLEAN DEFAULT 0"))
                     conn.commit()
         except Exception as e:
             app.logger.error(f"User schema migration error: {e}")

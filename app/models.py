@@ -43,6 +43,7 @@ class User(UserMixin, db.Model):
     language = db.Column(db.String(5), default='de')
     needs_password_change = db.Column(db.Boolean, default=True) # Forced for new users
     has_seen_tutorial = db.Column(db.Boolean, default=False)
+    has_accepted_privacy = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property

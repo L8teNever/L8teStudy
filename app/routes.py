@@ -170,47 +170,50 @@ def privacy_policy():
 Die folgenden Hinweise geben einen einfachen Überblick darüber, was mit Ihren personenbezogenen Daten passiert, wenn Sie diese Anwendung nutzen. Personenbezogene Daten sind alle Daten, mit denen Sie persönlich identifiziert werden können.
 
 ### Datenerfassung in dieser Anwendung
-Die Datenverarbeitung in dieser Anwendung erfolgt durch den Betreiber der Instanz. L8teStudy ist eine **selbstgehostete Anwendung**. Das bedeutet, dass alle Daten auf dem Server verbleiben, auf dem die Anwendung installiert wurde. Es findet keine Übermittlung an die Entwickler von L8teStudy statt.
+Die Datenverarbeitung in dieser Anwendung erfolgt durch den Betreiber der Instanz (z.B. Ihre Schule oder eine Privatperson). L8teStudy ist eine **selbstgehostete Anwendung**. Das bedeutet, dass alle Daten auf dem Server verbleiben, auf dem die Anwendung installiert wurde. Es findet keine Übermittlung an die Entwickler von L8teStudy statt.
 
 ## 2. Allgemeine Hinweise und Pflichtinformationen
 
+### Zugriffsschutz & Login-Pflicht
+Der Zugriff auf sämtliche Inhalte von L8teStudy (Aufgaben, Noten, Termine, Dateien) ist durch eine **strikte Authentifizierungspflicht** geschützt. Ohne Anmeldung sind keine personenbezogenen Daten oder Kursinhalte einsehbar.
+
 ### Datenschutz
 Der Betreiber dieser Anwendung nimmt den Schutz Ihrer persönlichen Daten sehr ernst. Wir behandeln Ihre personenbezogenen Daten vertraulich und entsprechend den gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung.
-
-### Hinweis zur verantwortlichen Stelle
-Die verantwortliche Stelle für die Datenverarbeitung ist die Person oder Organisation (z.B. Ihre Schule), die diese Instanz von L8teStudy betreibt.
 
 ## 3. Datenerfassung in L8teStudy
 
 ### Authentifizierung & Benutzerprofil
 Für die Nutzung der App ist die Erstellung eines Benutzerkontos erforderlich. Dabei werden folgende Daten gespeichert:
 *   Benutzername
-*   Passwort (gehasht und verschlüsselt)
-*   Zugehörige Schulklasse
+*   Passwort (gehasht und sicher verschlüsselt)
+*   Zugehörige Schulklasse & Rolle (Student/Admin)
 
 ### Nutzungsdaten (Aufgaben, Noten, Termine)
-Alle von Ihnen eingegebenen Daten wie Hausaufgaben, Prüfungstermine, Noten und persönliche To-Dos werden ausschließlich in der lokalen Datenbank der Instanz gespeichert. Diese Daten dienen allein dem Zweck der persönlichen Organisation Ihres Schulalltags.
+Alle von Ihnen eingegebenen Daten werden ausschließlich in der lokalen Datenbank der Instanz gespeichert. Diese Daten dienen allein dem Zweck der Organisation Ihres Schulalltags.
 
 ### WebUntis Integration
-Sofern Sie die WebUntis-Synchronisierung aktivieren, werden Ihre WebUntis-Zugangsdaten (verschlüsselt) in der lokalen Datenbank gespeichert. Die App kommuniziert direkt mit dem offiziellen WebUntis-Server Ihrer Schule, um Stundenpläne und Vertretungsdaten abzurufen.
+Bei Aktivierung der WebUntis-Synchronisierung werden Ihre Zugangsdaten **verschlüsselt** in der lokalen Datenbank gespeichert. Die App kommuniziert direkt mit den WebUntis-Servern Ihres Schulbetreibers.
+
+### Google Drive Integration
+Sofern die Google Drive Integration aktiviert ist:
+*   Administratoren können Dokumente und Ordner für Klassen freigeben.
+*   Normale Benutzer (Schüler) haben nur Zugriff auf Ordner, die explizit für ihre Klasse verknüpft wurden.
+*   OAuth-Tokens werden hochgradig verschlüsselt in der Datenbank abgelegt.
+*   Es findet kein genereller Zugriff auf Ihr privates Google-Konto durch die Software statt, sondern nur auf die vom Admin bereitgestellten Ressourcen.
 
 ### Cookies & Lokale Speicherung
-Diese Anwendung verwendet technisch notwendige Cookies und den LocalStorage Ihres Browsers, um:
-1.  Sie angemeldet zu halten (Sitzungs-Management).
-2.  Ihre Design-Einstellungen (z.B. Darkmode) zu speichern.
-Diese Daten sind für den Betrieb der App zwingend erforderlich.
+Diese Anwendung verwendet technisch notwendige Cookies, um Sie angemeldet zu halten und Ihre Einstellungen (z.B. Darkmode) zu speichern. Diese Daten verbleiben in Ihrem Browser.
 
 ## 4. Hosting und Datensicherheit
 
-### Lokales Hosting
-Die Anwendung läuft auf der Infrastruktur des Betreibers. Es findet keine Cloud-Speicherung auf externen Systemen statt.
+### Lokales Hosting & Verschlüsselung
+Die Anwendung nutzt moderne Verschlüsselungsverfahren (AES-256), um sensible Anmeldedaten (Untis, Drive) in der Datenbank zu schützen.
 
 ### SSL- bzw. TLS-Verschlüsselung
-Diese Seite nutzt aus Sicherheitsgründen und zum Schutz der Übertragung vertraulicher Inhalte eine SSL-bzw. TLS-Verschlüsselung.
+Diese Seite nutzt eine SSL-bzw. TLS-Verschlüsselung zum Schutz der Übertragung vertraulicher Inhalte.
 
 ## 5. Ihre Rechte
-
-Sie haben jederzeit das Recht, unentgeltlich Auskunft über Herkunft, Empfänger und Zweck Ihrer gespeicherten personenbezogenen Daten zu erhalten. Sie haben außerdem ein Recht, die Berichtigung oder Löschung dieser Daten zu verlangen. Hierzu sowie zu weiteren Fragen zum Thema Datenschutz können Sie sich jederzeit an den Administrator Ihrer L8teStudy-Instanz wenden.
+Sie haben jederzeit das Recht auf Auskunft, Berichtigung oder Löschung Ihrer Daten. Wenden Sie sich hierzu bitte an den Administrator Ihrer L8teStudy-Instanz.
 """
     content = GlobalSetting.get('privacy_policy', default_text)
     
@@ -228,6 +231,80 @@ Sie haben jederzeit das Recht, unentgeltlich Auskunft über Herkunft, Empfänger
         html_content = html
         
     return render_template('legal.html', title='Datenschutzerklärung', content=html_content)
+
+@main_bp.route('/privacy-acceptance')
+@login_required
+def privacy_acceptance():
+    if current_user.has_accepted_privacy:
+        return redirect(url_for('main.index'))
+    
+    # Get current policy
+    from .models import GlobalSetting
+    default_text = """# Datenschutzerklärung für L8teStudy
+
+## 1. Datenschutz auf einen Blick
+
+### Allgemeine Hinweise
+Die folgenden Hinweise geben einen einfachen Überblick darüber, was mit Ihren personenbezogenen Daten passiert, wenn Sie diese Anwendung nutzen. Personenbezogene Daten sind alle Daten, mit denen Sie persönlich identifiziert werden können.
+
+### Datenerfassung in dieser Anwendung
+Die Datenverarbeitung in dieser Anwendung erfolgt durch den Betreiber der Instanz (z.B. Ihre Schule oder eine Privatperson). L8teStudy ist eine **selbstgehostete Anwendung**. Das bedeutet, dass alle Daten auf dem Server verbleiben, auf dem die Anwendung installiert wurde. Es findet keine Übermittlung an die Entwickler von L8teStudy statt.
+
+## 2. Allgemeine Hinweise und Pflichtinformationen
+
+### Zugriffsschutz & Login-Pflicht
+Der Zugriff auf sämtliche Inhalte von L8teStudy (Aufgaben, Noten, Termine, Dateien) ist durch eine **strikte Authentifizierungspflicht** geschützt. Ohne Anmeldung sind keine personenbezogenen Daten oder Kursinhalte einsehbar.
+
+### Datenschutz
+Der Betreiber dieser Anwendung nimmt den Schutz Ihrer persönlichen Daten sehr ernst. Wir behandeln Ihre personenbezogenen Daten vertraulich und entsprechend den gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung.
+
+## 3. Datenerfassung in L8teStudy
+
+### Authentifizierung & Benutzerprofil
+Für die Nutzung der App ist die Erstellung eines Benutzerkontos erforderlich. Dabei werden folgende Daten gespeichert:
+*   Benutzername
+*   Passwort (gehasht und sicher verschlüsselt)
+*   Zugehörige Schulklasse & Rolle (Student/Admin)
+
+### Nutzungsdaten (Aufgaben, Noten, Termine)
+Alle von Ihnen eingegebenen Daten werden ausschließlich in der lokalen Datenbank der Instanz gespeichert. Diese Daten dienen allein dem Zweck der Organisation Ihres Schulalltags.
+
+### WebUntis Integration
+Bei Aktivierung der WebUntis-Synchronisierung werden Ihre Zugangsdaten **verschlüsselt** in der lokalen Datenbank gespeichert. Die App kommuniziert direkt mit den WebUntis-Servern Ihres Schulbetreibers.
+
+### Google Drive Integration
+Sofern die Google Drive Integration aktiviert ist:
+*   Administratoren können Dokumente und Ordner für Klassen freigeben.
+*   Normale Benutzer (Schüler) have nur Zugriff auf Ordner, die explizit für ihre Klasse verknüpft wurden.
+*   OAuth-Tokens werden hochgradig verschlüsselt in der Datenbank abgelegt.
+*   Es findet kein genereller Zugriff auf Ihr privates Google-Konto durch die Software statt, sondern nur auf die vom Admin bereitgestellten Ressourcen.
+
+### Cookies & Lokale Speicherung
+Diese Anwendung verwendet technisch notwendige Cookies, um Sie angemeldet zu halten und Ihre Einstellungen (z.B. Darkmode) zu speichern. Diese Daten verbleiben in Ihrem Browser.
+
+## 4. Hosting und Datensicherheit
+
+### Lokales Hosting & Verschlüsselung
+Die Anwendung nutzt moderne Verschlüsselungsverfahren (AES-256), um sensible Anmeldedaten (Untis, Drive) in der Datenbank zu schützen.
+
+### SSL- bzw. TLS-Verschlüsselung
+Diese Seite nutzt eine SSL-bzw. TLS-Verschlüsselung zum Schutz der Übertragung vertraulicher Inhalte.
+
+## 5. Ihre Rechte
+Sie haben jederzeit das Recht auf Auskunft, Berichtigung oder Löschung Ihrer Daten. Wenden Sie sich hierzu bitte an den Administrator Ihrer L8teStudy-Instanz.
+"""
+    
+    policy_raw = GlobalSetting.get('privacy_policy', default_text)
+    
+    import re
+    html = policy_raw
+    html = re.sub(r'^# (.*)$', r'<h1>\1</h1>', html, flags=re.M)
+    html = re.sub(r'^## (.*)$', r'<h2>\1</h2>', html, flags=re.M)
+    html = re.sub(r'^### (.*)$', r'<h3>\1</h3>', html, flags=re.M)
+    html = re.sub(r'^\* (.*)$', r'<li>\1</li>', html, flags=re.M)
+    html = html.replace('\n', '<br>')
+    
+    return render_template('privacy_acceptance.html', policy_html=html)
 
 @main_bp.route('/imprint')
 def imprint():
@@ -311,6 +388,21 @@ def login_page(class_code=None):
     return render_template('login.html', prefilled_code=class_code, class_name=class_name)
 
 # --- API Routes ---
+
+@api_bp.route('/accept-privacy', methods=['POST'])
+@login_required
+def accept_privacy():
+    current_user.has_accepted_privacy = True
+    
+    from .models import AuditLog
+    db.session.add(AuditLog(
+        user_id=current_user.id, 
+        class_id=current_user.class_id, 
+        action="Accepted privacy policy"
+    ))
+    db.session.commit()
+    
+    return jsonify({'success': True})
 
 # Tasks
 @api_bp.route('/tasks', methods=['GET'])
