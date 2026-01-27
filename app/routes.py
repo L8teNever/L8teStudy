@@ -1486,7 +1486,7 @@ def perform_restore(file, app_config):
         return False, f'Restore failed: {str(e)}'
 @api_bp.route('/admin/restore', methods=['POST'])
 @login_required
-def admin_import_restore():
+def admin_restore_database():
     if not current_user.is_super_admin:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     

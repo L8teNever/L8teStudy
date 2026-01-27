@@ -4,6 +4,7 @@ Handles authentication and API calls to Google Drive using OAuth tokens
 """
 import os
 import json
+import time
 from datetime import datetime, timedelta
 from flask import current_app, url_for
 from google.oauth2.credentials import Credentials
@@ -234,13 +235,13 @@ class DriveOAuthClient:
             else:
                 query = f"'{parent_id}' in parents and trashed=false"
             
-            results = service.files().list(
+            results = self._execute_with_retry(service.files().list(
                 q=query,
                 pageSize=page_size,
                 pageToken=page_token,
                 fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink, owners)",
                 orderBy="folder, name"
-            ).execute()
+            ))
             
             items = results.get('files', [])
             next_token = results.get('nextPageToken')
@@ -265,13 +266,13 @@ class DriveOAuthClient:
                 # Only direct children
                 query = f"'{folder_id}' in parents and mimeType!='application/vnd.google-apps.folder' and trashed=false"
             
-            results = service.files().list(
+            results = self._execute_with_retry(service.files().list(
                 q=query,
                 pageSize=page_size,
                 pageToken=page_token,
                 fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink)",
                 orderBy="modifiedTime desc"
-            ).execute()
+            ))
             
             return results.get('files', []), results.get('nextPageToken')
         except HttpError as error:
@@ -288,13 +289,13 @@ class DriveOAuthClient:
             # Query: All files that are not folders and not trashed
             query = "mimeType!='application/vnd.google-apps.folder' and trashed=false"
             
-            results = service.files().list(
+            results = self._execute_with_retry(service.files().list(
                 q=query,
                 pageSize=page_size,
                 pageToken=page_token,
                 fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink, owners)",
                 orderBy="modifiedTime desc"
-            ).execute()
+            ))
             
             return results.get('files', []), results.get('nextPageToken')
         except HttpError as error:
@@ -341,12 +342,12 @@ class DriveOAuthClient:
             
             query = " and ".join(query_parts)
             
-            results = service.files().list(
+            results = self._execute_with_retry(service.files().list(
                 q=query,
                 pageSize=page_size,
                 fields="files(id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink, owners)",
                 orderBy="modifiedTime desc"
-            ).execute()
+            ))
             
             items = results.get('files', [])
             self._set_cache(cache_key, items)
@@ -367,10 +368,10 @@ class DriveOAuthClient:
             return None
         
         try:
-            file = service.files().get(
+            file = self._execute_with_retry(service.files().get(
                 fileId=file_id,
                 fields="id, name, mimeType, size, modifiedTime, webViewLink, parents, thumbnailLink, iconLink, description"
-            ).execute()
+            ))
             
             self._set_cache(cache_key, file)
             return file
@@ -389,10 +390,10 @@ class DriveOAuthClient:
         
         try:
             while current_id and current_id != 'root':
-                file = service.files().get(
+                file = self._execute_with_retry(service.files().get(
                     fileId=current_id,
                     fields="id, name, parents"
-                ).execute()
+                ))
                 
                 path_parts.insert(0, file.get('name'))
                 parents = file.get('parents', [])
@@ -426,10 +427,10 @@ class DriveOAuthClient:
         try:
             # 1. Fetch current minimal metadata for validation (Always-Validate)
             # This is 1 small API call, much faster than a full download/export.
-            current_meta = service.files().get(
+            current_meta = self._execute_with_retry(service.files().get(
                 fileId=file_id,
                 fields="id, modifiedTime, md5Checksum, mimeType"
-            ).execute()
+            ))
             
             m_time = current_meta.get('modifiedTime')
             checksum = current_meta.get('md5Checksum', '')
@@ -447,14 +448,14 @@ class DriveOAuthClient:
             # 3. If not in cache or changed, Download/Export
             current_app.logger.info(f"Downloading/Exporting file (not in cache or outdated): {file_id}")
             if mime_type.startswith('application/vnd.google-apps.'):
-                content = service.files().export(
+                content = self._execute_with_retry(service.files().export(
                     fileId=file_id,
                     mimeType='application/pdf'
-                ).execute()
+                ))
             else:
-                content = service.files().get_media(
+                content = self._execute_with_retry(service.files().get_media(
                     fileId=file_id
-                ).execute()
+                ))
 
             # 4. Update Cache
             _DRIVE_CONTENT_CACHE[cache_key] = (m_time, checksum, content)
@@ -549,3 +550,17 @@ class DriveOAuthClient:
         except Exception as e:
             current_app.logger.error(f"Warmup DB Sync failed for {folder_id}: {e}")
             db.session.rollback()
+
+    def _execute_with_retry(self, request, max_retries=3):
+        """Execute a Google API request with simple exponential backoff for 500 errors"""
+        for i in range(max_retries):
+            try:
+                return request.execute()
+            except HttpError as e:
+                if e.resp.status in [500, 502, 503, 504] and i < max_retries - 1:
+                    wait_time = (2 ** i) + (0.1 * i)
+                    current_app.logger.warning(f"Drive API {e.resp.status} error, retrying in {wait_time}s... (Attempt {i+1}/{max_retries})")
+                    time.sleep(wait_time)
+                else:
+                    raise e
+        return None
