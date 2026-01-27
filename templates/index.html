@@ -7942,6 +7942,27 @@
             window.history.replaceState({ view: initialView }, '', window.location.pathname);
             currentView = initialView; // Set core variable early
 
+            // Update Navigation Active State
+            document.querySelectorAll('.nav-link').forEach(n => {
+                n.classList.remove('active');
+                if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${currentView}'`)) {
+                    n.classList.add('active');
+                }
+            });
+
+            // Handle More Menu Active State
+            const moreViews = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
+            const moreBtnMobile = document.getElementById('nav-more');
+            const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
+
+            if (moreViews.includes(currentView)) {
+                if (moreBtnMobile) moreBtnMobile.classList.add('active');
+                if (moreBtnSidebar) moreBtnSidebar.classList.add('active');
+            } else {
+                if (moreBtnMobile) moreBtnMobile.classList.remove('active');
+                if (moreBtnSidebar) moreBtnSidebar.classList.remove('active');
+            }
+
             if (relevantPath === '/' || relevantPath === '/home') renderHome();
             else if (relevantPath === '/tasks') renderTasks();
             else if (relevantPath === '/calendar') renderCalendar();
