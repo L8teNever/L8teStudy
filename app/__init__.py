@@ -412,6 +412,7 @@ def create_app():
     # Start scheduler for notifications & Drive Warmup
     from app.notifications import check_reminders
     from app.drive_oauth_client import DriveOAuthClient
+    from app.untis_service import update_untis_cache_job
     
     def run_drive_warmup():
         with app.app_context():
@@ -428,6 +429,15 @@ def create_app():
             # Run Drive Warmup once at startup (after a short delay to let worker boot)
             scheduler.add_job(id='drive_warmup', func=run_drive_warmup, trigger='date', 
                               run_date=datetime.now() + timedelta(seconds=10))
+            
+            # Untis Cache Jobs
+            if not scheduler.get_job('untis_cache_update'):
+                scheduler.add_job(id='untis_cache_update', func=update_untis_cache_job, args=[app], 
+                                  trigger='interval', minutes=45)
+            
+            # Initial Untis fetch on startup
+            scheduler.add_job(id='untis_initial_fetch', func=update_untis_cache_job, args=[app], 
+                              trigger='date', run_date=datetime.now() + timedelta(seconds=15))
             
             if not scheduler.running:
                 scheduler.start()

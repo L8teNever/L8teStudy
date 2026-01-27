@@ -21,6 +21,7 @@ try:
 except ImportError:
     md_lib = None
 from . import login_manager, limiter, csrf
+from .untis_service import get_timetable
 
 main_bp = Blueprint('main', __name__)
 auth_bp = Blueprint('auth', __name__)
@@ -2090,43 +2091,6 @@ def get_untis_schedule():
         return jsonify({'success': False, 'message': 'Untis not configured for this class'}), 404
         
     try:
-        # Clean server URL (remove https:// if present)
-        server_url = creds.server.strip().replace('https://', '').replace('http://', '').split('/')[0]
-        school_name = creds.school.strip()
-        
-        print(f"DEBUG: Attempting Untis login to {server_url} for school {school_name} with user {creds.username}")
-        
-        s = webuntis.Session(
-            server=server_url,
-            username=creds.username,
-            password=creds.get_password(),
-            school=school_name,
-            useragent='L8teStudy'
-        )
-        
-        try:
-            s.login()
-        except webuntis.errors.RemoteError as e:
-            # Re-raise with more context
-            error_text = str(e)
-            if "Request ID" in error_text:
-                return jsonify({'success': False, 'message': 'Untis-Fehler: Der Server hat ungültig geantwortet. Das passiert meistens, wenn der SCHULNAME oder der SERVER falsch ist (Groß-/Kleinschreibung prüfen!)'}), 500
-            raise e
-        
-        # Find class
-        untis_class = None
-        all_klassen = s.klassen()
-        for c in all_klassen:
-            if c.name.lower() == creds.untis_class_name.lower():
-                untis_class = c
-                break
-        
-        if not untis_class:
-            s.logout()
-            # Show the first few available classes to help the user find the right name
-            avail = ", ".join([k.name for k in all_klassen[:15]])
-            return jsonify({'success': False, 'message': f'Klasse "{creds.untis_class_name}" nicht gefunden. Verfügbar sind z.B.: {avail}'}), 404
-            
         # Target Date
         date_param = request.args.get('date')
         if date_param:
@@ -2137,33 +2101,13 @@ def get_untis_schedule():
         else:
             base_date = date.today()
 
-        monday = base_date - timedelta(days=base_date.weekday())
-        friday = monday + timedelta(days=6)
+        timetable, error = get_timetable(creds, base_date)
         
-        # Fetch timetable
-        # The library expects 'klasse' (German) as the keyword for classes
-        timetable_data = s.timetable(klasse=untis_class, start=monday, end=friday)
-        
-        results = []
-        for period in timetable_data:
-            results.append({
-                'id': period.id,
-                'start': period.start.isoformat(),
-                'end': period.end.isoformat(),
-                'subjects': [{'name': sub.name, 'long_name': sub.long_name} for sub in period.subjects],
-                'teachers': [{'name': t.name, 'long_name': t.long_name} for t in period.teachers],
-                'rooms': [{'name': r.name, 'long_name': r.long_name} for r in period.rooms],
-                'code': period.code,
-                'substText': getattr(period, 'substText', ""),
-                'activityType': getattr(period, 'activityType', ""),
-                'bkText': getattr(period, 'bkText', "")
-            })
+        if timetable is not None:
+            return jsonify({'success': True, 'timetable': timetable})
+        else:
+            return jsonify({'success': False, 'message': f'Untis-Fehler: {error}'}), 500
             
-        s.logout()
-        return jsonify({'success': True, 'timetable': results})
-        
-    except webuntis.errors.RemoteError as e:
-        return jsonify({'success': False, 'message': f'Untis Remote-Fehler: {str(e)}'}), 500
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -2292,9 +2236,6 @@ def get_current_subject_from_untis():
     """Get the current or last subject from WebUntis timetable"""
     try:
         class_id = request.args.get('class_id')
-        
-        from .models import UntisCredential
-        
         if not class_id:
             return jsonify({'success': False, 'message': 'Klassen-ID fehlt'}), 400
         
@@ -2303,40 +2244,17 @@ def get_current_subject_from_untis():
             return jsonify({'success': False, 'message': 'Keine Berechtigung'}), 403
         
         # Get Untis credentials
+        from .models import UntisCredential
         creds = UntisCredential.query.filter_by(class_id=class_id).first()
         if not creds:
             return jsonify({'success': False, 'subject': None})
         
-        # Clean server URL
-        server = creds.server.replace('https://', '').replace('http://', '').strip('/')
-        
-        # Connect to WebUntis
-        s = webuntis.Session(
-            server=server,
-            school=creds.school,
-            username=creds.username,
-            password=creds.get_password(),
-            useragent='L8teStudy'
-        )
-        s.login()
-        
-        # Get class
-        klassen = s.klassen()
-        untis_class = None
-        for k in klassen:
-            if k.name.lower() == creds.untis_class_name.lower():
-                untis_class = k
-                break
-        
-        if not untis_class:
-            s.logout()
-            return jsonify({'success': False, 'subject': None})
-        
-        # Get today's timetable
+        # Use cached timetable
         today = date.today()
-        timetable_data = s.timetable(klasse=untis_class, start=today, end=today)
+        timetable_data, error = get_timetable(creds, today)
         
-        s.logout()
+        if timetable_data is None:
+            return jsonify({'success': False, 'message': f'Untis-Fehler: {error}'}), 500
         
         # Find current or last period
         from datetime import datetime
@@ -2347,40 +2265,36 @@ def get_current_subject_from_untis():
         last_subject_name = None
         last_end_time = None
         
-        for period in timetable_data:
-            if not hasattr(period, 'subjects') or not period.subjects:
+        # Filter periods for TODAY specifically (just in case cache for week is broad)
+        # Note: timetable_data from get_timetable(creds, today) already covers only the requested week,
+        # but we iterate and compare times.
+        
+        for period_data in timetable_data:
+            if not period_data.get('subjects'):
                 continue
             
-            # Helper to safely get naive time from potentially aware datetime
-            def get_naive_time(dt):
-                if hasattr(dt, 'time'):
-                    # If it has timezone info, convert to local first (conceptually) or just drop it if we assume local
-                    # But if we assume standard WebUntis usage, it's often naive local. 
-                    # If aware, we should be careful. 
-                    # Assuming basic naive comparison is desired as per project scope.
-                    # But let's strip tzinfo just in case to avoid type errors
-                    return dt.time()
-                return dt
+            # Cache stores ISO strings like "2026-01-27T10:30:00"
+            p_start_dt = datetime.fromisoformat(period_data['start'])
+            p_end_dt = datetime.fromisoformat(period_data['end'])
             
-            period_start = get_naive_time(period.start)
-            period_end = get_naive_time(period.end)
+            # Only care about today's periods for "current"
+            if p_start_dt.date() != today:
+                continue
+                
+            p_start = p_start_dt.time()
+            p_end = p_end_dt.time()
             
-            # Check if currently in this period
-            if period_start <= current_time <= period_end:
-                if period.subjects:
-                    subj = period.subjects[0]
-                    current_subject_name = getattr(subj, 'long_name', None) or getattr(subj, 'name', None)
+            # 1. Check if CURRENTLY in this period
+            if p_start <= current_time <= p_end:
+                current_subject_name = period_data['subjects'][0]['name']
                 break
             
-            # Track last completed period
-            if period_end < current_time:
-                if last_end_time is None or period_end > last_end_time:
-                    last_end_time = period_end
-                    if period.subjects:
-                        subj = period.subjects[0]
-                        last_subject_name = getattr(subj, 'long_name', None) or getattr(subj, 'name', None)
+            # 2. Track last period that COMPLETED today
+            if p_end < current_time:
+                if last_end_time is None or p_end > last_end_time:
+                    last_end_time = p_end
+                    last_subject_name = period_data['subjects'][0]['name']
         
-        # Return current subject or last subject
         suggested_name = current_subject_name or last_subject_name
         suggested_subject_data = None
 
@@ -2397,7 +2311,6 @@ def get_current_subject_from_untis():
                     'name': subject_obj.name
                 }
             else:
-                # If not found in DB, still return name but ID is None
                 suggested_subject_data = {
                     'id': None,
                     'name': suggested_name
@@ -2412,7 +2325,7 @@ def get_current_subject_from_untis():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'subject': None})
+        return jsonify({'success': False, 'message': str(e)})
 
 # --- Subject Mapping Routes ---
 
