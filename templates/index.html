@@ -7810,12 +7810,7 @@
                 html += `</div>`;
             }
 
-            // Quick Action for Sick Note if not present
-            html += `
-                <div style="margin:30px 15px;">
-                    <button class="ios-btn" onclick="openSickNoteWizard()"><i data-lucide="thermometer" style="margin-right:8px; vertical-align:middle; width:18px;"></i> Krankmeldung erstellen</button>
-                </div>
-            `;
+
 
             document.getElementById('app-container').innerHTML = html;
             lucide.createIcons();
