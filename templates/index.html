@@ -2038,15 +2038,18 @@
             if (menu.classList.contains('active')) {
                 // Hide FAB when menu is open
                 if (fab) fab.style.display = 'none';
+                document.getElementById('app-container').classList.add('app-blur');
 
                 const closeHandler = () => {
                     menu.classList.remove('active');
+                    document.getElementById('app-container').classList.remove('app-blur');
                     if (fab) fab.style.display = 'flex'; // Show FAB again
                     document.removeEventListener('click', closeHandler);
                 };
                 setTimeout(() => document.addEventListener('click', closeHandler), 10);
             } else {
                 if (fab) fab.style.display = 'flex';
+                document.getElementById('app-container').classList.remove('app-blur');
             }
         }
 
