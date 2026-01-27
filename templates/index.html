@@ -756,29 +756,31 @@
         }
 
         .calendar-day.today {
-            color: var(--accent);
-            font-weight: 700;
-            background: rgba(0, 113, 227, 0.1);
+            color: #fff;
+            font-weight: 800;
+            background: #FF3B30 !important;
+            /* Distinct red for today */
+            box-shadow: 0 4px 10px rgba(255, 59, 48, 0.3);
         }
 
         .calendar-day.has-event {
-            background: rgba(0, 113, 227, 0.08);
-            /* Light accent background */
+            background: var(--tab-bg);
             font-weight: 600;
         }
 
-        /* If today AND has event, make it slightly stronger or merge */
-        .calendar-day.today.has-event {
-            background: rgba(0, 113, 227, 0.15);
+        .event-dots-container {
+            position: absolute;
+            bottom: 4px;
+            display: flex;
+            gap: 2px;
+            justify-content: center;
+            width: 100%;
         }
 
         .event-dot {
-            width: 4px;
-            height: 4px;
-            background: var(--accent);
+            width: 5px;
+            height: 5px;
             border-radius: 50%;
-            position: absolute;
-            bottom: 6px;
         }
 
         .ios-btn {
@@ -3581,10 +3583,21 @@
                 const d = String(dayDate.getDate()).padStart(2, '0');
                 const dateStr = `${year}-${month}-${d}`;
                 const dayEvents = events.filter(e => e.date === dateStr);
-                const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth();
+                const isToday = i === new Date().getDate() && viewDate.getMonth() === new Date().getMonth() && viewDate.getFullYear() === new Date().getFullYear();
                 const hasEvent = dayEvents.length > 0;
-                const dotHtml = hasEvent ? `<div class="event-dot"></div>` : '';
-                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasEvent ? 'has-event' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotHtml}</div>`;
+
+                let dotsHtml = '';
+                if (hasEvent) {
+                    dotsHtml = '<div class="event-dots-container">';
+                    // Limit to 3 dots to prevent overflow, but show color for each
+                    dayEvents.slice(0, 3).forEach(e => {
+                        const visuals = getEventVisuals(e.title);
+                        dotsHtml += `<div class="event-dot" style="background: ${visuals.color}"></div>`;
+                    });
+                    dotsHtml += '</div>';
+                }
+
+                grid.innerHTML += `<div class="calendar-day ${isToday ? 'today' : ''} ${hasEvent ? 'has-event' : ''}" onclick="openDayDetails(${i}, '${JSON.stringify(dayEvents).replace(/"/g, '&quot;')}')">${i}${dotsHtml}</div>`;
             }
         }
 
