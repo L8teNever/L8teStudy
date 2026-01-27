@@ -1365,7 +1365,7 @@
             .side-nav .nav-group {
                 display: flex;
                 flex-direction: column;
-                gap: 20px;
+                gap: 10px;
                 align-items: center;
             }
 
@@ -1818,6 +1818,8 @@
                     data-lucide="check-circle-2"></i><span>Aufgaben</span></a>
             <a class="nav-link" onclick="navigate('calendar', this, 'Plan')"><i
                     data-lucide="calendar-days"></i><span>Plan</span></a>
+            <a class="nav-link" onclick="navigate('stundenplan', this, 'Stundenplan')"><i
+                    data-lucide="clock-4"></i><span>Stundenplan</span></a>
             <a class="nav-link" onclick="toggleMoreMenu(event)"><i
                     data-lucide="more-horizontal"></i><span>Mehr</span></a>
         </div>
@@ -1970,19 +1972,20 @@
                 bottomNavLinks[2].innerText = t('calendar');
                 bottomNavLinks[3].innerText = t('more');
             }
-            // Update Side Navigation (Home, Tasks, Plan, More, Account)
+            // Update Side Navigation (Home, Tasks, Plan, Stundenplan, More, Account)
             const sideNavLinks = document.querySelectorAll('.side-nav .nav-link span');
-            if (sideNavLinks.length >= 5) {
+            if (sideNavLinks.length >= 6) {
                 sideNavLinks[0].innerText = t('home');
                 sideNavLinks[1].innerText = t('tasks');
                 sideNavLinks[2].innerText = t('calendar');
-                sideNavLinks[3].innerText = t('more');
-                sideNavLinks[4].innerText = t('account');
+                sideNavLinks[3].innerText = t('timetable');
+                sideNavLinks[4].innerText = t('more');
+                sideNavLinks[5].innerText = t('account');
 
                 // If more items are added in the future
-                if (sideNavLinks.length > 5) sideNavLinks[5].innerText = t('drive');
-                if (sideNavLinks.length > 6) sideNavLinks[6].innerText = t('mealplan');
-                if (sideNavLinks.length > 7) sideNavLinks[7].innerText = 'Infos';
+                if (sideNavLinks.length > 6) sideNavLinks[6].innerText = t('drive');
+                if (sideNavLinks.length > 7) sideNavLinks[7].innerText = t('mealplan');
+                if (sideNavLinks.length > 8) sideNavLinks[8].innerText = 'Infos';
             }
 
             // Update Header if on main view
