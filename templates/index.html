@@ -2243,21 +2243,21 @@
                 if (view !== 'home' && view !== 'settings' && view !== 'account' && view !== 'stundenplan' && view !== 'drive' && !view.startsWith('sub_')) fab.classList.add('visible');
                 else fab.classList.remove('visible');
 
-                // Mark "Mehr" button as active if on stundenplan or grades or drive or mealplan or blackboard
-                // Handle Mobile "More"
+                // Mark "Mehr" button as active if corresponding view is selected
                 const moreBtnMobile = document.getElementById('nav-more');
-                // Handle Sidebar "More" (we need to give it an ID or select it)
-                // Let's select it by onclick attribute or icon
                 const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
 
-                const moreViews = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
+                const mobileMoreViews = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
+                const sidebarMoreViews = ['grades', 'drive', 'mealplan', 'blackboard']; // Stundenplan is separate in side-nav
 
-                if (moreViews.includes(view)) {
-                    if (moreBtnMobile) moreBtnMobile.classList.add('active');
-                    if (moreBtnSidebar) moreBtnSidebar.classList.add('active');
-                } else {
-                    if (moreBtnMobile) moreBtnMobile.classList.remove('active');
-                    if (moreBtnSidebar) moreBtnSidebar.classList.remove('active');
+                if (moreBtnMobile) {
+                    if (mobileMoreViews.includes(view)) moreBtnMobile.classList.add('active');
+                    else moreBtnMobile.classList.remove('active');
+                }
+
+                if (moreBtnSidebar) {
+                    if (sidebarMoreViews.includes(view)) moreBtnSidebar.classList.add('active');
+                    else moreBtnSidebar.classList.remove('active');
                 }
 
                 lucide.createIcons();
