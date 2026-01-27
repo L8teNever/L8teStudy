@@ -7906,7 +7906,7 @@
             if (window.currentUser && window.currentUser.language) {
                 localStorage.setItem('l8te_lang', window.currentUser.language);
             }
-            updateAppLanguage(); // Initialize translations
+
 
             if (window.currentUser.needs_password_change) {
                 renderForcePasswordChange();
@@ -7941,6 +7941,9 @@
             // Replace the initial null state with the correct view state
             window.history.replaceState({ view: initialView }, '', window.location.pathname);
             currentView = initialView; // Set core variable early
+
+            updateAppLanguage(); // Initialize translations using correct currentView
+
 
             // Update Navigation Active State
             document.querySelectorAll('.nav-link').forEach(n => {
