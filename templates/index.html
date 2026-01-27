@@ -7946,24 +7946,29 @@
 
 
             // Update Navigation Active State
-            document.querySelectorAll('.nav-link').forEach(n => {
-                n.classList.remove('active');
-                if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${currentView}'`)) {
-                    n.classList.add('active');
-                }
-            });
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
 
-            // Handle More Menu Active State
+            let activeViewForNav = currentView;
+            // Map sub-views to main nav items
+            if (currentView.startsWith('settings')) activeViewForNav = 'account'; // Assuming settings is under account or separate? Actually Account has its own button.
+            // Let's check the onclicks. Account is account. 
+            // If we have views that don't match exactly, map them.
+
+            // Try to find exact match first
+            let activeLink = document.querySelector(`.nav-link[onclick*="'${activeViewForNav}'"]`);
+
+            // If no direct match, check for "More" views
             const moreViews = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
-            const moreBtnMobile = document.getElementById('nav-more');
-            const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
-
-            if (moreViews.includes(currentView)) {
+            if (moreViews.includes(activeViewForNav)) {
+                const moreBtnMobile = document.getElementById('nav-more');
+                const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
                 if (moreBtnMobile) moreBtnMobile.classList.add('active');
                 if (moreBtnSidebar) moreBtnSidebar.classList.add('active');
-            } else {
-                if (moreBtnMobile) moreBtnMobile.classList.remove('active');
-                if (moreBtnSidebar) moreBtnSidebar.classList.remove('active');
+            } else if (activeLink) {
+                activeLink.classList.add('active');
+                // Also handle Mobile vs Desktop duplicates if any (though usually by class)
+                // The querySelector might only catch one.
+                document.querySelectorAll(`.nav-link[onclick*="'${activeViewForNav}'"]`).forEach(l => l.classList.add('active'));
             }
 
             if (relevantPath === '/' || relevantPath === '/home') renderHome();
