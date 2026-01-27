@@ -1962,7 +1962,9 @@ def get_untis_schedule():
                 'teachers': [{'name': t.name, 'long_name': t.long_name} for t in period.teachers],
                 'rooms': [{'name': r.name, 'long_name': r.long_name} for r in period.rooms],
                 'code': period.code,
-                'substText': getattr(period, 'substText', "")
+                'substText': getattr(period, 'substText', ""),
+                'activityType': getattr(period, 'activityType', ""),
+                'bkText': getattr(period, 'bkText', "")
             })
             
         s.logout()

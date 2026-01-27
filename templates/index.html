@@ -1669,6 +1669,16 @@
             color: var(--accent);
         }
 
+        .period-card.additional {
+            border-left: 3px solid #AF52DE;
+            background: rgba(175, 82, 222, 0.05);
+        }
+
+        .status-badge.additional {
+            background: #AF52DE;
+            color: white;
+        }
+
         .status-badge {
             font-size: 9px;
             font-weight: 800;
@@ -4454,10 +4464,18 @@
                             statusClass = "cancelled";
                             statusLabel = "Entfällt";
                         } else if (p.code === "substitution") {
-                            // This is a NEW lesson (substitution without a cancelled counterpart)
                             statusClass = "new";
                             statusLabel = "Neu";
                             cardExtraClass = "new-lesson";
+                        } else if (
+                            (p.activityType && (p.activityType.includes("Zusatz") || p.activityType.includes("zusatz") || p.activityType === "irregular")) ||
+                            (p.code === "irregular") ||
+                            (p.bkText && (p.bkText.includes("Zusatz") || p.bkText.includes("zusatz"))) ||
+                            (p.substText && (p.substText.includes("Zusatz") || p.substText.includes("zusatz")))
+                        ) {
+                            statusClass = "additional";
+                            statusLabel = "Zusatz";
+                            cardExtraClass = "additional-lesson";
                         }
 
                         const subNames = p.subjects.map(s => s.long_name || s.name).join(', ');
