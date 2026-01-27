@@ -5177,7 +5177,8 @@
 
                 if (res.ok) {
                     closeSheet();
-                    renderBlackboardManagement();
+                    if (currentView === 'blackboard') renderBlackboard();
+                    else if (typeof renderBlackboardManagement === 'function') renderBlackboardManagement();
                 } else {
                     alert("Fehler beim Speichern");
                 }
@@ -5193,7 +5194,8 @@
                 const res = await fetch(`/api/blackboard/${id}`, { method: 'DELETE' });
                 if (res.ok) {
                     closeSheet();
-                    renderBlackboardManagement();
+                    if (currentView === 'blackboard') renderBlackboard();
+                    else if (typeof renderBlackboardManagement === 'function') renderBlackboardManagement();
                 } else {
                     alert("Fehler beim Löschen");
                 }
@@ -6187,6 +6189,10 @@
             }
             if (currentView === 'mealplan') {
                 openUploadMealPlan();
+                return;
+            }
+            if (currentView === 'blackboard') {
+                openBlackboardItemEditor();
                 return;
             }
             let type = editType || (currentView === 'tasks' ? "task" : (currentView === 'calendar' ? "event" : "grade"));
