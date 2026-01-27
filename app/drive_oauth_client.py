@@ -5,6 +5,7 @@ Handles authentication and API calls to Google Drive using OAuth tokens
 import os
 import json
 import time
+import sys
 from datetime import datetime, timedelta
 from flask import current_app, url_for
 from google.oauth2.credentials import Credentials
@@ -471,11 +472,11 @@ class DriveOAuthClient:
             current_app.logger.error(f"Drive download error: {error}")
             return None
 
-    def warmup_cache(self, depth=10):
-        """Warmup the RAM cache by pre-crawling the Drive structure (deeper)"""
+    def warmup_cache(self, depth=10, warmup_content=False):
+        """Warmup the RAM cache by pre-crawling the Drive structure and optionally caching content"""
         try:
-            current_app.logger.info(f"Starting deep Drive RAM Warmup (Depth: {depth})...")
-            self._warmup_recursive('root', depth)
+            current_app.logger.info(f"Starting deep Drive RAM Warmup (Depth: {depth}, Content: {warmup_content})...")
+            self._warmup_recursive('root', depth, warmup_content)
             current_app.logger.info("Deep Drive RAM Warmup completed.")
         except Exception as e:
             current_app.logger.error(f"Cache Warmup failed: {e}")
@@ -502,11 +503,11 @@ class DriveOAuthClient:
             'limit_mb': 8192
         }
 
-    def _warmup_recursive(self, parent_id, remaining_depth):
+    def _warmup_recursive(self, parent_id, remaining_depth, warmup_content=False):
         if remaining_depth < 0:
             return
             
-        # 1. List items (will automatically cache)
+        # 1. List items (will automatically cache listings)
         items, _ = self.list_items(parent_id)
         if items is None:
             current_app.logger.warning(f"Warmup: Failed to list items for {parent_id} (Auth error or folder inaccessible)")
@@ -521,15 +522,27 @@ class DriveOAuthClient:
         current_app.logger.info(f"Warmup: Cached {len(items)} items for {parent_id}")
         
         # 2. Update DB Stats for this folder
-        # Count non-folder items (files)
-        file_count = sum(1 for i in items if i['mimeType'] != 'application/vnd.google-apps.folder')
-        self._update_folder_stats(parent_id, file_count)
+        file_count = 0
+        for item in items:
+            is_folder = item['mimeType'] == 'application/vnd.google-apps.folder'
+            if not is_folder:
+                file_count += 1
+                
+                # Proactive Content Caching
+                if warmup_content:
+                    # Skip large files (> 20MB) to save RAM
+                    size_str = item.get('size', '0')
+                    size = int(size_str) if size_str.isdigit() else 0
+                    if size < 20 * 1024 * 1024: 
+                        # This will call download_file which uses _DRIVE_CONTENT_CACHE
+                        current_app.logger.debug(f"Warmup: Pre-caching content for {item['name']} ({item['id']})")
+                        self.download_file(item['id'])
             
-        # 3. Recurse into folders
-        if remaining_depth > 0:
-            for item in items:
-                if item['mimeType'] == 'application/vnd.google-apps.folder':
-                    self._warmup_recursive(item['id'], remaining_depth - 1)
+            # 3. Recurse into folders
+            if is_folder and remaining_depth > 0:
+                self._warmup_recursive(item['id'], remaining_depth - 1, warmup_content)
+
+        self._update_folder_stats(parent_id, file_count)
 
     def _update_folder_stats(self, folder_id, file_count):
         """Helper to update stats in DB for all DriveFolder entries linking this folder_id"""

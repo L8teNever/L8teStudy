@@ -418,7 +418,8 @@ def create_app():
         with app.app_context():
             client = DriveOAuthClient()
             if client.is_authenticated():
-                client.warmup_cache(depth=3)
+                # Cache structure and file contents (up to 20MB per file)
+                client.warmup_cache(depth=3, warmup_content=True)
 
     # In Gunicorn/Docker, we want it to run. In dev with reloader, only in the main process.
     if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or os.environ.get('GUNICORN_VERSION'):
@@ -429,6 +430,10 @@ def create_app():
             # Run Drive Warmup once at startup (after a short delay to let worker boot)
             scheduler.add_job(id='drive_warmup', func=run_drive_warmup, trigger='date', 
                               run_date=datetime.now() + timedelta(seconds=10))
+            
+            # Periodic Drive Warmup (every 2 hours)
+            if not scheduler.get_job('drive_periodic_warmup'):
+                scheduler.add_job(id='drive_periodic_warmup', func=run_drive_warmup, trigger='interval', hours=2)
             
             # Untis Cache Jobs
             if not scheduler.get_job('untis_cache_update'):
