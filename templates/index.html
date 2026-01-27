@@ -1461,6 +1461,12 @@
                 position: relative;
             }
 
+            .app-blur {
+                filter: blur(5px);
+                pointer-events: none;
+                transition: filter 0.3s ease;
+            }
+
             .more-menu {
                 bottom: 40px;
                 left: 90px;
@@ -2145,10 +2151,21 @@
                 if (view !== 'home' && view !== 'settings' && view !== 'account' && view !== 'stundenplan' && view !== 'drive' && !view.startsWith('sub_')) fab.classList.add('visible');
                 else fab.classList.remove('visible');
 
-                // Mark "Mehr" button as active if on stundenplan or grades or drive (mobile only)
-                const moreBtn = document.getElementById('nav-more');
-                if (moreBtn && ['stundenplan', 'grades', 'drive'].includes(view)) {
-                    moreBtn.classList.add('active');
+                // Mark "Mehr" button as active if on stundenplan or grades or drive or mealplan or blackboard
+                // Handle Mobile "More"
+                const moreBtnMobile = document.getElementById('nav-more');
+                // Handle Sidebar "More" (we need to give it an ID or select it)
+                // Let's select it by onclick attribute or icon
+                const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
+
+                const moreViews = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
+
+                if (moreViews.includes(view)) {
+                    if (moreBtnMobile) moreBtnMobile.classList.add('active');
+                    if (moreBtnSidebar) moreBtnSidebar.classList.add('active');
+                } else {
+                    if (moreBtnMobile) moreBtnMobile.classList.remove('active');
+                    if (moreBtnSidebar) moreBtnSidebar.classList.remove('active');
                 }
 
                 lucide.createIcons();
