@@ -1962,29 +1962,27 @@
         }
 
         function updateAppLanguage() {
-            // Update Bottom Navigation
+            // Update Bottom Navigation (Home, Tasks, Plan, More)
             const bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-link span');
-            if (bottomNavLinks.length >= 5) {
+            if (bottomNavLinks.length >= 4) {
                 bottomNavLinks[0].innerText = t('home');
                 bottomNavLinks[1].innerText = t('tasks');
                 bottomNavLinks[2].innerText = t('calendar');
-                bottomNavLinks[3].innerText = t('timetable');
-                bottomNavLinks[4].innerText = t('grades');
+                bottomNavLinks[3].innerText = t('more');
             }
-            // Update Side Navigation
+            // Update Side Navigation (Home, Tasks, Plan, More, Account)
             const sideNavLinks = document.querySelectorAll('.side-nav .nav-link span');
             if (sideNavLinks.length >= 5) {
                 sideNavLinks[0].innerText = t('home');
                 sideNavLinks[1].innerText = t('tasks');
                 sideNavLinks[2].innerText = t('calendar');
-                sideNavLinks[3].innerText = t('timetable');
-                sideNavLinks[4].innerText = t('grades');
-                // Drive (5), Mealplan (6), Blackboard (7)
+                sideNavLinks[3].innerText = t('more');
+                sideNavLinks[4].innerText = t('account');
+
+                // If more items are added in the future
                 if (sideNavLinks.length > 5) sideNavLinks[5].innerText = t('drive');
                 if (sideNavLinks.length > 6) sideNavLinks[6].innerText = t('mealplan');
                 if (sideNavLinks.length > 7) sideNavLinks[7].innerText = 'Infos';
-                // Account is in the second nav-group, so it's the last one
-                if (sideNavLinks.length > 8) sideNavLinks[sideNavLinks.length - 1].innerText = t('account');
             }
 
             // Update Header if on main view
