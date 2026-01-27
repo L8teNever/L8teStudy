@@ -1484,10 +1484,9 @@ def perform_restore(file, app_config):
         db.session.rollback()
         current_app.logger.error(f"Restore failed: {e}")
         return False, f'Restore failed: {str(e)}'
-
 @api_bp.route('/admin/restore', methods=['POST'])
 @login_required
-def import_restore():
+def admin_import_restore():
     if not current_user.is_super_admin:
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
@@ -1501,6 +1500,7 @@ def import_restore():
         return jsonify({'success': True})
     else:
         return jsonify({'success': False, 'message': message}), 500
+
 
 @api_bp.route('/setup/restore', methods=['POST'])
 def setup_restore():
