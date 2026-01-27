@@ -3630,7 +3630,7 @@
                                <div style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-sec); margin-bottom:4px;">${t('teacher') || 'LEHRER'}</div>
                                <div style="font-weight:600; font-size:15px;">${teacherName}</div>
                            </div>
-                           ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `<button class="ios-btn btn-small btn-sec" style="width:auto;" onclick="openEditTeacherSheet(${subjectId}, '${teacherName.replace(/'/g, "\\'")}', '${email}')"><i data-lucide="edit-3" style="width:16px;"></i></button>` : ''}
+                           ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `<button class="ios-btn btn-small btn-sec" style="width:auto;" onclick="openEditTeacherSheet(${subjectId}, '${teacherName.replace(/'/g, "\\'")}')"><i data-lucide="edit-3" style="width:16px;"></i></button>` : ''}
                        </div>
                    `;
                 } else if (window.currentUser.is_admin || window.currentUser.is_super_admin) {
@@ -3664,7 +3664,7 @@
             lucide.createIcons();
         }
 
-        function openEditTeacherSheet(id, name, email) {
+        function openEditTeacherSheet(id, name) {
             name = name === '-' ? '' : name;
             const html = `
                 <div class="sheet-header">
@@ -3674,7 +3674,6 @@
                 
                 <div style="margin-top: 10px;">
                     <input type="text" id="edit-teacher-name" class="ios-input" placeholder="Name des Lehrers" value="${name}">
-                    <input type="email" id="edit-teacher-email" class="ios-input" placeholder="E-Mail Adresse" value="${email}">
                     <button class="ios-btn" onclick="saveSubjectTeacher(${id})">Speichern</button>
                 </div>
             `;
@@ -3682,15 +3681,15 @@
         }
 
         async function saveSubjectTeacher(id) {
-            const email = document.getElementById('edit-teacher-email').value;
             const name = document.getElementById('edit-teacher-name').value;
             const classId = window.currentUser?.class_id;
 
             try {
+                // We do not update email from here anymore
                 const res = await fetch(`/api/subjects/${id}/teacher`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ teacher_email: email, teacher_name: name, class_id: classId })
+                    body: JSON.stringify({ teacher_name: name, class_id: classId })
                 });
                 if (res.ok) {
                     closeSheet();
