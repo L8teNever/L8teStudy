@@ -7913,30 +7913,56 @@
                 return;
             }
 
-            let relevantPath = window.location.pathname;
-            const cls = window.currentUser.className;
-            if (cls && relevantPath.toLowerCase().startsWith('/' + cls.toLowerCase())) {
-                relevantPath = relevantPath.substring(cls.length + 1);
-                if (!relevantPath) relevantPath = '/';
+            let initialView = 'home';
+            const fullPath = window.location.pathname.toLowerCase();
+
+            // Robust View Detection: Check if keys exist in path regardless of prefix
+            const viewKeys = [
+                { key: '/settings', val: 'settings' },
+                { key: '/account', val: 'account' },
+                { key: '/tasks', val: 'tasks' },
+                { key: '/calendar', val: 'calendar' },
+                { key: '/stundenplan', val: 'stundenplan' },
+                { key: '/grades', val: 'grades' },
+                { key: '/drive', val: 'drive' },
+                { key: '/admin', val: 'sub_admin_menu' },
+                { key: '/superadmin', val: 'sub_super_admin' },
+                { key: '/blackboard', val: 'blackboard' },
+                { key: '/mealplan', val: 'mealplan' },
+                { key: '/home', val: 'home' }
+            ];
+
+            for (let v of viewKeys) {
+                // We match if the path ends with the key OR contains the key followed by a slash
+                // e.g. /9a/grades matches /grades. /9a/grades/details matches /grades/
+                if (fullPath.endsWith(v.key) || fullPath.includes(v.key + '/')) {
+                    initialView = v.val;
+                    break;
+                }
             }
 
-            // Initial State setup to avoid duplication
-            const viewMapping = {
-                '/home': 'home', '/': 'home',
-                '/tasks': 'tasks',
-                '/calendar': 'calendar',
-                '/stundenplan': 'stundenplan',
-                '/grades': 'grades',
-                '/settings': 'settings',
-                '/account': 'account',
-                '/drive': 'drive',
-                '/admin': 'sub_admin_menu',
-                '/superadmin': 'sub_super_admin',
-                '/blackboard': 'blackboard',
-                '/blackboard': 'blackboard'
-            };
-            let initialView = 'home';
-            for (let k in viewMapping) { if (relevantPath.startsWith(k)) { initialView = viewMapping[k]; break; } }
+            // Re-establish relevantPath for sub-routing logic later based on what we found, 
+            // effectively acting as if we stripped the class.
+            // This is a bit hacky but ensures subsequent 'if (relevantPath === ...)' checks work 
+            // if we are NOT on home.
+            // If we are on home, relevantPath should ideally be '/' or '/home'
+            if (initialView !== 'home') {
+                // Try to construct a relevant path that matches string checks below
+                // e.g. /settings/password -> /settings/password (even if prefix was there)
+                // The easiest way is to use the part of the string starting from the matched key.
+                const match = viewKeys.find(v => v.val === initialView);
+                if (match) {
+                    const idx = fullPath.indexOf(match.key);
+                    if (idx !== -1) {
+                        // Use the substring from the match, preserving original case from window.location.pathname
+                        relevantPath = window.location.pathname.substring(idx);
+                    }
+                }
+            } else {
+                // If detected as home, force relevant path to / or /home for safety if it was bare class url
+                if (fullPath.endsWith('/home')) relevantPath = '/home';
+                else if (fullPath.split('/').length <= 2) relevantPath = '/';
+            }
 
             // Replace the initial null state with the correct view state
             window.history.replaceState({ view: initialView }, '', window.location.pathname);
