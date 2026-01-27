@@ -1290,7 +1290,7 @@
         }
 
         /* --- Desktop Responsive --- */
-        @media (min-width: 1024px) {
+        @media (min-width: 768px) {
             body {
                 padding-top: 40px;
                 padding-left: 100px;
@@ -2455,16 +2455,20 @@
                             </div>
                          </div>
                          
-                         <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
-                             <button class="ios-btn btn-sec" onclick="openUploadMealPlan()">${t('upload_mealplan_title')}</button>
+                         <div style="margin-top: 10px; display:flex;">
+                             <button class="ios-btn btn-sec" style="width: 40px; height: 40px; border-radius: 20px; padding: 0; display:flex; align-items:center; justify-content:center;" onclick="openUploadMealPlan()">
+                                <i data-lucide="plus" style="width:20px;"></i>
+                             </button>
                          </div>
                      `;
                 } else {
                     container.innerHTML = `
-                        <div style="padding: 30px 0;">
+                        <div style="padding: 30px 0; display:flex; flex-direction:column; align-items:center;">
                             <i data-lucide="utensils" style="width:48px; height:48px; color:var(--text-sec); opacity:0.3; margin-bottom:15px;"></i>
-                            <p class="item-sub">${t('no_results')}</p>
-                            <button class="ios-btn" style="margin-top:15px;" onclick="openUploadMealPlan()">${t('upload_mealplan_title')}</button>
+                            <p class="item-sub" style="margin-bottom:15px;">${t('no_results')}</p>
+                            <button class="ios-btn btn-sec" style="width: 40px; height: 40px; border-radius: 20px; padding: 0; display:flex; align-items:center; justify-content:center;" onclick="openUploadMealPlan()">
+                                <i data-lucide="plus" style="width:20px;"></i>
+                            </button>
                         </div>
                      `;
                 }
@@ -3596,7 +3600,6 @@
                            <div>
                                <div style="font-size:11px; text-transform:uppercase; font-weight:700; color:var(--text-sec); margin-bottom:4px;">${t('teacher') || 'LEHRER'}</div>
                                <div style="font-weight:600; font-size:15px;">${teacherName}</div>
-                               ${email ? `<div style="font-size:13px; color:var(--accent); margin-top:2px; cursor:pointer;" onclick="window.location.href='mailto:${email}'">${email}</div>` : ''}
                            </div>
                            ${(window.currentUser.is_admin || window.currentUser.is_super_admin) ? `<button class="ios-btn btn-small btn-sec" style="width:auto;" onclick="openEditTeacherSheet(${subjectId}, '${teacherName.replace(/'/g, "\\'")}', '${email}')"><i data-lucide="edit-3" style="width:16px;"></i></button>` : ''}
                        </div>
