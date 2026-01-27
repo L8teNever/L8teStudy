@@ -88,6 +88,22 @@
             overflow-x: hidden;
         }
 
+        /* Accessibility: Clear Focus States */
+        :focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        .nav-link:focus-visible,
+        .more-menu-item:focus-visible,
+        .btn-chat-open:focus-visible,
+        .fab:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: -4px;
+            border-radius: 12px;
+        }
+
         header {
             position: fixed;
             top: 15px;
@@ -1468,6 +1484,22 @@
                 position: relative;
             }
 
+            .skip-link {
+                position: absolute;
+                top: -100px;
+                left: 20px;
+                background: var(--accent);
+                color: white;
+                padding: 10px 20px;
+                z-index: 2000;
+                text-decoration: none;
+                border-radius: 12px;
+                transition: top 0.3s;
+            }
+
+            .skip-link:focus {
+                top: 20px;
+            }
 
 
             .more-menu {
@@ -1813,72 +1845,104 @@
 </head>
 
 <body data-theme="{{ 'dark' if user.dark_mode else 'light' }}">
+    <a href="#app-container" class="skip-link">Zum Hauptinhalt springen</a>
 
-    <nav class="side-nav">
+    <nav class="side-nav" aria-label="Hauptnavigation">
         <div class="nav-group">
-            <a class="nav-link active" onclick="navigate('home', this, 'Home')"><i
-                    data-lucide="house"></i><span>Home</span></a>
-            <a class="nav-link" onclick="navigate('tasks', this, 'Aufgaben')"><i
-                    data-lucide="check-circle-2"></i><span>Aufgaben</span></a>
-            <a class="nav-link" onclick="navigate('calendar', this, 'Plan')"><i
-                    data-lucide="calendar-days"></i><span>Plan</span></a>
-            <a class="nav-link" onclick="navigate('stundenplan', this, 'Stundenplan')"><i
-                    data-lucide="clock-4"></i><span>Stundenplan</span></a>
-            <a class="nav-link" onclick="toggleMoreMenu(event)"><i
-                    data-lucide="more-horizontal"></i><span>Mehr</span></a>
+            <a href="javascript:void(0)" class="nav-link active" onclick="navigate('home', this, 'Home')" role="button"
+                aria-label="Startseite">
+                <i data-lucide="house" aria-hidden="true"></i><span>Home</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('tasks', this, 'Aufgaben')" role="button"
+                aria-label="Aufgaben">
+                <i data-lucide="check-circle-2" aria-hidden="true"></i><span>Aufgaben</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('calendar', this, 'Plan')" role="button"
+                aria-label="Plan">
+                <i data-lucide="calendar-days" aria-hidden="true"></i><span>Plan</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('stundenplan', this, 'Stundenplan')"
+                role="button" aria-label="Stundenplan">
+                <i data-lucide="clock-4" aria-hidden="true"></i><span>Stundenplan</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="toggleMoreMenu(event)" role="button"
+                aria-label="Mehr Optionen" aria-haspopup="true" id="side-more-trigger">
+                <i data-lucide="more-horizontal" aria-hidden="true"></i><span>Mehr</span>
+            </a>
         </div>
         <div class="nav-group">
-            <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
+            <a href="javascript:void(0)" class="nav-link" onclick="openAccountMenu()" role="button"
+                aria-label="Account">
+                <i data-lucide="user" aria-hidden="true"></i><span>Account</span>
+            </a>
         </div>
     </nav>
 
     <header>
         <div class="header-left">
-            <div id="header-back-btn" onclick="goBackToPrevious()"><i data-lucide="chevron-left"></i></div>
+            <div id="header-back-btn" onclick="goBackToPrevious()" role="button" tabindex="0" aria-label="Zurück">
+                <i data-lucide="chevron-left" aria-hidden="true"></i>
+            </div>
             <div class="header-title" id="current-page-title">Home</div>
         </div>
-        <div class="profile-btn" onclick="openAccountMenu()"><i data-lucide="user"></i></div>
+        <div class="profile-btn" onclick="openAccountMenu()" role="button" tabindex="0" aria-label="Account Menü">
+            <i data-lucide="user" aria-hidden="true"></i>
+        </div>
     </header>
 
     <main id="app-container"></main>
 
-    <button class="fab" id="main-fab" onclick="openCreateMenu()"><i data-lucide="plus"></i></button>
+    <button class="fab" id="main-fab" onclick="openCreateMenu()" aria-label="Neu erstellen">
+        <i data-lucide="plus" aria-hidden="true"></i>
+    </button>
 
     <!-- MEHR DROPDOWN (Nur Mobil - Enthält nur Noten & Stundenplan) -->
-    <div id="more-menu" class="more-menu">
+    <div id="more-menu" class="more-menu" role="menu" aria-label="Erweitertes Menü">
         <div class="more-menu-item" id="more-stundenplan"
-            onclick="navigate('stundenplan', null, 'Stundenplan'); toggleMoreMenu()">
-            <i data-lucide="clock-4"></i><span>Stundenplan</span>
+            onclick="navigate('stundenplan', null, 'Stundenplan'); toggleMoreMenu()" role="menuitem" tabindex="0">
+            <i data-lucide="clock-4" aria-hidden="true"></i><span>Stundenplan</span>
         </div>
-        <div class="more-menu-item" onclick="navigate('grades', null, 'Noten'); toggleMoreMenu()">
-            <i data-lucide="bar-chart-3"></i><span>Noten</span>
+        <div class="more-menu-item" onclick="navigate('grades', null, 'Noten'); toggleMoreMenu()" role="menuitem"
+            tabindex="0">
+            <i data-lucide="bar-chart-3" aria-hidden="true"></i><span>Noten</span>
         </div>
-        <div class="more-menu-item" onclick="navigate('drive', null, 'Drive'); toggleMoreMenu()">
-            <i data-lucide="hard-drive"></i><span>Drive</span>
+        <div class="more-menu-item" onclick="navigate('drive', null, 'Drive'); toggleMoreMenu()" role="menuitem"
+            tabindex="0">
+            <i data-lucide="hard-drive" aria-hidden="true"></i><span>Drive</span>
         </div>
-        <div class="more-menu-item" onclick="navigate('mealplan', null, 'Essen'); toggleMoreMenu()">
-            <i data-lucide="utensils"></i><span>Essen</span>
+        <div class="more-menu-item" onclick="navigate('mealplan', null, 'Essen'); toggleMoreMenu()" role="menuitem"
+            tabindex="0">
+            <i data-lucide="utensils" aria-hidden="true"></i><span>Essen</span>
         </div>
-        <div class="more-menu-item" onclick="navigate('blackboard', null, 'Infos'); toggleMoreMenu()">
-            <i data-lucide="clipboard-list"></i><span>Infos</span>
+        <div class="more-menu-item" onclick="navigate('blackboard', null, 'Infos'); toggleMoreMenu()" role="menuitem"
+            tabindex="0">
+            <i data-lucide="clipboard-list" aria-hidden="true"></i><span>Infos</span>
         </div>
     </div>
 
     <!-- BOTTOM NAV (Nur Mobil - Max 4 Icons) -->
-    <nav class="bottom-nav">
-        <a class="nav-link active" id="nav-home" onclick="navigate('home', this, 'Home')"><i
-                data-lucide="house"></i><span>Home</span></a>
-        <a class="nav-link" id="nav-tasks" onclick="navigate('tasks', this, 'Aufgaben')"><i
-                data-lucide="check-circle-2"></i><span>Aufgaben</span></a>
-        <a class="nav-link" id="nav-calendar" onclick="navigate('calendar', this, 'Plan')"><i
-                data-lucide="calendar-days"></i><span>Plan</span></a>
-        <a class="nav-link" id="nav-more" onclick="toggleMoreMenu(event)"><i
-                data-lucide="more-horizontal"></i><span>Mehr</span></a>
+    <nav class="bottom-nav" aria-label="Mobile Navigation">
+        <a href="javascript:void(0)" class="nav-link active" id="nav-home" onclick="navigate('home', this, 'Home')"
+            role="button" aria-label="Startseite">
+            <i data-lucide="house" aria-hidden="true"></i><span>Home</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" id="nav-tasks" onclick="navigate('tasks', this, 'Aufgaben')"
+            role="button" aria-label="Aufgaben">
+            <i data-lucide="check-circle-2" aria-hidden="true"></i><span>Aufgaben</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" id="nav-calendar" onclick="navigate('calendar', this, 'Plan')"
+            role="button" aria-label="Plan">
+            <i data-lucide="calendar-days" aria-hidden="true"></i><span>Plan</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" id="nav-more" onclick="toggleMoreMenu(event)" role="button"
+            aria-label="Mehr Optionen" aria-haspopup="true">
+            <i data-lucide="more-horizontal" aria-hidden="true"></i><span>Mehr</span>
+        </a>
     </nav>
 
-    <div id="sheet-overlay" class="sheet-overlay" onclick="closeSheet()">
-        <div class="sheet" id="sheet" onclick="event.stopPropagation()">
-            <div class="sheet-drag-indicator"></div>
+    <div id="sheet-overlay" class="sheet-overlay" onclick="closeSheet()" role="presentation">
+        <div class="sheet" id="sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" tabindex="-1">
+            <div class="sheet-drag-indicator" aria-hidden="true"></div>
             <div id="sheet-content"></div>
         </div>
     </div>
@@ -1889,6 +1953,17 @@
             console.error("Global JS Error:", msg, "at line", line);
             // alert("JS Error: " + msg + "\nLine: " + line); 
         };
+
+        // Accessibility: Keyboard Navigation for [role="button"] and [role="menuitem"]
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const target = e.target;
+                if (target.getAttribute('role') === 'button' || target.getAttribute('role') === 'menuitem') {
+                    if (e.key === ' ') e.preventDefault();
+                    target.click();
+                }
+            }
+        });
         let currentView = 'home';
         let previousView = 'home';
         let selectedSubject = null;
@@ -2309,6 +2384,12 @@
             if (!sheet.classList.contains('active')) {
                 sheet.classList.add('active');
                 window.history.pushState({ modal: true }, '', null);
+
+                // Accessibility: Focus the sheet
+                setTimeout(() => {
+                    const innerSheet = document.getElementById('sheet');
+                    if (innerSheet) innerSheet.focus();
+                }, 100);
             }
         }
 
@@ -3028,15 +3109,15 @@
                     html += `
                         <div class="floating-card" style="padding: 20px 24px 10px 24px; margin-bottom: 15px;">
                             <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('next_event')}</h4>
-                            <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id}, '[]', ${e.subject_id || 'null'})">
+                            <div class="list-item" role="button" tabindex="0" aria-label="${e.title} am ${timeText} ansehen" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id}, '[]', ${e.subject_id || 'null'})">
                                 <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: ${visuals.color};">
-                                    <i data-lucide="${visuals.icon}" style="width:18px; height:18px;"></i>
+                                    <i data-lucide="${visuals.icon}" style="width:18px; height:18px;" aria-hidden="true"></i>
                                 </div>
                                 <div class="item-content">
                                     <div class="item-title" style="${visuals.color !== 'var(--accent)' ? `color:${visuals.color}; font-weight:700;` : ''}">${e.title}</div>
                                     <div class="item-sub">${timeText}</div>
                                 </div>
-                                <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                                <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)" aria-hidden="true"></i>
                             </div>
                         </div>`;
                 }
@@ -3055,15 +3136,15 @@
                     html += `
                         <div class="floating-card" style="padding: 20px 24px 10px 24px;">
                             <h4 style="margin:0 0 15px 0; font-size:17px; color:${visuals.color};">Nächste Arbeit/Test</h4>
-                            <div class="list-item" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id}, '[]', ${e.subject_id || 'null'})">
+                            <div class="list-item" role="button" tabindex="0" aria-label="${e.title} am ${timeText} ansehen" onclick="openDetails('event', '${e.title}', null, '${e.date}', null, '${e.description || ''}', ${e.id}, '[]', ${e.subject_id || 'null'})">
                                 <div class="account-item-icon" style="margin-right: 16px; width: 24px; height: 24px; background: none; color: ${visuals.color};">
-                                    <i data-lucide="${visuals.icon}" style="width:18px; height:18px;"></i>
+                                    <i data-lucide="${visuals.icon}" style="width:18px; height:18px;" aria-hidden="true"></i>
                                 </div>
                                 <div class="item-content">
                                     <div class="item-title" style="color:${visuals.color}; font-weight:700;">${e.title}</div>
                                     <div class="item-sub">${timeText}</div>
                                 </div>
-                                <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                                <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)" aria-hidden="true"></i>
                             </div>
                         </div>`;
                 }
@@ -3073,10 +3154,11 @@
                     lucide.createIcons();
                 } else {
                     document.getElementById('home-next-event').innerHTML = `
-                        <div class="floating-card" onclick="navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'))">
+                        <div class="floating-card" role="button" tabindex="0" onclick="navigate('calendar', document.querySelectorAll('.nav-link')[2], t('calendar'))" aria-label="Kalender öffnen">
                             <h4 style="margin:0 0 5px 0; font-size:17px; color:var(--accent);">${t('next_event')}</h4>
                             <p class="item-sub">${t('no_upcoming_events')}</p>
-                        </div>`;
+                        </div>
+`;
                 }
             } catch (e) { console.error(e); }
 
@@ -3178,18 +3260,18 @@
                     return;
                 }
                 const listHtml = filteredTasks.map(task => `
-                    <div class="list-item" style="padding: 18px 0;" onclick="openTaskDetails(${task.id})">
-                        <div class="check-circle ${task.is_done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})">
-                            <i data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}"></i>
+                    <div class="list-item" role="button" tabindex="0" aria-label="Aufgabe ansehen: ${task.title}" style="padding: 18px 0;" onclick="openTaskDetails(${task.id})">
+                        <div class="check-circle ${task.is_done ? 'checked' : ''}" role="button" tabindex="0" aria-label="${task.is_done ? 'Als offen markieren' : 'Als erledigt markieren'}" onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, ${task.is_done})">
+                            <i data-lucide="check" style="width:14px; opacity:${task.is_done ? 1 : 0}" aria-hidden="true"></i>
                         </div>
                         <div class="item-content">
                             <div class="item-title">${task.title}</div>
                             <div class="item-sub" style="display:flex; align-items:center;">
-                                ${task.subject || t('general')} • ${task.due_date ? new Date(task.due_date).toLocaleDateString(locale) : t('no_date')}
-                                ${task.unread_chat_count > 0 ? `<div style="background:var(--danger); width:8px; height:8px; border-radius:50%; margin-left:8px;"></div>` : ''}
+                                ${task.subject || t('general')} • ${task.due_date ? `<span aria-label="Fällig am">${new Date(task.due_date).toLocaleDateString(locale)}</span>` : t('no_date')}
+                                ${task.unread_chat_count > 0 ? `<div aria-label="${task.unread_chat_count} neue Nachrichten" style="background:var(--danger); width:8px; height:8px; border-radius:50%; margin-left:8px;"></div>` : ''}
                             </div>
                         </div>
-                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)" aria-hidden="true"></i>
                     </div>`).join('');
                 listContainer.innerHTML = `<div class="floating-card" style="padding:0 24px">${listHtml}</div>`;
                 lucide.createIcons();
