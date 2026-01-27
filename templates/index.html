@@ -1458,6 +1458,19 @@
                 position: relative;
             }
 
+            .more-menu {
+                bottom: 40px;
+                left: 90px;
+                right: auto;
+                width: 200px;
+                transform-origin: bottom left;
+                transform: scale(0.9) translateY(10px);
+            }
+
+            .more-menu.active {
+                transform: scale(1) translateY(0);
+            }
+
             .loading::after {
                 content: "";
                 position: absolute;
@@ -1799,6 +1812,8 @@
                     data-lucide="utensils"></i><span>Essen</span></a>
             <a class="nav-link" onclick="navigate('blackboard', this, 'Infos')"><i
                     data-lucide="clipboard-list"></i><span>Infos</span></a>
+            <a class="nav-link" onclick="toggleMoreMenu(event)"><i
+                    data-lucide="more-horizontal"></i><span>Mehr</span></a>
         </div>
         <div class="nav-group">
             <a class="nav-link" onclick="openAccountMenu()"><i data-lucide="user"></i><span>Account</span></a>
@@ -6147,6 +6162,10 @@
             }
             if (currentView === 'sub_classes') {
                 openCreateClassMenu();
+                return;
+            }
+            if (currentView === 'mealplan') {
+                openUploadMealPlan();
                 return;
             }
             let type = editType || (currentView === 'tasks' ? "task" : (currentView === 'calendar' ? "event" : "grade"));
