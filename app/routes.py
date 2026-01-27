@@ -2412,3 +2412,31 @@ def delete_blackboard_item(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@api_bp.route('/blackboard/<int:id>', methods=['PUT'])
+@login_required
+def update_blackboard_item(id):
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+        
+    try:
+        from .models import BlackboardItem
+        item = BlackboardItem.query.get_or_404(id)
+        
+        # Check permissions
+        if not current_user.is_super_admin and item.class_id != current_user.class_id:
+            return jsonify({'success': False, 'message': 'Forbidden'}), 403
+
+        data = request.json
+        
+        if 'title' in data: item.title = data['title']
+        if 'content' in data: item.content = data['content']
+        if 'type' in data: item.item_type = data['type']
+        if 'category' in data: item.category = data['category']
+        if 'sort_order' in data: item.sort_order = data['sort_order']
+        
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500

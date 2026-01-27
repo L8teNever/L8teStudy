@@ -4646,6 +4646,11 @@
                         <div class="account-item-text">Drive Verwaltung</div>
                         <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
                     </div>
+                    <div class="account-item" onclick="renderBlackboardManagement()">
+                        <div class="account-item-icon" style="background:#FF2D55; color:white;"><i data-lucide="info"></i></div>
+                        <div class="account-item-text">Infos (Blackboard)</div>
+                        <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                    </div>
                     ` : ''}
                     ${window.currentUser.class_id ? `
                     <div class="account-item" onclick="renderClassSettings(${window.currentUser.class_id})">
@@ -4994,6 +4999,166 @@
             }
 
             renderActivityLogList(filtered);
+        }
+
+        /* --- BLACKBOARD MANAGEMENT --- */
+        async function renderBlackboardManagement() {
+            previousView = 'sub_admin_menu';
+            currentView = 'sub_blackboard_mgmt';
+            setPageTitle('Infos verwalten');
+            document.getElementById('header-back-btn').style.display = 'block';
+
+            if (!window.isPoppingState) {
+                window.history.pushState({ view: 'sub_blackboard_mgmt' }, '', '/admin/blackboard');
+            }
+            window.isPoppingState = false;
+            document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
+
+            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px;">${t('loading')}</div>`;
+
+            try {
+                const res = await fetch('/api/blackboard');
+                const allItems = await res.json();
+                // Only manual items can be edited
+                const items = allItems.filter(i => i.is_manual);
+
+                const listHtml = items.map(item => `
+                    <div class="list-item" onclick="openBlackboardItemEditor(${item.id})">
+                        <div class="item-content">
+                            <div class="item-title">${item.title}</div>
+                            <div class="item-sub">${item.category || 'Keine Kategorie'} • ${item.type}</div>
+                        </div>
+                        <i data-lucide="chevron-right" style="color:var(--text-sec); width:18px;"></i>
+                    </div>
+                `).join('');
+
+                const addBtnHtml = `
+                    <div class="floating-card" style="padding:20px;">
+                        <button class="ios-btn" onclick="openBlackboardItemEditor(null)">+ Neuer Eintrag</button>
+                    </div>
+                `;
+
+                document.getElementById('app-container').innerHTML = `
+                    ${addBtnHtml}
+                    <h3 style="margin:20px 0 10px 5px; font-size:18px;">Einträge</h3>
+                    <div class="floating-card" style="padding:0 24px;">
+                        ${listHtml || `<div style="padding:20px; text-align:center; color:var(--text-sec)">Keine manuellen Einträge</div>`}
+                    </div>
+                `;
+                lucide.createIcons();
+
+                // Cache for editor
+                window.blackboardCache = items;
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app-container').innerHTML = `<div style="text-align:center; color:var(--danger)">Fehler beim Laden</div>`;
+            }
+        }
+
+        function openBlackboardItemEditor(id) {
+            let item = { title: '', content: '', category: 'Sonstiges', type: 'info', sort_order: 0 };
+            let title = "Neuer Eintrag";
+
+            if (id) {
+                item = window.blackboardCache.find(i => i.id === id) || item;
+                title = "Bearbeiten";
+            }
+
+            const categories = ['Wichtige Kontakte', 'Lehrer', 'Vorlagen', 'Sonstiges'];
+            const catOptions = categories.map(c => `<option value="${c}" ${item.category === c ? 'selected' : ''}>${c}</option>`).join('');
+
+            const types = [
+                { val: 'info', label: 'Info (Text)' },
+                { val: 'contact_email', label: 'Kontakt: Email' },
+                { val: 'contact_phone', label: 'Kontakt: Telefon' },
+                { val: 'template', label: 'Vorlage (Krankmeldung etc.)' },
+                { val: 'link', label: 'Link' }
+            ];
+            const typeOptions = types.map(t => `<option value="${t.val}" ${item.type === t.val ? 'selected' : ''}>${t.label}</option>`).join('');
+
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h2 style="margin:0; font-size:20px; font-weight:700;">${title}</h2>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x" style="width:18px"></i></div>
+                </div>
+
+                <label style="font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:5px; display:block;">TITEL</label>
+                <input type="text" id="bb-title" class="ios-input" value="${item.title}" placeholder="Titel">
+
+                <label style="font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:5px; display:block;">INHALT (Email, Nr, Text)</label>
+                <textarea id="bb-content" class="ios-input" style="height:100px; padding:10px; font-family:inherit;" placeholder="Inhalt...">${item.content || ''}</textarea>
+
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label style="font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:5px; display:block;">KATEGORIE</label>
+                        <select id="bb-cat" class="ios-input">${catOptions}</select>
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:5px; display:block;">TYP</label>
+                        <select id="bb-type" class="ios-input">${typeOptions}</select>
+                    </div>
+                </div>
+
+                <label style="font-size:12px; font-weight:600; color:var(--text-sec); margin-bottom:5px; display:block;">SORTIERUNG (0 = Oben)</label>
+                <input type="number" id="bb-sort" class="ios-input" value="${item.sort_order}">
+
+                <div style="margin-top:20px;">
+                    <button class="ios-btn" onclick="saveBlackboardItem(${id})">Speichern</button>
+                    ${id ? `<button class="ios-btn" style="background:var(--danger); margin-top:10px;" onclick="deleteBlackboardItem(${id})">Löschen</button>` : ''}
+                </div>
+            `;
+
+            openSheetOverlay();
+            lucide.createIcons();
+        }
+
+        async function saveBlackboardItem(id) {
+            const data = {
+                title: document.getElementById('bb-title').value,
+                content: document.getElementById('bb-content').value,
+                category: document.getElementById('bb-cat').value,
+                type: document.getElementById('bb-type').value,
+                sort_order: parseInt(document.getElementById('bb-sort').value) || 0
+            };
+
+            if (!data.title) return alert("Titel fehlt");
+
+            try {
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/blackboard/${id}` : '/api/blackboard';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    closeSheet();
+                    renderBlackboardManagement();
+                } else {
+                    alert("Fehler beim Speichern");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Verbindungsfehler");
+            }
+        }
+
+        async function deleteBlackboardItem(id) {
+            if (!confirm("Wirklich löschen?")) return;
+            try {
+                const res = await fetch(`/api/blackboard/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    closeSheet();
+                    renderBlackboardManagement();
+                } else {
+                    alert("Fehler beim Löschen");
+                }
+            } catch (e) {
+                alert("Verbindungsfehler");
+            }
         }
 
         // Sub-page: School Class Management
@@ -7746,6 +7911,7 @@
             }
             else if (relevantPath === '/admin/untis') renderUntisConfig();
             else if (relevantPath === '/admin/drive') renderDriveManagement();
+            else if (relevantPath === '/admin/blackboard') renderBlackboardManagement();
             else if (relevantPath.startsWith('/drive')) {
                 if (relevantPath.startsWith('/drive/folder/')) {
                     const parts = relevantPath.split('/');
