@@ -1419,9 +1419,10 @@
                 border: 1px solid var(--border);
                 border-radius: 24px;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-                justify-content: space-between;
                 padding: 30px 0;
-                z-index: 1000;
+                justify-content: space-between;
+                z-index: 2000;
+                /* Above everything */
             }
 
             .side-nav .nav-group {
@@ -1677,6 +1678,11 @@
                 display: flex;
                 align-items: center;
                 gap: 12px;
+                pointer-events: none;
+            }
+
+            .controls-row>* {
+                pointer-events: auto;
             }
 
             .controls-row .tab-bar {
@@ -8043,175 +8049,9 @@
             closeSheet();
         }
 
-        async function renderBlackboard() {
-            currentView = 'blackboard';
-            setPageTitle('Infos');
-            document.getElementById('app-container').innerHTML = `<div style="text-align:center; padding:20px;">${t('loading')}</div>`;
-
-            // Add search bar
-            const searchHtml = `
-                <div style="padding: 0 10px 15px 10px;">
-                    <div class="custom-picker-trigger" style="margin-bottom:0; cursor:text;" onclick="document.getElementById('bb-search').focus()">
-                        <i data-lucide="search" style="color:var(--text-sec); width:20px;"></i>
-                        <input type="text" id="bb-search" placeholder="Suchen..." style="border:none; background:transparent; font-size:16px; width:100%; outline:none; margin-left:10px; color:var(--text-main);" onkeyup="filterBlackboard()">
-                    </div>
-                </div>
-            `;
-
-            try {
-                const res = await fetch('/api/blackboard');
-                const items = await res.json();
-                // Global for filtering
-                window.blackboardItems = items;
-
-                displayBlackboardItems(items, searchHtml);
-
-            } catch (e) {
-                document.getElementById('app-container').innerHTML = `<div style="text-align:center; color:var(--danger)">Fehler beim Laden</div>`;
-            }
-        }
-
-        function displayBlackboardItems(items, contentPre = '') {
-            let html = contentPre;
-
-            // Group items
-            const groups = {
-                'Wichtige Kontakte': [],
-                'Lehrer': [],
-                'Vorlagen': [],
-                'Sonstiges': []
-            };
-
-            items.forEach(i => {
-                if (i.category && groups[i.category]) groups[i.category].push(i);
-                else if (i.type === 'template') groups['Vorlagen'].push(i);
-                else if (i.type && i.type.startsWith('contact')) groups['Wichtige Kontakte'].push(i);
-                else if (i.category === 'Lehrer') groups['Lehrer'].push(i);
-                else groups['Sonstiges'].push(i);
-            });
-
-            // Render Groups
-            for (const [name, list] of Object.entries(groups)) {
-                if (list.length === 0) continue;
-
-                html += `<h4 style="margin:20px 15px 10px 15px; text-transform:uppercase; font-size:13px; color:var(--text-sec);">${name}</h4>`;
-                html += `<div class="floating-card" style="padding:0; margin-bottom:10px;">`;
-
-                list.forEach((item, idx) => {
-                    const isLast = idx === list.length - 1;
-                    const icon = item.type === 'contact_email' ? 'mail' : (item.type === 'contact_phone' ? 'phone' : (item.type === 'template' ? 'file-text' : 'info'));
-
-                    let action = '';
-                    if (item.type === 'contact_email') action = `onclick="window.location.href='mailto:${item.content}'"`;
-                    else if (item.type === 'contact_phone') action = `onclick="window.location.href='tel:${item.content}'"`;
-                    else if (item.type === 'template') action = `onclick="openSickNoteWizard('${item.title.replace(/'/g, "\\'")}', '${(item.content || '').replace(/'/g, "\\'").replace(/\n/g, "\\n")}')"`;
-
-                    // Description handling
-                    const desc = item.description || (item.subjects ? item.subjects.join(', ') : '');
-
-                    html += `
-                        <div class="account-item" ${action} style="padding:15px; ${isLast ? 'border-bottom:none' : ''}">
-                            <div class="account-item-icon"><i data-lucide="${icon}"></i></div>
-                            <div class="account-item-text">
-                                <div style="font-weight:600;">${item.title}</div>
-                                ${item.content && item.type !== 'template' ? `<div style="font-size:13px; color:var(--text-sec);">${item.content}</div>` : ''}
-                                ${desc ? `<div style="font-size:11px; color:var(--accent); margin-top:2px;">${desc}</div>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-            }
-
-
-
-            document.getElementById('app-container').innerHTML = html;
-            lucide.createIcons();
-        }
-
-        function handleBlackboardContext(e, id) {
-            e.preventDefault();
-            if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(50);
-            openBlackboardItemEditor(id);
-        }
-
-        function filterBlackboard() {
-            const term = document.getElementById('bb-search').value.toLowerCase();
-            if (!window.blackboardItems) return;
-
-            const filtered = window.blackboardItems.filter(i =>
-                i.title.toLowerCase().includes(term) ||
-                (i.content && i.content.toLowerCase().includes(term)) ||
-                (i.subjects && i.subjects.join(' ').toLowerCase().includes(term))
-            );
-
-            const searchHtml = `
-                <div style="padding: 0 10px 15px 10px;">
-                    <div class="custom-picker-trigger" style="margin-bottom:0; cursor:text;" onclick="document.getElementById('bb-search').focus()">
-                        <i data-lucide="search" style="color:var(--text-sec); width:20px;"></i>
-                        <input type="text" id="bb-search" placeholder="Suchen..." value="${document.getElementById('bb-search').value}" style="border:none; background:transparent; font-size:16px; width:100%; outline:none; margin-left:10px; color:var(--text-main);" onkeyup="filterBlackboard()" autofocus>
-                    </div>
-                </div>
-            `;
-            displayBlackboardItems(filtered, searchHtml);
-            const newInput = document.getElementById('bb-search');
-            newInput.focus();
-            newInput.setSelectionRange(newInput.value.length, newInput.value.length);
-        }
-
-        function openSickNoteWizard(title = 'Krankmeldung', templateContent = '') {
-            const html = `
-                <div class="sheet-header">
-                    <h3>${title}</h3>
-                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
-                </div>
-                <div style="padding:10px 0;">
-                    <p style="color:var(--text-sec); font-size:14px; margin-bottom:20px;">Wähle den Zeitraum für deine Krankmeldung. Es wird eine E-Mail vorbereitet.</p>
-                    
-                    <label style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-sec);">Von</label>
-                    <input type="date" id="sick-start" class="ios-input" value="${new Date().toISOString().split('T')[0]}">
-                    
-                    <label style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-sec);">Bis</label>
-                    <input type="date" id="sick-end" class="ios-input" value="${new Date().toISOString().split('T')[0]}">
-                    
-                    <button class="ios-btn" onclick="generateSickEmail('${templateContent.replace(/'/g, "\\'")}')">E-Mail erstellen</button>
-                </div>
-            `;
-            openSheet(html);
-            lucide.createIcons();
-        }
-
-        function generateSickEmail(template = '') {
-            const start = document.getElementById('sick-start').value;
-            const end = document.getElementById('sick-end').value;
-
-            const formatDate = (d) => {
-                const parts = d.split('-');
-                return `${parts[2]}.${parts[1]}.${parts[0]}`;
-            };
-
-            const startStr = formatDate(start);
-            const endStr = formatDate(end);
-
-            let subject = "Krankmeldung";
-            let body = `Sehr geehrte Damen und Herren,\n\nhiermit melde ich mich für den Zeitraum vom ${startStr} bis zum ${endStr} krank.\n\nMit freundlichen Grüßen,\n${window.currentUser.name}`;
-
-            if (template && template.length > 5) {
-                body = template.replace('[START]', startStr).replace('[END]', endStr).replace('[NAME]', window.currentUser.name);
-            }
-
-            let mailTo = "";
-            if (window.blackboardItems) {
-                // Try to find sekretariat or similar
-                const sec = window.blackboardItems.find(i => (i.title.toLowerCase().includes('sekretariat') || i.title.toLowerCase().includes('krank')) && i.type === 'contact_email');
-                if (sec) mailTo = sec.content;
-            }
-
-            window.location.href = `mailto:${mailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            closeSheet();
-        }
 
         window.onload = () => {
+            let relevantPath = '/';
             const path = window.location.pathname;
             if (window.currentUser && window.currentUser.language) {
                 localStorage.setItem('l8te_lang', window.currentUser.language);
