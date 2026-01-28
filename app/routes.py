@@ -22,6 +22,32 @@ except ImportError:
     md_lib = None
 from . import login_manager, limiter, csrf
 from .untis_service import get_timetable
+from PIL import Image, ImageOps
+
+def process_and_save_image(file_stream, save_path, max_width=2000):
+    try:
+        # Seek to start just in case
+        file_stream.seek(0)
+        img = Image.open(file_stream)
+        
+        # Correct orientation based on EXIF (crucial for mobile uploads)
+        img = ImageOps.exif_transpose(img)
+        
+        if img.mode in ("RGBA", "P"): 
+            img = img.convert("RGB")
+            
+        # Resize/Compress if too large
+        if img.width > max_width:
+            ratio = max_width / img.width
+            new_h = int(img.height * ratio)
+            img = img.resize((max_width, new_h), Image.Resampling.LANCZOS)
+            
+        # Save as optimized JPEG
+        img.save(save_path, "JPEG", quality=75, optimize=True)
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Image processing error: {e}")
+        return False
 
 main_bp = Blueprint('main', __name__)
 auth_bp = Blueprint('auth', __name__)
@@ -526,10 +552,20 @@ def create_task():
             for file in files:
                 if file and file.filename:
                     filename = secure_filename(f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}")
-                    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                    if not filename.lower().endswith('.jpg') and not filename.lower().endswith('.jpeg'):
+                        filename += '.jpg'
                     
-                    img = TaskImage(task_id=new_task.id, filename=filename)
-                    db.session.add(img)
+                    upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    
+                    if process_and_save_image(file, upload_path):
+                        img = TaskImage(task_id=new_task.id, filename=filename)
+                        db.session.add(img)
+                    else:
+                        # Fallback to direct save if processing fails
+                        file.seek(0)
+                        file.save(upload_path)
+                        img = TaskImage(task_id=new_task.id, filename=filename)
+                        db.session.add(img)
         
         # Audit Log
         from .models import AuditLog
@@ -613,10 +649,19 @@ def update_task(id):
                 for file in files:
                     if file and file.filename:
                         filename = secure_filename(f"{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}")
-                        file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+                        if not filename.lower().endswith('.jpg') and not filename.lower().endswith('.jpeg'):
+                            filename += '.jpg'
                         
-                        img = TaskImage(task_id=task.id, filename=filename)
-                        db.session.add(img)
+                        upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        
+                        if process_and_save_image(file, upload_path):
+                            img = TaskImage(task_id=task.id, filename=filename)
+                            db.session.add(img)
+                        else:
+                            file.seek(0)
+                            file.save(upload_path)
+                            img = TaskImage(task_id=task.id, filename=filename)
+                            db.session.add(img)
         
         db.session.commit()
         return jsonify({'success': True})
@@ -2338,6 +2383,8 @@ def get_current_subject_from_untis():
 @api_bp.route('/mealplan', methods=['POST'])
 @login_required
 def upload_meal_plan():
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
 
     if 'image' not in request.files:
         return jsonify({'success': False, 'message': 'No image provided'}), 400
@@ -2348,20 +2395,11 @@ def upload_meal_plan():
         
     if file:
         try:
-            from PIL import Image
             filename = secure_filename(f"mealplan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg")
             upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             
-            img = Image.open(file)
-            if img.mode in ("RGBA", "P"): img = img.convert("RGB")
-            
-            # Resize/Compress
-            if img.width > 2000:
-                ratio = 2000 / img.width
-                new_h = int(img.height * ratio)
-                img = img.resize((2000, new_h), Image.Resampling.LANCZOS)
-                
-            img.save(upload_path, quality=60, optimize=True)
+            if not process_and_save_image(file, upload_path):
+                return jsonify({'success': False, 'message': 'Image processing failed'}), 500
              
             
             # Save to DB
