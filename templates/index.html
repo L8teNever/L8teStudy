@@ -8744,7 +8744,7 @@
                 const deck = await res.json();
 
                 let cardsHtml = deck.cards.map(c => `
-                    <div class="list-item" onclick="previewCard('${c.front.replace(/'/g, "\\'")}', '${c.back.replace(/'/g, "\\'")}')" style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                    <div class="list-item" onclick="previewCard(${c.id}, '${c.front.replace(/'/g, "\\'")}', '${c.back.replace(/'/g, "\\'")}', ${deck.is_own})" style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                         <div style="flex:1; margin-right:10px;">
                             <div style="font-weight:600; margin-bottom:4px;">${c.front}</div>
                             <div style="color:var(--text-sec); font-size:14px;">${c.back}</div>
@@ -8829,55 +8829,120 @@
             if (window.currentDeckId) renderDeck(window.currentDeckId);
         }
 
-        async function showAddCardModal(deckId) {
-            const front = await promptDialog("Neue Karte", "Vorderseite (Frage)");
-            if (!front) return;
-            // Introduce a small delay to ensure the first dialog fully closes/animates before opening the next
-            // This is often needed with modal transitions
-            await new Promise(r => setTimeout(r, 300));
+        function openFormDialog(title, fields, submitText = "Speichern") {
+            return new Promise((resolve) => {
+                _activeDialogResolve = (val) => { _activeDialogResolve = null; resolve(val); };
 
-            const back = await promptDialog("Neue Karte", "Rückseite (Antwort)");
-            if (!back) return;
+                let fieldsHtml = fields.map(f => {
+                    if (f.type === 'textarea') {
+                        return `
+                        <div class="input-group" style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:8px; font-weight:500;">${f.label}</label>
+                            <textarea id="form-input-${f.name}" class="ios-input" rows="3" placeholder="${f.placeholder || ''}">${f.value || ''}</textarea>
+                        </div>`;
+                    } else if (f.type === 'checkbox') {
+                        return `
+                        <div class="list-item" style="padding:0; border:none; margin-bottom:15px; background:none;">
+                            <div class="item-content" style="font-weight:500;">${f.label}</div>
+                            <label class="switch">
+                                <input type="checkbox" id="form-input-${f.name}" ${f.checked ? 'checked' : ''}>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>`;
+                    } else {
+                        return `
+                        <div class="input-group" style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:8px; font-weight:500;">${f.label}</label>
+                            <input type="${f.type || 'text'}" id="form-input-${f.name}" value="${f.value || ''}" class="ios-input" placeholder="${f.placeholder || ''}" autocomplete="off">
+                        </div>`;
+                    }
+                }).join('');
+
+                const html = `
+                    <div style="padding: 10px 0;">
+                        <h3 style="margin:0 0 20px 0; text-align:center;">${title}</h3>
+                        <div style="margin-bottom:20px;">
+                            ${fieldsHtml}
+                        </div>
+                        <div style="display:flex; gap:12px;">
+                            <button onclick="closeSheet()" class="ios-btn" style="background:var(--tab-bg); color:var(--text-main); flex:1;">Abbrechen</button>
+                            <button id="form-submit-btn" class="ios-btn" style="flex:1;">${submitText}</button>
+                        </div>
+                    </div>
+                `;
+                openSheet(html);
+
+                document.getElementById('form-submit-btn').onclick = () => {
+                    const result = {};
+                    let valid = true;
+                    fields.forEach(f => {
+                        const el = document.getElementById(`form-input-${f.name}`);
+                        if (f.type === 'checkbox') {
+                            result[f.name] = el.checked;
+                        } else {
+                            if (!el.value.trim() && f.type !== 'checkbox') { // Simple required check
+                                el.style.borderColor = 'var(--danger)';
+                                valid = false;
+                            } else {
+                                el.style.borderColor = '';
+                            }
+                            result[f.name] = el.value;
+                        }
+                    });
+
+                    if (!valid) return;
+
+                    if (_activeDialogResolve) _activeDialogResolve(result);
+                    closeSheet();
+                };
+            });
+        }
+
+        async function showAddCardModal(deckId) {
+            const data = await openFormDialog("Neue Karte", [
+                { name: 'front', label: 'Vorderseite (Frage)', type: 'textarea', placeholder: 'Was ist...' },
+                { name: 'back', label: 'Rückseite (Antwort)', type: 'textarea', placeholder: 'Die Antwort ist...' }
+            ], "Erstellen");
+
+            if (!data) return;
 
             await fetch(`/api/decks/${deckId}/cards`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ front, back })
+                body: JSON.stringify({ front: data.front, back: data.back })
             });
             renderDeck(deckId);
         }
 
         async function editDeck(id) {
-            // First get current details to pre-fill? 
-            // We can fetch or just prompt empty. For better UX, let's fetch first.
             let currentTitle = "";
             let currentDesc = "";
+            let isPublic = false;
             try {
                 const res = await fetch(`/api/decks/${id}`);
                 const data = await res.json();
                 currentTitle = data.title;
                 currentDesc = data.description;
+                isPublic = data.is_public;
             } catch (e) { }
 
-            const title = await promptDialog("Stapel bearbeiten", "Titel", currentTitle);
-            if (!title) return;
-            await new Promise(r => setTimeout(r, 300));
+            const data = await openFormDialog("Stapel bearbeiten", [
+                { name: 'title', label: 'Titel', value: currentTitle },
+                { name: 'description', label: 'Beschreibung', value: currentDesc },
+                { name: 'is_public', label: 'Öffentlich sichtbar', type: 'checkbox', checked: isPublic }
+            ]);
 
-            const description = await promptDialog("Stapel bearbeiten", "Beschreibung", currentDesc);
-            await new Promise(r => setTimeout(r, 300));
-
-            // Public Toggle
-            const isPublic = await confirmDialog("Sichtbarkeit", "Soll dieser Stapel öffentlich sichtbar sein?", "Öffentlich", "Privat");
+            if (!data) return;
 
             await fetch(`/api/decks/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, description, is_public: isPublic })
+                body: JSON.stringify({ title: data.title, description: data.description, is_public: data.is_public })
             });
             renderDeck(id);
         }
 
-        function previewCard(front, back) {
+        function previewCard(id, front, back, isOwn) {
             const html = `
                 <div style="padding:10px 0; text-align:center;">
                    <h3 style="margin-bottom:15px;">Vorschau</h3>
@@ -8892,6 +8957,13 @@
                              </div>
                         </div>
                    </div>
+                   ${isOwn ? `
+                   <div style="margin-top:20px;">
+                        <button class="ios-btn" onclick="closeSheet(); editCard(${id}, '${front.replace(/'/g, "\\'")}', '${back.replace(/'/g, "\\'")}')" style="width:100%;">
+                            <i data-lucide="pencil" style="width:16px; margin-right:5px; vertical-align:middle;"></i> Bearbeiten
+                        </button>
+                   </div>
+                   ` : ''}
                    <style>
                       .flipped .preview-inner { transform: rotateY(180deg); }
                    </style>
@@ -8901,17 +8973,17 @@
         }
 
         async function editCard(id, currentFront, currentBack) {
-            const front = await promptDialog("Karte bearbeiten", "Vorderseite", currentFront);
-            if (!front) return;
-            await new Promise(r => setTimeout(r, 300));
+            const data = await openFormDialog("Karte bearbeiten", [
+                { name: 'front', label: 'Vorderseite', type: 'textarea', value: currentFront },
+                { name: 'back', label: 'Rückseite', type: 'textarea', value: currentBack }
+            ]);
 
-            const back = await promptDialog("Karte bearbeiten", "Rückseite", currentBack);
-            if (!back) return;
+            if (!data) return;
 
             await fetch(`/api/cards/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ front, back })
+                body: JSON.stringify({ front: data.front, back: data.back })
             });
             // Refresh deck
             if (window.currentDeckId) renderDeck(window.currentDeckId);

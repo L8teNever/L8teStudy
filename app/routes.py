@@ -2784,10 +2784,11 @@ def review_card(id):
     # NOTE: User input is mapped: 1(Fail) -> 1, 2(Hard) -> 2, 3(Good) -> 4, 4(Easy) -> 5
     # Let's assume frontend sends 1, 2, 3, 4 map to standard SM-2 
     
-    if quality < 3:
-        # Failed
-        review.interval = 1
-        review.review_count = 0 # Reset streak? SM-2 usually resets interval but ease remains
+    if quality < 2:
+        # Failed / Again (< 1m)
+        review.interval = 0 # 0 days
+        review.review_count = 0
+        review.next_review_at = datetime.utcnow() + timedelta(minutes=1)
     else:
         if review.review_count == 0:
             review.interval = 1
@@ -2797,16 +2798,16 @@ def review_card(id):
             review.interval = round(review.interval * review.ease_factor)
         
         review.review_count += 1
-        
+        review.next_review_at = datetime.utcnow() + timedelta(days=review.interval)
+
     # Update Ease
     # EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
     review.ease_factor = review.ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
     if review.ease_factor < 1.3:
         review.ease_factor = 1.3
         
-    # Set next review date
+    # Set last review date
     review.last_review_at = datetime.utcnow()
-    review.next_review_at = datetime.utcnow() + timedelta(days=review.interval)
     
     db.session.commit()
     
