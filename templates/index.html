@@ -2215,8 +2215,45 @@
         }
 
         /* Easy */
-    </style>
+        /* Study Mode Mobile Nav */
+        .study-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 90px;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            /* For Safari */
+            border-top: 1px solid var(--border);
+            z-index: 10000;
+            padding: 10px 20px 25px 20px;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
 
+        body.learning-mode .bottom-nav {
+            display: none !important;
+        }
+
+        body.learning-mode .study-nav {
+            display: flex;
+        }
+
+        /* Adjustments for desktop study mode */
+        @media (min-width: 769px) {
+            body.learning-mode .study-nav {
+                display: none;
+            }
+
+            /* On desktop we might keep controls in-place or handle differently, 
+                but user req was specifically "handy version" (mobile). 
+                We'll ensure desktop controls remain visible in content. */
+        }
+    </style>
 </head>
 
 <body data-theme="{{ 'dark' if user.dark_mode else 'light' }}">
@@ -2314,6 +2351,28 @@
             <i data-lucide="more-horizontal" aria-hidden="true"></i><span>Mehr</span>
         </a>
     </nav>
+
+    <!-- STUDY NAV (Mobile Learning Mode) -->
+    <div id="study-nav" class="study-nav">
+        <!-- Buttons will be injected here or static -->
+        <button class="rating-btn rate-1" onclick="rateCard(1)"
+            style="flex:1; height:48px; font-size:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
+            Nochmal <span style="font-size:10px; opacity:0.8;">
+                < 1m</span>
+        </button>
+        <button class="rating-btn rate-2" onclick="rateCard(2)"
+            style="flex:1; height:48px; font-size:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
+            Schwer <span style="font-size:10px; opacity:0.8;">2d</span>
+        </button>
+        <button class="rating-btn rate-3" onclick="rateCard(3)"
+            style="flex:1; height:48px; font-size:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
+            Gut <span style="font-size:10px; opacity:0.8;">4d</span>
+        </button>
+        <button class="rating-btn rate-4" onclick="rateCard(4)"
+            style="flex:1; height:48px; font-size:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
+            Einfach <span style="font-size:10px; opacity:0.8;">7d</span>
+        </button>
+    </div>
 
     <div id="sheet-overlay" class="sheet-overlay" onclick="closeSheet()" role="presentation">
         <div class="sheet" id="sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" tabindex="-1">
@@ -2875,9 +2934,65 @@
             lucide.createIcons();
         }
 
+        let _activeDialogResolve = null;
+        function confirmDialog(title, message) {
+            return new Promise((resolve) => {
+                _activeDialogResolve = (val) => { _activeDialogResolve = null; resolve(!!val); };
+                const html = `
+                    <div style="text-align:center; padding: 10px 0;">
+                        <h3 style="margin:0 0 10px 0;">${title}</h3>
+                        <p style="color:var(--text-sec); margin-bottom:25px;">${message}</p>
+                        <div style="display:flex; gap:12px;">
+                            <button onclick="closeSheet()" class="ios-btn" style="background:var(--tab-bg); color:var(--text-main); flex:1;">${t('cancel') || 'Abbrechen'}</button>
+                            <button id="dialog-confirm-btn" class="ios-btn" style="flex:1;">OK</button>
+                        </div>
+                    </div>
+                `;
+                openSheet(html);
+                document.getElementById('dialog-confirm-btn').onclick = () => {
+                    if (_activeDialogResolve) _activeDialogResolve(true);
+                    closeSheet();
+                };
+            });
+        }
+
+        function promptDialog(title, label, defaultValue = '', placeholder = '') {
+            return new Promise((resolve) => {
+                _activeDialogResolve = (val) => { _activeDialogResolve = null; resolve(val); };
+                const html = `
+                    <div style="padding: 10px 0;">
+                        <h3 style="margin:0 0 15px 0; text-align:center;">${title}</h3>
+                        <div class="input-group" style="margin-bottom:25px;">
+                            <label style="display:block; margin-bottom:8px; font-weight:500;">${label}</label>
+                            <input type="text" id="dialog-input" value="${defaultValue}" class="ios-input" placeholder="${placeholder || label}" autofocus autocomplete="off">
+                        </div>
+                        <div style="display:flex; gap:12px;">
+                            <button onclick="closeSheet()" class="ios-btn" style="background:var(--tab-bg); color:var(--text-main); flex:1;">${t('cancel') || 'Abbrechen'}</button>
+                            <button id="dialog-submit-btn" class="ios-btn" style="flex:1;">OK</button>
+                        </div>
+                    </div>
+                `;
+                openSheet(html);
+                const input = document.getElementById('dialog-input');
+                setTimeout(() => { if (input) { input.focus(); if (input.value) input.select(); } }, 300);
+
+                const submit = () => {
+                    const inputEl = document.getElementById('dialog-input');
+                    if (!inputEl) return;
+                    const val = inputEl.value;
+                    if (_activeDialogResolve) _activeDialogResolve(val);
+                    closeSheet();
+                };
+
+                document.getElementById('dialog-submit-btn').onclick = submit;
+                input.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+            });
+        }
+
         // Modified closeSheet to handle history
         let isModalClosing = false;
         function closeSheet() {
+            if (typeof _activeDialogResolve === 'function') _activeDialogResolve(null);
             const sheet = document.getElementById('sheet-overlay');
             if (sheet && sheet.classList.contains('active')) {
                 sheet.classList.remove('active');
@@ -5918,8 +6033,8 @@
             } catch (e) { alert(t('connection_error')); }
         }
 
-        function editUsername(id, currentName) {
-            const newName = prompt("Neuer Benutzername:", currentName);
+        async function editUsername(id, currentName) {
+            const newName = await promptDialog("Name bearbeiten", "Benutzername", currentName);
             if (!newName || newName === currentName) return;
 
             fetch(`/api/admin/users/${id}`, {
@@ -5936,8 +6051,8 @@
             });
         }
 
-        function changeOwnUsername() {
-            const newName = prompt("Dein neuer Name:", window.currentUser?.name);
+        async function changeOwnUsername() {
+            const newName = await promptDialog("Profil bearbeiten", "Dein Name", window.currentUser?.name);
             if (!newName || newName === window.currentUser?.name) return;
 
             fetch('/api/settings/username', {
@@ -6413,7 +6528,7 @@
         }
 
         async function resetUserPassword(id) {
-            const newPw = prompt(t('password_new') + ':');
+            const newPw = await promptDialog(t('password_new'), "Neues Passwort");
             if (!newPw) return;
 
             try {
@@ -7368,7 +7483,8 @@
         }
 
         async function deleteChatMessage(msgId, taskId, taskTitle) {
-            if (!confirm('Nachricht wirklich löschen?')) return;
+            const confirmed = await confirmDialog("Löschen", "Möchten Sie diese Nachricht wirklich löschen?");
+            if (!confirmed) return;
             try {
                 const res = await fetch(`/api/tasks/chat/message/${msgId}`, { method: 'DELETE' });
                 if (res.ok) {
@@ -7871,7 +7987,8 @@
         // Tutorial removed as per user request
 
         async function deleteSubject(id, name) {
-            if (!confirm(t('confirm_delete_subject').replace('{name}', name))) return;
+            const confirmed = await confirmDialog("Fach löschen", t('confirm_delete_subject').replace('{name}', name));
+            if (!confirmed) return;
 
             try {
                 const res = await fetch(`/api/subjects/${id}`, { method: 'DELETE' });
@@ -8021,7 +8138,9 @@
         }
 
         async function deleteDriveFolderAdmin(id, name) {
-            if (!confirm(`Möchten Sie den Ordner "${name}" wirklich löschen? Dies entfernt die Verknüpfung für den Benutzer.`)) return;
+            const msg = `Möchten Sie den Ordner "${name}" wirklich löschen? Dies entfernt die Verknüpfung für den Benutzer.`;
+            const confirmed = await confirmDialog("Ordner löschen", msg);
+            if (!confirmed) return;
             try {
                 const res = await fetch(`/api/drive/folders/${id}`, { method: 'DELETE' });
                 const data = await res.json();
@@ -8076,7 +8195,8 @@
         }
 
         async function saveDriveOwner(folderId, userId, userName) {
-            if (!confirm(`Besitzer wirklich zu "${userName}" ändern?`)) return;
+            const confirmed = await confirmDialog("Besitzer ändern", `Besitzer wirklich zu "${userName}" ändern?`);
+            if (!confirmed) return;
 
             try {
                 const res = await fetch(`/api/drive/folders/${folderId}`, {
@@ -8575,26 +8695,28 @@
         }
 
         async function createDeck() {
-            const title = prompt(t('enter_deck_title') || "Titel des Stapels:");
+            const title = await promptDialog(t('create_deck') || "Stapel erstellen", t('enter_deck_title') || "Titel des Stapels");
             if (!title) return;
 
-            const desc = prompt(t('enter_deck_description') || "Beschreibung (optional):");
-            const isPublic = confirm(t('make_public') || "Soll der Stapel öffentlich sein?");
+            const desc = await promptDialog(title, t('enter_deck_description') || "Beschreibung (optional)");
+            const isPublic = await confirmDialog(title, t('make_public') || "Soll der Stapel öffentlich sein?");
 
             try {
                 const res = await fetch('/api/decks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, description: desc, is_public: isPublic })
+                    body: JSON.stringify({ title, description: desc || '', is_public: !!isPublic })
                 });
                 const data = await res.json();
                 if (data.success) {
                     renderFlashcards();
                 } else {
-                    alert("Error: " + data.message);
+                    if (window.showToast) showToast(data.message, 'error');
+                    else alert("Error: " + data.message);
                 }
             } catch (e) {
-                alert("Error creating deck");
+                if (window.showToast) showToast('Fehler beim Erstellen', 'error');
+                else alert("Error creating deck");
             }
         }
 
@@ -8667,21 +8789,23 @@
         }
 
         async function deleteDeck(id) {
-            if (!confirm("Wirklich löschen?")) return;
+            const confirmed = await confirmDialog("Wirklich löschen?", "Möchten Sie diesen Stapel unwiderruflich löschen?");
+            if (!confirmed) return;
             await fetch(`/api/decks/${id}/delete`, { method: 'DELETE' });
             renderFlashcards();
         }
 
         async function deleteCard(id) {
-            if (!confirm("Karte löschen?")) return;
+            const confirmed = await confirmDialog("Karte löschen?", "Soll diese Karte wirklich aus dem Stapel entfernt werden?");
+            if (!confirmed) return;
             await fetch(`/api/cards/${id}`, { method: 'DELETE' });
             if (window.currentDeckId) renderDeck(window.currentDeckId);
         }
 
-        function showAddCardModal(deckId) {
-            const front = prompt("Vorderseite:");
+        async function showAddCardModal(deckId) {
+            const front = await promptDialog("Neue Karte", "Vorderseite (Frage)");
             if (!front) return;
-            const back = prompt("Rückseite:");
+            const back = await promptDialog("Neue Karte", "Rückseite (Antwort)");
             if (!back) return;
 
             fetch(`/api/decks/${deckId}/cards`, {
@@ -8708,9 +8832,21 @@
 
                 if (studyQueue.length === 0) {
                     alert("Alles erledigt für heute! Gute Arbeit.");
-                    renderDeck(deckId);
+                    renderDeck(deckId); // This will clean up
                     return;
                 }
+
+                // Activate Learning Mode UI
+                document.body.classList.add('learning-mode');
+                // Setup header back button
+                const backBtn = document.getElementById('header-back-btn');
+                if (backBtn) {
+                    backBtn.style.display = 'flex'; // Ensure it's visible even overrides
+                    // Store old onclick to restore? navigate() usually handles it
+                    // But here we need specific exit from learning mode
+                    backBtn.onclick = () => renderDeck(deckId);
+                }
+                setPageTitle("Lernen");
 
                 renderStudyInterface();
                 showNextCard();
@@ -8725,8 +8861,9 @@
                 <div class="page-container" style="height: 100%; display:flex; flex-direction:column;">
                     <br>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <button onclick="renderDeck(window.currentDeckId)" style="background:none; border:none; color:var(--text-sec); font-size:16px;">Beenden</button>
-                        <div id="study-progress" style="font-weight:600; color:var(--text-sec);"></div>
+                        <!-- Desktop Exit Button (Mobile uses header back) -->
+                        <button class="desktop-only-btn" onclick="renderDeck(window.currentDeckId)" style="background:none; border:none; color:var(--text-sec); font-size:16px; display:none;">Beenden</button>
+                        <div id="study-progress" style="font-weight:600; color:var(--text-sec); width:100%; text-align:center;"></div>
                     </div>
                     
                     <div class="study-container">
@@ -8741,24 +8878,29 @@
                             </div>
                         </div>
                         
-                        <div class="study-controls" id="study-controls">
-                            <button class="rating-btn rate-1" onclick="rateCard(1)">
-                                Nochmal <span>< 1m</span>
-                            </button>
-                            <button class="rating-btn rate-2" onclick="rateCard(2)">
-                                Schwer <span>2d</span>
-                            </button>
-                            <button class="rating-btn rate-3" onclick="rateCard(3)">
-                                Gut <span>4d</span>
-                            </button>
-                            <button class="rating-btn rate-4" onclick="rateCard(4)">
-                                Einfach <span>7d</span>
-                            </button>
+                        <!-- Desktop Controls (Hidden on Mobile via CSS in learning-mode if needed, 
+                             but our goal requires mobile bottom bar. We'll show this div ONLY on desktop) -->
+                        <div class="study-controls desktop-only" style="display:none;">
+                            <button class="rating-btn rate-1" onclick="rateCard(1)">Nochmal <span>< 1m</span></button>
+                            <button class="rating-btn rate-2" onclick="rateCard(2)">Schwer <span>2d</span></button>
+                            <button class="rating-btn rate-3" onclick="rateCard(3)">Gut <span>4d</span></button>
+                            <button class="rating-btn rate-4" onclick="rateCard(4)">Einfach <span>7d</span></button>
                         </div>
+
                         <div id="tap-hint" style="margin-top:20px; color:var(--text-sec); font-size:13px; opacity:0.7;">Tippen um zu drehen</div>
                     </div>
+                    
+                    <style>
+                        @media (min-width: 769px) {
+                            .desktop-only-btn { display: block !important; }
+                            .desktop-only { display: flex !important; }
+                        }
+                    </style>
                 </div>
             `;
+            // Reset mobile nav state (hidden until flip)
+            const studyNav = document.getElementById('study-nav');
+            if (studyNav) studyNav.style.visibility = 'hidden';
         }
 
         function showNextCard() {
@@ -8775,24 +8917,33 @@
             const scene = document.querySelector('.flashcard-scene');
             scene.classList.remove('flipped');
 
-            // Re-trigger animation reset hack if needed, but remove class is enough usually.
+            // Hide controls
+            const desktopControls = document.querySelector('.study-controls.desktop-only');
+            if (desktopControls) desktopControls.classList.remove('visible');
 
-            document.querySelector('.study-controls').classList.remove('visible');
+            const studyNav = document.getElementById('study-nav');
+            if (studyNav) studyNav.style.visibility = 'hidden';
+
             document.getElementById('tap-hint').style.opacity = '0.7';
 
             document.getElementById('study-progress').innerText = studyQueue.length + " verbleibend";
         }
 
         function flipCard(el) {
-            // Check if already flipped to avoid double logic? Actually users map toggle.
             if (el.classList.contains('flipped')) {
-                // Allowing toggle back? Usually not in SM2 apps but helpful if accidental.
+                // Allow toggle back
                 el.classList.remove('flipped');
                 return;
             }
             el.classList.add('flipped');
-            document.getElementById('study-controls').classList.add('visible');
             document.getElementById('tap-hint').style.opacity = '0';
+
+            // Show controls
+            const desktopControls = document.querySelector('.study-controls.desktop-only');
+            if (desktopControls) desktopControls.classList.add('visible');
+
+            const studyNav = document.getElementById('study-nav');
+            if (studyNav) studyNav.style.visibility = 'visible';
         }
 
         async function rateCard(quality) {
