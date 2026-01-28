@@ -8441,7 +8441,7 @@
             else if (relevantPath === '/calendar') renderCalendar();
             else if (relevantPath === '/stundenplan') renderStundenplan();
             else if (relevantPath === '/grades') renderGrades();
-            else if (relevantPath === '/flashcards') renderFlashcards();
+            else if (relevantPath.toLowerCase().startsWith('/flashcards')) renderFlashcards();
             else if (relevantPath === '/settings') renderSettingsPage();
             else if (relevantPath === '/settings/password') renderChangePassword();
             else if (relevantPath === '/settings/notifications') renderNotificationSettings();
