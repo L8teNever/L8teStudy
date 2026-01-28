@@ -446,6 +446,8 @@ def create_app():
             
             if not scheduler.running:
                 scheduler.start()
+                import atexit
+                atexit.register(lambda: scheduler.shutdown(wait=False))
                 app.logger.info("--- Background Scheduler Started (Notifications & Warmup) ---")
         except Exception as e:
             app.logger.error(f"Failed to start scheduler: {e}")
