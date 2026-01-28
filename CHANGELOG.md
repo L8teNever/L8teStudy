@@ -6,6 +6,16 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 
+## [1.2.0] - 2026-01-28
+
+### 🎉 Hinzugefügt
+
+- **Lernkarten (Flashcards)**: Vollständiges System zum Erstellen und Lernen von Lernkarten.
+  - **Decks**: Erstellen von persönlichen Stapeln und Zugriff auf öffentliche Stapel.
+  - **Lernmodus**: Interaktiver Lernmodus mit SM-2 Algorithmus (Spaced Repetition).
+  - **Kartenverwaltung**: Einfaches Hinzufügen und Löschen von Karten.
+  - **Fortschrittsverfolgung**: Intelligente Wiedervorlage basierend auf Lernerfolg (Nochmal, Schwer, Gut, Einfach).
+
 ## [2.0.4] - 2026-01-16
 
 ### 🎉 Hinzugefügt

@@ -372,3 +372,41 @@ class BlackboardItem(db.Model):
 
     school_class = db.relationship('SchoolClass', backref='blackboard_items')
 
+
+class Deck(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(128), nullable=False)
+    description = db.Column(db.Text)
+    is_public = db.Column(db.Boolean, default=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='decks')
+    cards = db.relationship('Flashcard', backref='deck', lazy='dynamic', cascade="all, delete-orphan")
+
+class Flashcard(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    deck_id = db.Column(db.Integer, db.ForeignKey('deck.id'), nullable=False)
+    front = db.Column(db.Text, nullable=False)
+    back = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(512)) # Optional image
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class CardReview(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    card_id = db.Column(db.Integer, db.ForeignKey('flashcard.id'), nullable=False)
+    
+    # SM-2 / Anki Algorithm Parameters
+    next_review_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_review_at = db.Column(db.DateTime, default=datetime.utcnow)
+    interval = db.Column(db.Float, default=0.0) # Days (Float for more precision)
+    ease_factor = db.Column(db.Float, default=2.5)
+    review_count = db.Column(db.Integer, default=0)
+    
+    card = db.relationship('Flashcard', backref=db.backref('reviews', lazy='dynamic'))
+    user = db.relationship('User', backref='card_reviews')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'card_id', name='_user_card_review_uc'),
+    )

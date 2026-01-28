@@ -2597,3 +2597,221 @@ def update_blackboard_item(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# --- Flashcards Routes ---
+
+@api_bp.route('/decks', methods=['GET'])
+@login_required
+def get_decks():
+    from .models import Deck, Flashcard, CardReview
+    
+    # 1. My Decks
+    my_decks = Deck.query.filter_by(user_id=current_user.id).all()
+    
+    # 2. Public Decks (excluding mine)
+    public_decks = Deck.query.filter(Deck.is_public == True, Deck.user_id != current_user.id).all()
+    
+    def serialize_deck(d):
+        # Count due cards
+        # Join with CardReview to find cards due driven by algorithm
+        # For simplicity in list view, maybe just total cards
+        card_count = d.cards.count()
+        
+        # Calculate due count efficiently? 
+        # For now, let's keep it simple.
+        return {
+            'id': d.id,
+            'title': d.title,
+            'description': d.description,
+            'is_public': d.is_public,
+            'is_own': d.user_id == current_user.id,
+            'author_name': d.user.username,
+            'card_count': card_count,
+            'created_at': d.created_at.isoformat()
+        }
+
+    return jsonify({
+        'my_decks': [serialize_deck(d) for d in my_decks],
+        'public_decks': [serialize_deck(d) for d in public_decks]
+    })
+
+@api_bp.route('/decks', methods=['POST'])
+@login_required
+def create_deck():
+    data = request.json
+    if not data or not data.get('title'):
+        return jsonify({'error': 'Title required'}), 400
+        
+    from .models import Deck
+    deck = Deck(
+        title=data['title'],
+        description=data.get('description', ''),
+        is_public=data.get('is_public', False),
+        user_id=current_user.id
+    )
+    db.session.add(deck)
+    db.session.commit()
+    return jsonify({'success': True, 'id': deck.id})
+
+@api_bp.route('/decks/<int:id>', methods=['GET'])
+@login_required
+def get_deck_details(id):
+    from .models import Deck, Flashcard, CardReview
+    deck = Deck.query.get_or_404(id)
+    
+    # Check permissions (Own OR Public)
+    if not deck.is_public and deck.user_id != current_user.id and not current_user.is_super_admin:
+        return jsonify({'error': 'Access denied'}), 403
+        
+    # Get Cards
+    cards = deck.cards.all()
+    
+    # Calculate Due Cards for Study Mode
+    # If user has reviewed a card, use that state. Else, it's new.
+    due_count = 0
+    new_count = 0
+    now = datetime.utcnow()
+    
+    cards_data = []
+    
+    for c in cards:
+        review = CardReview.query.filter_by(user_id=current_user.id, card_id=c.id).first()
+        is_due = False
+        if not review:
+            new_count += 1
+            is_due = True # New cards are available to study
+        elif review.next_review_at <= now:
+            due_count += 1
+            is_due = True
+            
+        cards_data.append({
+            'id': c.id,
+            'front': c.front,
+            'back': c.back,
+            'image_url': c.image_url,
+            'is_due': is_due
+        })
+        
+    return jsonify({
+        'id': deck.id,
+        'title': deck.title,
+        'description': deck.description,
+        'is_public': deck.is_public,
+        'is_own': deck.user_id == current_user.id,
+        'cards': cards_data,
+        'stats': {
+            'new': new_count,
+            'due': due_count,
+            'total': len(cards)
+        }
+    })
+
+@api_bp.route('/decks/<int:id>/cards', methods=['POST'])
+@login_required
+def add_card(id):
+    from .models import Deck, Flashcard
+    deck = Deck.query.get_or_404(id)
+    
+    if deck.user_id != current_user.id and not current_user.is_super_admin:
+        return jsonify({'error': 'Only author can add cards'}), 403
+        
+    data = request.json
+    front = data.get('front')
+    back = data.get('back')
+    
+    if not front or not back:
+        return jsonify({'error': 'Front and Back required'}), 400
+        
+    card = Flashcard(
+        deck_id=deck.id,
+        front=front,
+        back=back,
+        image_url=data.get('image_url')
+    )
+    db.session.add(card)
+    db.session.commit()
+    return jsonify({'success': True, 'id': card.id})
+
+@api_bp.route('/decks/<int:id>/delete', methods=['DELETE'])
+@login_required
+def delete_deck(id):
+    from .models import Deck
+    deck = Deck.query.get_or_404(id)
+    if deck.user_id != current_user.id and not current_user.is_super_admin:
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    db.session.delete(deck)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/cards/<int:id>', methods=['DELETE'])
+@login_required
+def delete_card(id):
+    from .models import Flashcard
+    card = Flashcard.query.get_or_404(id)
+    if card.deck.user_id != current_user.id and not current_user.is_super_admin:
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    db.session.delete(card)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/cards/<int:id>/review', methods=['POST'])
+@login_required
+def review_card(id):
+    from .models import Flashcard, CardReview
+    card = Flashcard.query.get_or_404(id)
+    
+    data = request.json
+    if 'quality' not in data:
+        return jsonify({'error': 'Quality rating required (0-5)'}), 400
+        
+    quality = int(data['quality']) # 0-5
+    
+    review = CardReview.query.filter_by(user_id=current_user.id, card_id=id).first()
+    if not review:
+        review = CardReview(
+            user_id=current_user.id,
+            card_id=id,
+            interval=0,
+            ease_factor=2.5,
+            review_count=0
+        )
+        db.session.add(review)
+    
+    # --- SM-2 Algorithm ---
+    # Quality: 0=Blackout, 1=Incorrect, 2=Hard, 3=Pass, 4=Good, 5=Bright
+    # NOTE: User input is mapped: 1(Fail) -> 1, 2(Hard) -> 2, 3(Good) -> 4, 4(Easy) -> 5
+    # Let's assume frontend sends 1, 2, 3, 4 map to standard SM-2 
+    
+    if quality < 3:
+        # Failed
+        review.interval = 1
+        review.review_count = 0 # Reset streak? SM-2 usually resets interval but ease remains
+    else:
+        if review.review_count == 0:
+            review.interval = 1
+        elif review.review_count == 1:
+            review.interval = 6
+        else:
+            review.interval = round(review.interval * review.ease_factor)
+        
+        review.review_count += 1
+        
+    # Update Ease
+    # EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+    review.ease_factor = review.ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+    if review.ease_factor < 1.3:
+        review.ease_factor = 1.3
+        
+    # Set next review date
+    review.last_review_at = datetime.utcnow()
+    review.next_review_at = datetime.utcnow() + timedelta(days=review.interval)
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'next_review': review.next_review_at.isoformat(),
+        'interval': review.interval
+    })

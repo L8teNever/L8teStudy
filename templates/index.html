@@ -2027,7 +2027,196 @@
                 transform: translateY(0) scale(1);
             }
         }
+
+        /* --- Flashcards CSS --- */
+        .deck-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+            padding-bottom: 20px;
+        }
+
+        .deck-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            aspect-ratio: 1;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .deck-card:active {
+            transform: scale(0.96);
+        }
+
+        .deck-title {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 5px;
+            word-break: break-word;
+        }
+
+        .deck-stats {
+            font-size: 12px;
+            color: var(--text-sec);
+            margin-top: auto;
+        }
+
+        .deck-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent);
+            color: white;
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .add-deck-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            border: 2px dashed var(--border);
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        /* Study Mode */
+        .study-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: calc(100vh - 180px);
+            /* Adjust based on valid space */
+            justify-content: center;
+            max-height: 600px;
+            margin: 0 auto;
+        }
+
+        .flashcard-scene {
+            width: 100%;
+            max-width: 360px;
+            aspect-ratio: 4/5;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .flashcard-scene.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 24px;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            font-size: 24px;
+            font-weight: 600;
+            flex-direction: column;
+            overflow-y: auto;
+            word-wrap: break-word;
+        }
+
+        .flashcard-back {
+            transform: rotateY(180deg);
+            background: var(--card-bg);
+            border-color: var(--accent);
+        }
+
+        .study-controls {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 360px;
+            justify-content: space-between;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .study-controls.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .rating-btn {
+            flex: 1;
+            padding: 15px 0;
+            border-radius: 14px;
+            border: none;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .rating-btn span {
+            font-size: 10px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        .rating-btn:active {
+            transform: scale(0.95);
+        }
+
+        .rate-1 {
+            background: #ff3b30;
+        }
+
+        /* Again */
+        .rate-2 {
+            background: #ff9f0a;
+        }
+
+        /* Hard */
+        .rate-3 {
+            background: #30d158;
+        }
+
+        /* Good */
+        .rate-4 {
+            background: #0a84ff;
+        }
+
+        /* Easy */
     </style>
+
 </head>
 
 <body data-theme="{{ 'dark' if user.dark_mode else 'light' }}">
@@ -2180,6 +2369,7 @@
             { id: 'calendar', icon: 'calendar-days', label: 'calendar', view: 'calendar' },
             { id: 'stundenplan', icon: 'clock-4', label: 'timetable', view: 'stundenplan' },
             { id: 'grades', icon: 'bar-chart-3', label: 'grades', view: 'grades' },
+            { id: 'flashcards', icon: 'layers', label: 'flashcards', view: 'flashcards' },
             { id: 'drive', icon: 'hard-drive', label: 'drive', view: 'drive' },
             { id: 'mealplan', icon: 'utensils', label: 'mealplan', view: 'mealplan' },
             { id: 'blackboard', icon: 'clipboard-list', label: 'blackboard', view: 'blackboard' }
@@ -2496,6 +2686,7 @@
                     else if (view === 'stundenplan') await renderStundenplan();
                     else if (view === 'home') await renderHome();
                     else if (view === 'grades') await renderGrades();
+                    else if (view === 'flashcards') await renderFlashcards();
                     else if (view === 'settings') await renderSettingsPage();
                     else if (view === 'account') await renderAccountHub();
                     else if (view === 'drive') await renderDrive();
@@ -8310,6 +8501,301 @@
             }, 100);
         };
         console.log('Main Script Parsed Successfully');
+
+        // --- Flashcards Logic ---
+
+        async function renderFlashcards() {
+            currentView = 'flashcards'; window.history.replaceState({ view: 'flashcards' }, '', '/flashcards');
+
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `<div class="loading"></div>`;
+            updateFabVisibility('flashcards');
+
+            try {
+                const res = await fetch('/api/decks');
+                const data = await res.json();
+
+                let html = `
+                    <div class="page-container">
+                        <br>
+                        <h3>${t('my_decks') || 'Meine Stapel'}</h3>
+                        <div class="deck-grid">
+                            <div class="deck-card add-deck-card" onclick="createDeck()">
+                                <div style="text-align:center;">
+                                    <i data-lucide="plus" style="width:32px; height:32px; margin-bottom:8px;"></i>
+                                    <div style="font-weight:600; font-size:14px;">${t('create_deck') || 'Erstellen'}</div>
+                                </div>
+                            </div>
+                            ${data.my_decks.map(d => renderDeckCard(d)).join('')}
+                        </div>
+                        
+                        <h3 style="margin-top:30px;">${t('public_decks') || 'Öffentliche Stapel'}</h3>
+                        <div class="deck-grid">
+                            ${data.public_decks.length ? data.public_decks.map(d => renderDeckCard(d)).join('') : '<div style="color:var(--text-sec); padding:10px;">No public decks</div>'}
+                        </div>
+                    </div>
+                `;
+                mainContent.innerHTML = html;
+                lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                mainContent.innerHTML = `<div class="error-state">Error loading decks</div>`;
+            }
+        }
+
+        function renderDeckCard(deck) {
+            return `
+                <div class="deck-card" onclick="renderDeck(${deck.id})">
+                    ${deck.is_public ? '<div class="deck-badge">Public</div>' : ''}
+                    <div class="deck-title">${deck.title}</div>
+                    <div style="font-size:13px; color:var(--text-sec); margin-bottom:10px; line-height:1.4;">
+                        ${deck.description || ''}
+                    </div>
+                    <div class="deck-stats">
+                    ${deck.card_count} Karten
+                    </div>
+                </div>
+            `;
+        }
+
+        async function createDeck() {
+            const title = prompt(t('enter_deck_title') || "Titel des Stapels:");
+            if (!title) return;
+
+            const desc = prompt(t('enter_deck_description') || "Beschreibung (optional):");
+            const isPublic = confirm(t('make_public') || "Soll der Stapel öffentlich sein?");
+
+            try {
+                const res = await fetch('/api/decks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description: desc, is_public: isPublic })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    renderFlashcards();
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (e) {
+                alert("Error creating deck");
+            }
+        }
+
+        async function renderDeck(id) {
+            window.currentDeckId = id;
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `<div class="loading"></div>`;
+
+            try {
+                const res = await fetch(`/api/decks/${id}`);
+                if (!res.ok) throw new Error("Failed to load");
+                const deck = await res.json();
+
+                let cardsHtml = deck.cards.map(c => `
+                    <div class="list-item" style="padding: 15px 0;">
+                        <div class="item-content">
+                            <div style="font-weight:600; margin-bottom:4px;">${c.front}</div>
+                            <div style="color:var(--text-sec); font-size:14px;">${c.back}</div>
+                        </div>
+                        ${deck.is_own ? `
+                        <div onclick="deleteCard(${c.id}); event.stopPropagation();" style="padding:10px; color:var(--danger); cursor:pointer;">
+                            <i data-lucide="trash-2" width="16"></i>
+                        </div>` : ''}
+                    </div>
+                `).join('');
+
+                mainContent.innerHTML = `
+                    <div class="page-container">
+                        <div style="margin-bottom: 20px; display:flex; align-items:center; gap:10px;">
+                            <button onclick="renderFlashcards()" style="background:none; border:none; color:var(--accent); cursor:pointer; padding:5px;">
+                                <i data-lucide="arrow-left"></i>
+                            </button>
+                            <h2 style="margin:0;">${deck.title}</h2>
+                        </div>
+                        
+                        <div style="background:var(--tab-bg); border-radius:16px; padding:20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-weight:700; font-size:24px;">${deck.stats.due + deck.stats.new}</div>
+                                <div style="font-size:13px; color:var(--text-sec);">Zu lernen</div>
+                            </div>
+                            <button onclick="startStudy(${deck.id})" class="ios-btn" style="width:auto; padding: 10px 25px;">
+                                <i data-lucide="play" style="width:16px; height:16px; margin-right:5px; vertical-align:middle;"></i> Lernen
+                            </button>
+                        </div>
+                        
+                        <h3 style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Karten (${deck.stats.total})</span>
+                            ${deck.is_own ? `
+                            <button onclick="showAddCardModal(${deck.id})" style="background:none; border:none; color:var(--accent); font-weight:600; cursor:pointer;">
+                                + Karte
+                            </button>` : ''}
+                        </h3>
+                        
+                        <div class="cards-list">
+                            ${cardsHtml.length ? cardsHtml : '<div style="padding:20px; text-align:center; color:var(--text-sec);">Keine Karten vorhanden</div>'}
+                        </div>
+                        
+                        ${deck.is_own ? `
+                        <div style="margin-top:40px; text-align:center;">
+                            <button onclick="deleteDeck(${deck.id})" style="background:none; border:none; color:var(--danger); opacity:0.7;">
+                                Stapel löschen
+                            </button>
+                        </div>` : ''}
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch (e) {
+                mainContent.innerHTML = `<div class="error-state">Error loading deck</div>`;
+            }
+        }
+
+        async function deleteDeck(id) {
+            if (!confirm("Wirklich löschen?")) return;
+            await fetch(`/api/decks/${id}/delete`, { method: 'DELETE' });
+            renderFlashcards();
+        }
+
+        async function deleteCard(id) {
+            if (!confirm("Karte löschen?")) return;
+            await fetch(`/api/cards/${id}`, { method: 'DELETE' });
+            if (window.currentDeckId) renderDeck(window.currentDeckId);
+        }
+
+        function showAddCardModal(deckId) {
+            const front = prompt("Vorderseite:");
+            if (!front) return;
+            const back = prompt("Rückseite:");
+            if (!back) return;
+
+            fetch(`/api/decks/${deckId}/cards`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ front, back })
+            }).then(() => renderDeck(deckId));
+        }
+
+        let studyQueue = [];
+        let currentCard = null;
+
+        async function startStudy(deckId) {
+            window.currentDeckId = deckId;
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `<div class="loading"></div>`;
+
+            try {
+                const res = await fetch(`/api/decks/${deckId}`);
+                const deck = await res.json();
+
+                // Filter cards that are due
+                studyQueue = deck.cards.filter(c => c.is_due);
+
+                if (studyQueue.length === 0) {
+                    alert("Alles erledigt für heute! Gute Arbeit.");
+                    renderDeck(deckId);
+                    return;
+                }
+
+                renderStudyInterface();
+                showNextCard();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderStudyInterface() {
+            const mainContent = document.getElementById('main-content');
+            mainContent.innerHTML = `
+                <div class="page-container" style="height: 100%; display:flex; flex-direction:column;">
+                    <br>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <button onclick="renderDeck(window.currentDeckId)" style="background:none; border:none; color:var(--text-sec); font-size:16px;">Beenden</button>
+                        <div id="study-progress" style="font-weight:600; color:var(--text-sec);"></div>
+                    </div>
+                    
+                    <div class="study-container">
+                        <div class="flashcard-scene" onclick="flipCard(this)">
+                            <div class="flashcard-inner">
+                                <div class="flashcard-face flashcard-front" id="card-front">
+                                    Feature Loading...
+                                </div>
+                                <div class="flashcard-face flashcard-back" id="card-back">
+                                    Loading...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="study-controls" id="study-controls">
+                            <button class="rating-btn rate-1" onclick="rateCard(1)">
+                                Nochmal <span>< 1m</span>
+                            </button>
+                            <button class="rating-btn rate-2" onclick="rateCard(2)">
+                                Schwer <span>2d</span>
+                            </button>
+                            <button class="rating-btn rate-3" onclick="rateCard(3)">
+                                Gut <span>4d</span>
+                            </button>
+                            <button class="rating-btn rate-4" onclick="rateCard(4)">
+                                Einfach <span>7d</span>
+                            </button>
+                        </div>
+                        <div id="tap-hint" style="margin-top:20px; color:var(--text-sec); font-size:13px; opacity:0.7;">Tippen um zu drehen</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showNextCard() {
+            if (studyQueue.length === 0) {
+                alert("Lernsession abgeschlossen! Großartig.");
+                renderDeck(window.currentDeckId);
+                return;
+            }
+
+            currentCard = studyQueue[0];
+
+            document.getElementById('card-front').innerText = currentCard.front;
+            document.getElementById('card-back').innerText = currentCard.back;
+            const scene = document.querySelector('.flashcard-scene');
+            scene.classList.remove('flipped');
+
+            // Re-trigger animation reset hack if needed, but remove class is enough usually.
+
+            document.querySelector('.study-controls').classList.remove('visible');
+            document.getElementById('tap-hint').style.opacity = '0.7';
+
+            document.getElementById('study-progress').innerText = studyQueue.length + " verbleibend";
+        }
+
+        function flipCard(el) {
+            // Check if already flipped to avoid double logic? Actually users map toggle.
+            if (el.classList.contains('flipped')) {
+                // Allowing toggle back? Usually not in SM2 apps but helpful if accidental.
+                el.classList.remove('flipped');
+                return;
+            }
+            el.classList.add('flipped');
+            document.getElementById('study-controls').classList.add('visible');
+            document.getElementById('tap-hint').style.opacity = '0';
+        }
+
+        async function rateCard(quality) {
+            if (!currentCard) return;
+            const cardId = currentCard.id;
+            studyQueue.shift();
+
+            try {
+                await fetch(`/api/cards/${cardId}/review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quality })
+                });
+                showNextCard();
+            } catch (e) {
+                alert("Error submitting review");
+            }
+        }
+
     </script>
     <div id="message-menu-overlay" class="message-menu-overlay" onclick="closeMessageMenu()">
         <div class="message-menu" id="message-menu-content" onclick="event.stopPropagation()">
