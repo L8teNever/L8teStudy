@@ -2298,6 +2298,25 @@
             }
         }
 
+        function updateFabVisibility(view) {
+            const fab = document.getElementById('main-fab');
+            if (!fab) return;
+
+            const noFabViews = ['home', 'settings', 'account', 'stundenplan', 'drive'];
+            const adminOnlyFabViews = ['mealplan', 'blackboard'];
+
+            if (!noFabViews.includes(view) && !view.startsWith('sub_')) {
+                if (adminOnlyFabViews.includes(view)) {
+                    if (isAdmin) fab.classList.add('visible');
+                    else fab.classList.remove('visible');
+                } else {
+                    fab.classList.add('visible');
+                }
+            } else {
+                fab.classList.remove('visible');
+            }
+        }
+
         function updateAppLanguage() {
             // Update Bottom Navigation (Home, Tasks, Plan, More)
             const bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-link span');
@@ -2484,12 +2503,7 @@
                     else if (view === 'blackboard') await renderBlackboard();
                     else if (view === 'sub_admin_menu' || view === 'sub_admin') await renderAdminMenu();
 
-                    const fab = document.getElementById('main-fab');
-                    if (fab) {
-                        const noFabViews = ['home', 'settings', 'account', 'stundenplan', 'drive', 'mealplan', 'blackboard'];
-                        if (!noFabViews.includes(view) && !view.startsWith('sub_')) fab.classList.add('visible');
-                        else fab.classList.remove('visible');
-                    }
+                    updateFabVisibility(view);
 
                     // Update "Mehr" and Sidebar states
                     const moreBtnMobile = document.getElementById('nav-more');
@@ -8288,6 +8302,8 @@
             } else {
                 renderHome();
             }
+
+            updateFabVisibility(initialView);
 
             setTimeout(() => {
                 if (window.lucide) lucide.createIcons();
