@@ -2376,6 +2376,14 @@
         </button>
     </div>
 
+    <!-- PRACTICE NAV (Mobile Free Practice Mode) -->
+    <div id="practice-nav" class="study-nav">
+        <button class="ios-btn btn-primary" onclick="nextFreePracticeCard()"
+            style="width:100%; height:48px; border-radius:14px; font-size:16px;">
+            Nächste Karte <i data-lucide="arrow-right" style="width:18px; margin-left:8px; vertical-align:middle;"></i>
+        </button>
+    </div>
+
     <div id="sheet-overlay" class="sheet-overlay" onclick="closeSheet()" role="presentation">
         <div class="sheet" id="sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" tabindex="-1">
             <div class="sheet-drag-indicator" aria-hidden="true"></div>
@@ -8733,15 +8741,21 @@
                 const deck = await res.json();
 
                 let cardsHtml = deck.cards.map(c => `
-                    <div class="list-item" style="padding: 15px 0;">
-                        <div class="item-content">
+                    <div class="list-item" style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex:1; margin-right:10px;">
                             <div style="font-weight:600; margin-bottom:4px;">${c.front}</div>
                             <div style="color:var(--text-sec); font-size:14px;">${c.back}</div>
                         </div>
                         ${deck.is_own ? `
-                        <div onclick="deleteCard(${c.id}); event.stopPropagation();" style="padding:10px; color:var(--danger); cursor:pointer;">
-                            <i data-lucide="trash-2" width="16"></i>
-                        </div>` : ''}
+                        <div style="display:flex; gap:10px;">
+                             <button onclick="editCard(${c.id}, '${c.front.replace(/'/g, "\\'")}', '${c.back.replace(/'/g, "\\'")}')" style="background:none; border:none; color:var(--text-sec); padding:5px;">
+                                <i data-lucide="pencil" style="width:16px; height:16px;"></i>
+                            </button>
+                            <button onclick="deleteCard(${c.id})" style="background:none; border:none; color:var(--danger); padding:5px;">
+                                <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+                            </button>
+                        </div>
+                        ` : ''}
                     </div>
                 `).join('');
 
@@ -8759,9 +8773,14 @@
                                 <div style="font-weight:700; font-size:24px;">${deck.stats.due + deck.stats.new}</div>
                                 <div style="font-size:13px; color:var(--text-sec);">Zu lernen</div>
                             </div>
-                            <button onclick="startStudy(${deck.id})" class="ios-btn" style="width:auto; padding: 10px 25px;">
-                                <i data-lucide="play" style="width:16px; height:16px; margin-right:5px; vertical-align:middle;"></i> Lernen
-                            </button>
+                            <div style="display:flex; gap:8px;">
+                                <button onclick="startPractice(${deck.id})" class="ios-btn" style="width:auto; padding: 10px 15px; background:var(--bg); color:var(--text-main);">
+                                    <i data-lucide="layers" style="width:16px; height:16px; margin-right:5px; vertical-align:middle;"></i> Durchblättern
+                                </button>
+                                <button onclick="startStudy(${deck.id})" class="ios-btn" style="width:auto; padding: 10px 25px;">
+                                    <i data-lucide="play" style="width:16px; height:16px; margin-right:5px; vertical-align:middle;"></i> Lernen
+                                </button>
+                            </div>
                         </div>
                         
                         <h3 style="display:flex; justify-content:space-between; align-items:center;">
@@ -8777,9 +8796,12 @@
                         </div>
                         
                         ${deck.is_own ? `
-                        <div style="margin-top:40px; text-align:center;">
+                        <div style="margin-top:40px; text-align:center; display:flex; gap:15px; justify-content:center;">
+                            <button onclick="editDeck(${deck.id})" style="background:none; border:none; color:var(--text-sec); opacity:0.7;">
+                                <i data-lucide="pencil" style="width:16px; height:16px; margin-right:5px; vertical-align:middle;"></i> Bearbeiten
+                            </button>
                             <button onclick="deleteDeck(${deck.id})" style="background:none; border:none; color:var(--danger); opacity:0.7;">
-                                Stapel löschen
+                                <i data-lucide="trash-2" style="width:16px; height:16px; margin-right:5px; vertical-align:middle;"></i> Löschen
                             </button>
                         </div>` : ''}
                     </div>
@@ -8807,14 +8829,64 @@
         async function showAddCardModal(deckId) {
             const front = await promptDialog("Neue Karte", "Vorderseite (Frage)");
             if (!front) return;
+            // Introduce a small delay to ensure the first dialog fully closes/animates before opening the next
+            // This is often needed with modal transitions
+            await new Promise(r => setTimeout(r, 300));
+
             const back = await promptDialog("Neue Karte", "Rückseite (Antwort)");
             if (!back) return;
 
-            fetch(`/api/decks/${deckId}/cards`, {
+            await fetch(`/api/decks/${deckId}/cards`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ front, back })
-            }).then(() => renderDeck(deckId));
+            });
+            renderDeck(deckId);
+        }
+
+        async function editDeck(id) {
+            // First get current details to pre-fill? 
+            // We can fetch or just prompt empty. For better UX, let's fetch first.
+            let currentTitle = "";
+            let currentDesc = "";
+            try {
+                const res = await fetch(`/api/decks/${id}`);
+                const data = await res.json();
+                currentTitle = data.title;
+                currentDesc = data.description;
+            } catch (e) { }
+
+            const title = await promptDialog("Stapel bearbeiten", "Titel", currentTitle);
+            if (!title) return;
+            await new Promise(r => setTimeout(r, 300));
+
+            const description = await promptDialog("Stapel bearbeiten", "Beschreibung", currentDesc);
+            // Public Toggle? Hard to do with promptDialog. We'll skip or use confirm?
+            // Let's stick to title/desc for now as per promptDialog limits.
+
+            await fetch(`/api/decks/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, description })
+            });
+            renderDeck(id);
+        }
+
+        async function editCard(id, currentFront, currentBack) {
+            const front = await promptDialog("Karte bearbeiten", "Vorderseite", currentFront);
+            if (!front) return;
+            await new Promise(r => setTimeout(r, 300));
+
+            const back = await promptDialog("Karte bearbeiten", "Rückseite", currentBack);
+            if (!back) return;
+
+            await fetch(`/api/cards/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ front, back })
+            });
+            // Refresh deck
+            if (window.currentDeckId) renderDeck(window.currentDeckId);
         }
 
         let studyQueue = [];
@@ -8840,6 +8912,8 @@
 
                 // Activate Learning Mode UI
                 document.body.classList.add('learning-mode');
+                window.isPracticeMode = false;
+
                 // Setup header back button
                 const backBtn = document.getElementById('header-back-btn');
                 if (backBtn) {
@@ -8857,7 +8931,44 @@
             }
         }
 
-        function renderStudyInterface() {
+        async function startPractice(deckId) {
+            window.currentDeckId = deckId;
+            const mainContent = document.getElementById('app-container');
+            mainContent.innerHTML = `<div class="loading"></div>`;
+
+            try {
+                const res = await fetch(`/api/decks/${deckId}`);
+                const deck = await res.json();
+
+                // Use all cards, no filter
+                studyQueue = deck.cards;
+
+                if (studyQueue.length === 0) {
+                    alert("Keine Karten im Stapel.");
+                    renderDeck(deckId);
+                    return;
+                }
+
+                // Activate Learning Mode UI
+                document.body.classList.add('learning-mode');
+                window.isPracticeMode = true;
+
+                // Setup header back button
+                const backBtn = document.getElementById('header-back-btn');
+                if (backBtn) {
+                    backBtn.style.display = 'flex';
+                    backBtn.onclick = () => renderDeck(deckId);
+                }
+                setPageTitle("Durchblättern");
+
+                renderStudyInterface(true);
+                showNextCard();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderStudyInterface(isPractice = false) {
             const mainContent = document.getElementById('app-container');
             mainContent.innerHTML = `
                 <div class="page-container" style="height: 100%; display:flex; flex-direction:column;">
@@ -8880,14 +8991,19 @@
                             </div>
                         </div>
                         
-                        <!-- Desktop Controls (Hidden on Mobile via CSS in learning-mode if needed, 
-                             but our goal requires mobile bottom bar. We'll show this div ONLY on desktop) -->
+                        <!-- Desktop Controls -->
+                        ${!isPractice ? `
                         <div class="study-controls desktop-only" style="display:none;">
                             <button class="rating-btn rate-1" onclick="rateCard(1)">Nochmal <span>< 1m</span></button>
                             <button class="rating-btn rate-2" onclick="rateCard(2)">Schwer <span>2d</span></button>
                             <button class="rating-btn rate-3" onclick="rateCard(3)">Gut <span>4d</span></button>
                             <button class="rating-btn rate-4" onclick="rateCard(4)">Einfach <span>7d</span></button>
                         </div>
+                        ` : `
+                        <div class="study-controls desktop-only" style="display:none;">
+                             <button class="ios-btn btn-primary" onclick="nextFreePracticeCard()">Nächste Karte <i data-lucide="arrow-right"></i></button>
+                        </div>
+                        `}
 
                         <div id="tap-hint" style="margin-top:20px; color:var(--text-sec); font-size:13px; opacity:0.7;">Tippen um zu drehen</div>
                     </div>
@@ -8903,6 +9019,8 @@
             // Reset mobile nav state (hidden until flip)
             const studyNav = document.getElementById('study-nav');
             if (studyNav) studyNav.style.visibility = 'hidden';
+            const practiceNav = document.getElementById('practice-nav');
+            if (practiceNav) practiceNav.style.visibility = 'hidden';
         }
 
         function showNextCard() {
@@ -8929,6 +9047,10 @@
             document.getElementById('tap-hint').style.opacity = '0.7';
 
             document.getElementById('study-progress').innerText = studyQueue.length + " verbleibend";
+
+            // Practice mode nav hide
+            const practiceNav = document.getElementById('practice-nav');
+            if (practiceNav) practiceNav.style.visibility = 'hidden';
         }
 
         function flipCard(el) {
@@ -8944,8 +9066,19 @@
             const desktopControls = document.querySelector('.study-controls.desktop-only');
             if (desktopControls) desktopControls.classList.add('visible');
 
-            const studyNav = document.getElementById('study-nav');
-            if (studyNav) studyNav.style.visibility = 'visible';
+            if (window.isPracticeMode) {
+                const practiceNav = document.getElementById('practice-nav');
+                if (practiceNav) practiceNav.style.visibility = 'visible';
+            } else {
+                const studyNav = document.getElementById('study-nav');
+                if (studyNav) studyNav.style.visibility = 'visible';
+            }
+        }
+
+        function nextFreePracticeCard() {
+            studyQueue.shift(); // Remove current
+            // Don't rate, just move next
+            showNextCard();
         }
 
         async function rateCard(quality) {

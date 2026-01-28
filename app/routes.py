@@ -2815,3 +2815,45 @@ def review_card(id):
         'next_review': review.next_review_at.isoformat(),
         'interval': review.interval
     })
+
+@api_bp.route('/decks/<int:id>', methods=['PUT'])
+@login_required
+def update_deck(id):
+    from .models import Deck
+    deck = Deck.query.get_or_404(id)
+    
+    if deck.user_id != current_user.id and not current_user.is_super_admin:
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    data = request.json
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+        
+    if 'title' in data:
+        deck.title = data['title']
+    if 'description' in data:
+        deck.description = data['description']
+    if 'is_public' in data:
+        deck.is_public = data['is_public']
+        
+    db.session.commit()
+    return jsonify({'success': True})
+
+@api_bp.route('/cards/<int:id>', methods=['PUT', 'PATCH'])
+@login_required
+def update_card(id):
+    from .models import Flashcard
+    card = Flashcard.query.get_or_404(id)
+    deck = card.deck
+    
+    if deck.user_id != current_user.id and not current_user.is_super_admin:
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    data = request.json
+    if 'front' in data:
+        card.front = data['front']
+    if 'back' in data:
+        card.back = data['back']
+        
+    db.session.commit()
+    return jsonify({'success': True})
