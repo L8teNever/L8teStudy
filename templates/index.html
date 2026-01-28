@@ -2167,6 +2167,7 @@
         let currentReplyTo = null;
         let classMembers = [];
         let selectedMentionIdx = -1;
+        let relevantPath = window.location.pathname;
 
         function updateBrowserTitle(pageTitle) {
             const base = "L8teStudy";
@@ -2261,7 +2262,6 @@
             else if (currentView === 'grades') renderGrades();
             else if (currentView === 'settings') renderSettingsPage();
             else if (currentView === 'account') renderAccountHub();
-            else if (currentView === 'sub_admin') renderAdminContent();
             else if (currentView === 'sub_admin_menu') renderAdminMenu();
         }
 
@@ -2319,7 +2319,7 @@
             }
         }
 
-        function navigate(view, el, title) {
+        async function navigate(view, el, title) {
             if (view === currentView) return;
 
             // Determine Animation Direction
@@ -2342,109 +2342,106 @@
                 exitAnim = 'slideOutRight'; enterAnim = 'slideInLeft';
             }
 
+            // Always close "More" menu and remove blurs on navigation
+            const menu = document.getElementById('more-menu');
+            if (menu) menu.classList.remove('active');
+            document.getElementById('app-container').classList.remove('app-blur');
+            const header = document.querySelector('header');
+            if (header) header.classList.remove('app-blur');
+
             const container = document.getElementById('app-container');
             container.style.animation = `${exitAnim} 0.1s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
-            setTimeout(() => {
-                previousView = (currentView === 'settings' || currentView.startsWith('sub_')) ? previousView : currentView;
-                currentView = view;
-                isSearchActive = false;
+            setTimeout(async () => {
+                try {
+                    previousView = (currentView === 'settings' || currentView.startsWith('sub_')) ? previousView : currentView;
+                    currentView = view;
+                    isSearchActive = false;
 
-                document.getElementById('header-back-btn').style.display = (view === 'settings' || view.startsWith('sub_')) ? 'block' : 'none';
+                    document.getElementById('header-back-btn').style.display = (view === 'settings' || view.startsWith('sub_')) ? 'block' : 'none';
 
-                // Set Header Title using translation
-                const titleKeys = {
-                    home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
-                    settings: 'settings', account: 'account', drive: 'drive'
-                };
-                const translatedTitle = titleKeys[view] ? t(titleKeys[view]) : (view.charAt(0).toUpperCase() + view.slice(1));
-                setPageTitle(translatedTitle);
+                    // Set Header Title
+                    const titleKeys = {
+                        home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
+                        settings: 'settings', account: 'account', drive: 'drive', mealplan: 'mealplan', blackboard: 'Infos'
+                    };
+                    const translatedTitle = titleKeys[view] ? t(titleKeys[view]) : (view.charAt(0).toUpperCase() + view.slice(1));
+                    setPageTitle(translatedTitle);
 
-                document.querySelectorAll('.nav-link').forEach(n => {
-                    n.classList.remove('active');
-                    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${view}'`)) {
-                        n.classList.add('active');
+                    document.querySelectorAll('.nav-link').forEach(n => {
+                        n.classList.remove('active');
+                        if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${view}'`)) {
+                            n.classList.add('active');
+                        }
+                    });
+
+                    // Update URL
+                    const pathMap = {
+                        home: '/home', tasks: '/tasks', calendar: '/calendar', stundenplan: '/stundenplan',
+                        grades: '/grades', settings: '/settings', account: '/account', drive: '/drive',
+                        mealplan: '/mealplan', blackboard: '/blackboard', sub_admin_menu: '/admin',
+                        sub_users: '/admin/users', sub_activity: '/admin/activity', sub_subjects: '/admin/subjects',
+                        sub_classes: '/admin/classes', sub_super_admin: '/superadmin', sub_shared_content: '/superadmin/shared'
+                    };
+
+                    let path = pathMap[view] || '/home';
+                    if (window.currentUser && window.currentUser.className) {
+                        path = '/' + window.currentUser.className + path;
                     }
-                });
 
-                // Update URL
-                const pathMap = {
-                    home: '/home',
-                    tasks: '/tasks',
-                    calendar: '/calendar',
-                    stundenplan: '/stundenplan',
-                    grades: '/grades',
-                    settings: '/settings',
-                    account: '/account',
-                    drive: '/drive',
-                    settings: '/settings',
-                    account: '/account',
-                    drive: '/drive',
-                    mealplan: '/mealplan',
-                    blackboard: '/blackboard',
-                    sub_admin_menu: '/admin',
-                    sub_users: '/admin/users',
-                    sub_activity: '/admin/activity',
-                    sub_subjects: '/admin/subjects',
-                    sub_classes: '/admin/classes',
-                    sub_super_admin: '/superadmin',
-                    sub_shared_content: '/superadmin/shared'
-                };
+                    if (!window.isPoppingState) {
+                        window.history.pushState({ view: view }, '', path);
+                    }
+                    window.isPoppingState = false;
 
-                let path = pathMap[view] || '/home';
+                    // Render (Awaited to ensure lucide has something to process)
+                    if (view === 'tasks') await renderTasks();
+                    else if (view === 'calendar') await renderCalendar();
+                    else if (view === 'stundenplan') await renderStundenplan();
+                    else if (view === 'home') await renderHome();
+                    else if (view === 'grades') await renderGrades();
+                    else if (view === 'settings') await renderSettingsPage();
+                    else if (view === 'account') await renderAccountHub();
+                    else if (view === 'drive') await renderDrive();
+                    else if (view === 'mealplan') await renderMealPlan();
+                    else if (view === 'blackboard') await renderBlackboard();
+                    else if (view === 'sub_admin_menu' || view === 'sub_admin') await renderAdminMenu();
 
-                // Prefix with class name if available
-                if (window.currentUser && window.currentUser.className) {
-                    path = '/' + window.currentUser.className + path;
+                    const fab = document.getElementById('main-fab');
+                    if (fab) {
+                        const noFabViews = ['home', 'settings', 'account', 'stundenplan', 'drive', 'mealplan', 'blackboard'];
+                        if (!noFabViews.includes(view) && !view.startsWith('sub_')) fab.classList.add('visible');
+                        else fab.classList.remove('visible');
+                    }
+
+                    // Update "Mehr" and Sidebar states
+                    const moreBtnMobile = document.getElementById('nav-more');
+                    const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
+                    const moreViewsList = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
+
+                    if (moreBtnMobile) {
+                        if (moreViewsList.includes(view)) moreBtnMobile.classList.add('active');
+                        else moreBtnMobile.classList.remove('active');
+                    }
+                    if (moreBtnSidebar) {
+                        if (moreViewsList.includes(view)) moreBtnSidebar.classList.add('active');
+                        else moreBtnSidebar.classList.remove('active');
+                    }
+
+                    lucide.createIcons();
+                    closeSheet();
+
+                    // Enter Animation
+                    window.scrollTo(0, 0);
+                    container.style.animation = 'none';
+                    void container.offsetWidth; // Reflow
+                    container.style.animation = `${enterAnim} 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+
+                } catch (err) {
+                    console.error("Navigation error:", err);
+                    // Fallback to home if critical failure
+                    if (view !== 'home') navigate('home');
                 }
-
-                if (!window.isPoppingState) {
-                    window.history.pushState({ view: view }, '', path);
-                }
-                window.isPoppingState = false;
-
-                // Render
-                if (view === 'tasks') renderTasks();
-                else if (view === 'calendar') renderCalendar();
-                else if (view === 'stundenplan') renderStundenplan();
-                else if (view === 'home') renderHome();
-                else if (view === 'grades') renderGrades();
-                else if (view === 'settings') renderSettingsPage();
-                else if (view === 'account') renderAccountHub();
-                else if (view === 'drive') renderDrive(); // Google Drive OAuth Integration
-                else if (view === 'mealplan') renderMealPlan();
-                else if (view === 'blackboard') renderBlackboard();
-                else if (view === 'sub_admin') renderAdminContent();
-
-                const fab = document.getElementById('main-fab');
-                if (view !== 'home' && view !== 'settings' && view !== 'account' && view !== 'stundenplan' && view !== 'drive' && !view.startsWith('sub_')) fab.classList.add('visible');
-                else fab.classList.remove('visible');
-
-                // Mark "Mehr" button as active if corresponding view is selected
-                const moreBtnMobile = document.getElementById('nav-more');
-                const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
-
-                const mobileMoreViews = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
-                const sidebarMoreViews = ['grades', 'drive', 'mealplan', 'blackboard']; // Stundenplan is separate in side-nav
-
-                if (moreBtnMobile) {
-                    if (mobileMoreViews.includes(view)) moreBtnMobile.classList.add('active');
-                    else moreBtnMobile.classList.remove('active');
-                }
-
-                if (moreBtnSidebar) {
-                    if (sidebarMoreViews.includes(view)) moreBtnSidebar.classList.add('active');
-                    else moreBtnSidebar.classList.remove('active');
-                }
-
-                lucide.createIcons();
-                closeSheet();
-
-                // Enter Animation
-                window.scrollTo(0, 0);
-                container.style.animation = 'none';
-                void container.offsetWidth; // Reflow
-                container.style.animation = `${enterAnim} 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
             }, 100);
         }
 
@@ -8053,7 +8050,6 @@
 
 
         window.onload = () => {
-            let relevantPath = '/';
             const path = window.location.pathname;
             if (window.currentUser && window.currentUser.language) {
                 localStorage.setItem('l8te_lang', window.currentUser.language);
