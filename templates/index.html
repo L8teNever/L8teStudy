@@ -2103,8 +2103,8 @@
 
         .flashcard-scene {
             width: 100%;
-            max-width: 360px;
-            aspect-ratio: 4/5;
+            max-width: 500px;
+            aspect-ratio: 3/4;
             perspective: 1000px;
             cursor: pointer;
             margin-bottom: 20px;
@@ -2219,20 +2219,22 @@
         .study-nav {
             display: none;
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 90px;
-            background: var(--card-bg);
+            bottom: 30px;
+            left: 20px;
+            right: 20px;
+            height: 70px;
+            background: var(--nav-bg, var(--card-bg));
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
             /* For Safari */
-            border-top: 1px solid var(--border);
+            border-radius: 25px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
             z-index: 10000;
-            padding: 10px 20px 25px 20px;
-            justify-content: space-between;
+            padding: 0 10px;
+            justify-content: center;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         body.learning-mode .bottom-nav {
