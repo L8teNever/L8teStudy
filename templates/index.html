@@ -2025,32 +2025,47 @@
     <a href="#app-container" class="skip-link">Zum Hauptinhalt springen</a>
 
     <nav class="side-nav" aria-label="Hauptnavigation">
-        <div class="nav-group">
-            <a href="javascript:void(0)" class="nav-link active" onclick="navigate('home', this, 'Home')" role="button"
-                aria-label="Startseite">
-                <i data-lucide="house" aria-hidden="true"></i><span>Home</span>
+        <div class="nav-group" id="side-nav-primary">
+            <a href="javascript:void(0)" class="nav-link active" onclick="navigate('home', this, 'Home')"
+                data-nav-id="home">
+                <i data-lucide="house"></i><span>Home</span>
             </a>
-            <a href="javascript:void(0)" class="nav-link" onclick="navigate('tasks', this, 'Aufgaben')" role="button"
-                aria-label="Aufgaben">
-                <i data-lucide="check-circle-2" aria-hidden="true"></i><span>Aufgaben</span>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('tasks', this, 'Aufgaben')"
+                data-nav-id="tasks">
+                <i data-lucide="check-circle-2"></i><span>Aufgaben</span>
             </a>
-            <a href="javascript:void(0)" class="nav-link" onclick="navigate('calendar', this, 'Plan')" role="button"
-                aria-label="Plan">
-                <i data-lucide="calendar-days" aria-hidden="true"></i><span>Plan</span>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('calendar', this, 'Plan')"
+                data-nav-id="calendar">
+                <i data-lucide="calendar-days"></i><span>Plan</span>
             </a>
             <a href="javascript:void(0)" class="nav-link" onclick="navigate('stundenplan', this, 'Stundenplan')"
-                role="button" aria-label="Stundenplan">
-                <i data-lucide="clock-4" aria-hidden="true"></i><span>Stundenplan</span>
+                data-nav-id="stundenplan">
+                <i data-lucide="clock-4"></i><span>Stundenplan</span>
             </a>
-            <a href="javascript:void(0)" class="nav-link" onclick="toggleMoreMenu(event)" role="button"
-                aria-label="Mehr Optionen" aria-haspopup="true" id="side-more-trigger">
-                <i data-lucide="more-horizontal" aria-hidden="true"></i><span>Mehr</span>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('grades', this, 'Noten')"
+                data-nav-id="grades">
+                <i data-lucide="bar-chart-3"></i><span>Noten</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('drive', this, 'Drive')"
+                data-nav-id="drive">
+                <i data-lucide="hard-drive"></i><span>Drive</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('mealplan', this, 'Essen')"
+                data-nav-id="mealplan">
+                <i data-lucide="utensils"></i><span>Essen</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('blackboard', this, 'Infos')"
+                data-nav-id="blackboard">
+                <i data-lucide="clipboard-list"></i><span>Infos</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="toggleMoreMenu(event)" id="side-more-trigger"
+                style="display:none;">
+                <i data-lucide="more-horizontal"></i><span>Mehr</span>
             </a>
         </div>
-        <div class="nav-group">
-            <a href="javascript:void(0)" class="nav-link" onclick="openAccountMenu()" role="button"
-                aria-label="Account">
-                <i data-lucide="user" aria-hidden="true"></i><span>Account</span>
+        <div class="nav-group" id="side-nav-account">
+            <a href="javascript:void(0)" class="nav-link" onclick="openAccountMenu()" data-nav-id="account">
+                <i data-lucide="user"></i><span>Account</span>
             </a>
         </div>
     </nav>
@@ -2075,26 +2090,7 @@
 
     <!-- MEHR DROPDOWN (Nur Mobil - Enthält nur Noten & Stundenplan) -->
     <div id="more-menu" class="more-menu" role="menu" aria-label="Erweitertes Menü">
-        <div class="more-menu-item" id="more-stundenplan"
-            onclick="navigate('stundenplan', null, 'Stundenplan'); toggleMoreMenu()" role="menuitem" tabindex="0">
-            <i data-lucide="clock-4" aria-hidden="true"></i><span>Stundenplan</span>
-        </div>
-        <div class="more-menu-item" onclick="navigate('grades', null, 'Noten'); toggleMoreMenu()" role="menuitem"
-            tabindex="0">
-            <i data-lucide="bar-chart-3" aria-hidden="true"></i><span>Noten</span>
-        </div>
-        <div class="more-menu-item" onclick="navigate('drive', null, 'Drive'); toggleMoreMenu()" role="menuitem"
-            tabindex="0">
-            <i data-lucide="hard-drive" aria-hidden="true"></i><span>Drive</span>
-        </div>
-        <div class="more-menu-item" onclick="navigate('mealplan', null, 'Essen'); toggleMoreMenu()" role="menuitem"
-            tabindex="0">
-            <i data-lucide="utensils" aria-hidden="true"></i><span>Essen</span>
-        </div>
-        <div class="more-menu-item" onclick="navigate('blackboard', null, 'Infos'); toggleMoreMenu()" role="menuitem"
-            tabindex="0">
-            <i data-lucide="clipboard-list" aria-hidden="true"></i><span>Infos</span>
-        </div>
+        <!-- Will be populated dynamically by JS -->
     </div>
 
     <!-- BOTTOM NAV (Nur Mobil - Max 4 Icons) -->
@@ -2168,6 +2164,78 @@
         let classMembers = [];
         let selectedMentionIdx = -1;
         let relevantPath = window.location.pathname;
+
+        const navItemsList = [
+            { id: 'home', icon: 'house', label: 'home', view: 'home' },
+            { id: 'tasks', icon: 'check-circle-2', label: 'tasks', view: 'tasks' },
+            { id: 'calendar', icon: 'calendar-days', label: 'calendar', view: 'calendar' },
+            { id: 'stundenplan', icon: 'clock-4', label: 'timetable', view: 'stundenplan' },
+            { id: 'grades', icon: 'bar-chart-3', label: 'grades', view: 'grades' },
+            { id: 'drive', icon: 'hard-drive', label: 'drive', view: 'drive' },
+            { id: 'mealplan', icon: 'utensils', label: 'mealplan', view: 'mealplan' },
+            { id: 'blackboard', icon: 'clipboard-list', label: 'blackboard', view: 'blackboard' }
+        ];
+
+        function updateSidebarOverflow() {
+            const isMobile = window.innerWidth < 768;
+            const moreMenu = document.getElementById('more-menu');
+            if (!moreMenu) return;
+
+            let overflowItems = [];
+
+            if (isMobile) {
+                // On mobile, items not in bottom-nav go to more-menu
+                const bottomNavIds = ['home', 'tasks', 'calendar'];
+                overflowItems = navItemsList.filter(item => !bottomNavIds.includes(item.id));
+            } else {
+                const sidebar = document.querySelector('.side-nav');
+                const topGroup = document.getElementById('side-nav-primary');
+                const moreTrigger = document.getElementById('side-more-trigger');
+                if (!sidebar || !topGroup || !moreTrigger) return;
+
+                const sidebarHeight = sidebar.offsetHeight;
+                const reservedHeight = 160; // Padding + Account button area
+                const itemHeight = 90; // 80px height + 10px gap
+                const availableHeight = sidebarHeight - reservedHeight;
+
+                let maxVisible = Math.floor(availableHeight / itemHeight);
+
+                if (navItemsList.length > maxVisible) {
+                    maxVisible = Math.max(1, Math.floor((availableHeight - itemHeight) / itemHeight));
+                    moreTrigger.style.display = 'flex';
+                } else {
+                    moreTrigger.style.display = 'none';
+                    maxVisible = navItemsList.length;
+                }
+
+                const allSidebarLinks = topGroup.querySelectorAll('.nav-link:not(#side-more-trigger)');
+                allSidebarLinks.forEach((link, idx) => {
+                    const navId = link.getAttribute('data-nav-id');
+                    if (idx < maxVisible) {
+                        link.style.display = 'flex';
+                    } else {
+                        link.style.display = 'none';
+                        const item = navItemsList.find(n => n.id === navId);
+                        if (item) overflowItems.push(item);
+                    }
+                });
+            }
+
+            // Render hidden items into more-menu
+            let moreHtml = '';
+            overflowItems.forEach(item => {
+                const translated = t(item.label) || item.label;
+                moreHtml += `
+                    <div class="more-menu-item" onclick="navigate('${item.view}', null, '${translated}'); toggleMoreMenu()" role="menuitem" tabindex="0">
+                        <i data-lucide="${item.icon}"></i><span>${translated}</span>
+                    </div>
+                `;
+            });
+            moreMenu.innerHTML = moreHtml;
+            lucide.createIcons({ props: { "stroke-width": 2 }, elements: moreMenu.querySelectorAll('i') });
+        }
+
+        window.addEventListener('resize', updateSidebarOverflow);
 
         function updateBrowserTitle(pageTitle) {
             const base = "L8teStudy";
@@ -2416,15 +2484,22 @@
 
                     // Update "Mehr" and Sidebar states
                     const moreBtnMobile = document.getElementById('nav-more');
-                    const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
-                    const moreViewsList = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
+                    const moreBtnSidebar = document.getElementById('side-more-trigger');
+
+                    const sidebarLinks = Array.from(document.querySelectorAll('#side-nav-primary .nav-link:not(#side-more-trigger)'));
+                    const hiddenSidebarIds = sidebarLinks
+                        .filter(link => link.style.display === 'none')
+                        .map(link => link.getAttribute('data-nav-id'));
+
+                    const isMobileMore = !['home', 'tasks', 'calendar'].includes(view) && view !== 'account' && !view.startsWith('sub_') && !view.includes('settings');
+                    const isSidebarMore = hiddenSidebarIds.includes(view);
 
                     if (moreBtnMobile) {
-                        if (moreViewsList.includes(view)) moreBtnMobile.classList.add('active');
+                        if (isMobileMore) moreBtnMobile.classList.add('active');
                         else moreBtnMobile.classList.remove('active');
                     }
                     if (moreBtnSidebar) {
-                        if (moreViewsList.includes(view)) moreBtnSidebar.classList.add('active');
+                        if (isSidebarMore) moreBtnSidebar.classList.add('active');
                         else moreBtnSidebar.classList.remove('active');
                     }
 
@@ -8051,6 +8126,7 @@
 
         window.onload = () => {
             const path = window.location.pathname;
+            updateSidebarOverflow();
             if (window.currentUser && window.currentUser.language) {
                 localStorage.setItem('l8te_lang', window.currentUser.language);
             }
@@ -8120,30 +8196,27 @@
 
 
             // Update Navigation Active State
+            let activeViewForNav = currentView;
+            if (currentView.startsWith('settings')) activeViewForNav = 'account';
+
+            const sidebarLinks = Array.from(document.querySelectorAll('#side-nav-primary .nav-link:not(#side-more-trigger)'));
+            const hiddenSidebarIds = sidebarLinks
+                .filter(link => link.style.display === 'none')
+                .map(link => link.getAttribute('data-nav-id'));
+
+            const isMobileMore = !['home', 'tasks', 'calendar'].includes(activeViewForNav) && activeViewForNav !== 'account' && !activeViewForNav.startsWith('sub_') && !activeViewForNav.includes('settings');
+            const isSidebarMore = hiddenSidebarIds.includes(activeViewForNav);
+
+            const moreBtnMobile = document.getElementById('nav-more');
+            const moreBtnSidebar = document.getElementById('side-more-trigger');
+
             document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
 
-            let activeViewForNav = currentView;
-            // Map sub-views to main nav items
-            if (currentView.startsWith('settings')) activeViewForNav = 'account'; // Assuming settings is under account or separate? Actually Account has its own button.
-            // Let's check the onclicks. Account is account. 
-            // If we have views that don't match exactly, map them.
+            if (moreBtnMobile && isMobileMore) moreBtnMobile.classList.add('active');
+            if (moreBtnSidebar && isSidebarMore) moreBtnSidebar.classList.add('active');
 
-            // Try to find exact match first
-            let activeLink = document.querySelector(`.nav-link[onclick*="'${activeViewForNav}'"]`);
-
-            // If no direct match, check for "More" views
-            const moreViews = ['stundenplan', 'grades', 'drive', 'mealplan', 'blackboard'];
-            if (moreViews.includes(activeViewForNav)) {
-                const moreBtnMobile = document.getElementById('nav-more');
-                const moreBtnSidebar = document.querySelector('.side-nav .nav-link[onclick*="toggleMoreMenu"]');
-                if (moreBtnMobile) moreBtnMobile.classList.add('active');
-                if (moreBtnSidebar) moreBtnSidebar.classList.add('active');
-            } else if (activeLink) {
-                activeLink.classList.add('active');
-                // Also handle Mobile vs Desktop duplicates if any (though usually by class)
-                // The querySelector might only catch one.
-                document.querySelectorAll(`.nav-link[onclick*="'${activeViewForNav}'"]`).forEach(l => l.classList.add('active'));
-            }
+            // Apply active class to direct links matching the view
+            document.querySelectorAll(`.nav-link[onclick*="'${activeViewForNav}'"]`).forEach(l => l.classList.add('active'));
 
             if (relevantPath === '/' || relevantPath === '/home') renderHome();
             else if (relevantPath === '/tasks') renderTasks();

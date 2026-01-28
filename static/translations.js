@@ -280,7 +280,8 @@ const translations = {
         load_more: "Mehr laden",
         back_to_root: "Zurück zum Hauptverzeichnis",
         mealplan: "Essensplan",
-        upload_mealplan_title: "Essensplan hochladen"
+        upload_mealplan_title: "Essensplan hochladen",
+        blackboard: "Infos"
     },
     en: {
         home: "Home",
@@ -563,6 +564,7 @@ const translations = {
         load_more: "Load more",
         back_to_root: "Back to root",
         mealplan: "Meal Plan",
-        upload_mealplan_title: "Upload Meal Plan"
+        upload_mealplan_title: "Upload Meal Plan",
+        blackboard: "Infos"
     }
 };
