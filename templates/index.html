@@ -1537,9 +1537,13 @@
                 bottom: 40px;
                 left: 115px;
                 right: auto;
-                width: 200px;
+                width: 220px;
+                max-height: calc(100vh - 100px);
+                overflow-y: auto;
                 transform-origin: bottom left;
                 transform: scale(0.9) translateY(10px);
+                display: none;
+                flex-direction: column;
             }
 
             #more-stundenplan {
@@ -1643,7 +1647,9 @@
             }
 
             .more-menu.active {
+                display: flex;
                 transform: scale(1) translateY(0);
+                z-index: 10001;
             }
 
             .loading::after {
@@ -1963,6 +1969,8 @@
             bottom: 115px;
             right: 25px;
             width: 200px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
             background: var(--card-bg);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
@@ -1972,7 +1980,7 @@
             padding: 10px;
             display: none;
             flex-direction: column;
-            z-index: 1001;
+            z-index: 10001;
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
@@ -2232,7 +2240,7 @@
                 `;
             });
             moreMenu.innerHTML = moreHtml;
-            lucide.createIcons({ props: { "stroke-width": 2 }, elements: moreMenu.querySelectorAll('i') });
+            lucide.createIcons();
         }
 
         window.addEventListener('resize', updateSidebarOverflow);
@@ -2431,7 +2439,7 @@
                     // Set Header Title
                     const titleKeys = {
                         home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
-                        settings: 'settings', account: 'account', drive: 'drive', mealplan: 'mealplan', blackboard: 'Infos'
+                        settings: 'settings', account: 'account', drive: 'drive', mealplan: 'mealplan', blackboard: 'blackboard'
                     };
                     const translatedTitle = titleKeys[view] ? t(titleKeys[view]) : (view.charAt(0).toUpperCase() + view.slice(1));
                     setPageTitle(translatedTitle);

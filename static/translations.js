@@ -279,7 +279,7 @@ const translations = {
         by: "von",
         load_more: "Mehr laden",
         back_to_root: "Zurück zum Hauptverzeichnis",
-        mealplan: "Essensplan",
+        mealplan: "Essen",
         upload_mealplan_title: "Essensplan hochladen",
         blackboard: "Infos"
     },
@@ -563,7 +563,7 @@ const translations = {
         by: "by",
         load_more: "Load more",
         back_to_root: "Back to root",
-        mealplan: "Meal Plan",
+        mealplan: "Meal",
         upload_mealplan_title: "Upload Meal Plan",
         blackboard: "Infos"
     }
