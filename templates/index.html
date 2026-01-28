@@ -2535,7 +2535,8 @@
             // Update Header if on main view
             const titles = {
                 home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
-                account: 'account', settings: 'settings', sub_admin: 'admin', drive: 'drive', mealplan: 'mealplan', blackboard: 'Infos'
+                account: 'account', settings: 'settings', sub_admin: 'admin', drive: 'drive', mealplan: 'mealplan', blackboard: 'Infos',
+                flashcards: 'flashcards'
             };
             if (titles[currentView]) {
                 setPageTitle(t(titles[currentView]));
@@ -2546,6 +2547,7 @@
             else if (currentView === 'tasks') renderTasks();
             else if (currentView === 'calendar') renderCalendar();
             else if (currentView === 'grades') renderGrades();
+            else if (currentView === 'flashcards') renderFlashcards();
             else if (currentView === 'settings') renderSettingsPage();
             else if (currentView === 'account') renderAccountHub();
             else if (currentView === 'sub_admin_menu') renderAdminMenu();
@@ -2649,7 +2651,8 @@
                     // Set Header Title
                     const titleKeys = {
                         home: 'home', tasks: 'tasks', calendar: 'calendar', stundenplan: 'timetable', grades: 'grades',
-                        settings: 'settings', account: 'account', drive: 'drive', mealplan: 'mealplan', blackboard: 'blackboard'
+                        settings: 'settings', account: 'account', drive: 'drive', mealplan: 'mealplan', blackboard: 'blackboard',
+                        flashcards: 'flashcards'
                     };
                     const translatedTitle = titleKeys[view] ? t(titleKeys[view]) : (view.charAt(0).toUpperCase() + view.slice(1));
                     setPageTitle(translatedTitle);
@@ -2664,7 +2667,7 @@
                     // Update URL
                     const pathMap = {
                         home: '/home', tasks: '/tasks', calendar: '/calendar', stundenplan: '/stundenplan',
-                        grades: '/grades', settings: '/settings', account: '/account', drive: '/drive',
+                        grades: '/grades', flashcards: '/flashcards', settings: '/settings', account: '/account', drive: '/drive',
                         mealplan: '/mealplan', blackboard: '/blackboard', sub_admin_menu: '/admin',
                         sub_users: '/admin/users', sub_activity: '/admin/activity', sub_subjects: '/admin/subjects',
                         sub_classes: '/admin/classes', sub_super_admin: '/superadmin', sub_shared_content: '/superadmin/shared'
@@ -8506,7 +8509,7 @@
         // --- Flashcards Logic ---
 
         async function renderFlashcards() {
-            currentView = 'flashcards'; window.history.replaceState({ view: 'flashcards' }, '', '/flashcards');
+            currentView = 'flashcards';
 
             const mainContent = document.getElementById('main-content');
             mainContent.innerHTML = `<div class="loading"></div>`;
