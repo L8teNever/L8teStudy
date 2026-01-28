@@ -281,7 +281,8 @@ const translations = {
         back_to_root: "Zurück zum Hauptverzeichnis",
         mealplan: "Essen",
         upload_mealplan_title: "Essensplan hochladen",
-        blackboard: "Infos"
+        blackboard: "Infos",
+        flashcards: "Lernkarten"
     },
     en: {
         home: "Home",
@@ -565,6 +566,7 @@ const translations = {
         back_to_root: "Back to root",
         mealplan: "Meal",
         upload_mealplan_title: "Upload Meal Plan",
-        blackboard: "Infos"
+        blackboard: "Infos",
+        flashcards: "Flashcards"
     }
 };

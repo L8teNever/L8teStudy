@@ -2244,6 +2244,10 @@
                 data-nav-id="grades">
                 <i data-lucide="bar-chart-3"></i><span>Noten</span>
             </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('flashcards', this, 'Lernkarten')"
+                data-nav-id="flashcards">
+                <i data-lucide="layers"></i><span>Lernkarten</span>
+            </a>
             <a href="javascript:void(0)" class="nav-link" onclick="navigate('drive', this, 'Drive')"
                 data-nav-id="drive">
                 <i data-lucide="hard-drive"></i><span>Drive</span>
@@ -2257,7 +2261,7 @@
                 <i data-lucide="clipboard-list"></i><span>Infos</span>
             </a>
             <a href="javascript:void(0)" class="nav-link" onclick="toggleMoreMenu(event)" id="side-more-trigger"
-                style="display:none;">
+                data-nav-id="more" style="display:none;">
                 <i data-lucide="more-horizontal"></i><span>Mehr</span>
             </a>
         </div>
@@ -2508,29 +2512,35 @@
         }
 
         function updateAppLanguage() {
-            // Update Bottom Navigation (Home, Tasks, Plan, More)
-            const bottomNavLinks = document.querySelectorAll('.bottom-nav .nav-link span');
-            if (bottomNavLinks.length >= 4) {
-                bottomNavLinks[0].innerText = t('home');
-                bottomNavLinks[1].innerText = t('tasks');
-                bottomNavLinks[2].innerText = t('calendar');
-                bottomNavLinks[3].innerText = t('more');
-            }
-            // Update Side Navigation (Home, Tasks, Plan, Stundenplan, More, Account)
-            const sideNavLinks = document.querySelectorAll('.side-nav .nav-link span');
-            if (sideNavLinks.length >= 6) {
-                sideNavLinks[0].innerText = t('home');
-                sideNavLinks[1].innerText = t('tasks');
-                sideNavLinks[2].innerText = t('calendar');
-                sideNavLinks[3].innerText = t('timetable');
-                sideNavLinks[4].innerText = t('more');
-                sideNavLinks[5].innerText = t('account');
+            // Update Bottom Navigation
+            document.querySelectorAll('.bottom-nav .nav-link').forEach(link => {
+                const span = link.querySelector('span');
+                if (!span) return;
+                const onclick = link.getAttribute('onclick');
+                if (onclick && onclick.includes('navigate(')) {
+                    const match = onclick.match(/navigate\('([^']+)'/);
+                    if (match) {
+                        const view = match[1];
+                        if (view === 'home') span.innerText = t('home');
+                        else if (view === 'tasks') span.innerText = t('tasks');
+                        else if (view === 'calendar') span.innerText = t('calendar');
+                    }
+                } else if (onclick && onclick.includes('toggleMoreMenu')) {
+                    span.innerText = t('more');
+                }
+            });
 
-                // If more items are added in the future
-                if (sideNavLinks.length > 6) sideNavLinks[6].innerText = t('drive');
-                if (sideNavLinks.length > 7) sideNavLinks[7].innerText = t('mealplan');
-                if (sideNavLinks.length > 8) sideNavLinks[8].innerText = 'Infos';
-            }
+            // Update Side Navigation
+            document.querySelectorAll('.side-nav .nav-link').forEach(link => {
+                const navId = link.getAttribute('data-nav-id');
+                const span = link.querySelector('span');
+                if (span && navId) {
+                    const item = navItemsList.find(i => i.id === navId);
+                    if (item) span.innerText = t(item.label);
+                    else if (navId === 'account') span.innerText = t('account');
+                    else if (navId === 'more') span.innerText = t('more');
+                }
+            });
 
             // Update Header if on main view
             const titles = {
@@ -8436,41 +8446,42 @@
             // Apply active class to direct links matching the view
             document.querySelectorAll(`.nav-link[onclick*="'${activeViewForNav}'"]`).forEach(l => l.classList.add('active'));
 
-            if (relevantPath === '/' || relevantPath === '/home') renderHome();
-            else if (relevantPath === '/tasks') renderTasks();
-            else if (relevantPath === '/calendar') renderCalendar();
-            else if (relevantPath === '/stundenplan') renderStundenplan();
-            else if (relevantPath === '/grades') renderGrades();
-            else if (relevantPath.toLowerCase().startsWith('/flashcards')) renderFlashcards();
-            else if (relevantPath === '/settings') renderSettingsPage();
-            else if (relevantPath === '/settings/password') renderChangePassword();
-            else if (relevantPath === '/settings/notifications') renderNotificationSettings();
-            else if (relevantPath === '/account') renderAccountHub();
-            else if (relevantPath === '/admin') renderAdminMenu();
-            else if (relevantPath === '/admin/users') renderUserManagement();
-            else if (relevantPath.startsWith('/admin/users/')) renderUserManagement(relevantPath.split('/').pop());
-            else if (relevantPath === '/admin/activity') renderActivityLog();
-            else if (relevantPath.startsWith('/admin/activity/')) renderActivityLog(relevantPath.split('/').pop());
-            else if (relevantPath === '/admin/subjects') renderSubjectManagement();
-            else if (relevantPath.startsWith('/admin/subjects/')) renderSubjectManagement(relevantPath.split('/').pop());
-            else if (relevantPath === '/admin/classes') renderSchoolClassManagement();
-            else if (relevantPath.startsWith('/admin/classes/')) renderSingleClassAdmin(relevantPath.split('/').pop(), 'Klasse');
-            else if (relevantPath === '/superadmin') renderSuperAdminDashboard();
-            else if (relevantPath === '/superadmin/shared') renderSharedContentManagement();
-            else if (relevantPath.includes('/settings') && relevantPath.includes('/admin/classes/')) {
+            const rPath = relevantPath.toLowerCase();
+            if (rPath === '/' || rPath === '/home') renderHome();
+            else if (rPath.startsWith('/tasks')) renderTasks();
+            else if (rPath.startsWith('/calendar')) renderCalendar();
+            else if (rPath.startsWith('/stundenplan')) renderStundenplan();
+            else if (rPath.startsWith('/grades')) renderGrades();
+            else if (rPath.startsWith('/flashcards')) renderFlashcards();
+            else if (rPath === '/settings') renderSettingsPage();
+            else if (rPath === '/settings/password') renderChangePassword();
+            else if (rPath === '/settings/notifications') renderNotificationSettings();
+            else if (rPath === '/account') renderAccountHub();
+            else if (rPath === '/admin') renderAdminMenu();
+            else if (rPath === '/admin/users') renderUserManagement();
+            else if (rPath.startsWith('/admin/users/')) renderUserManagement(relevantPath.split('/').pop());
+            else if (rPath === '/admin/activity') renderActivityLog();
+            else if (rPath.startsWith('/admin/activity/')) renderActivityLog(relevantPath.split('/').pop());
+            else if (rPath === '/admin/subjects') renderSubjectManagement();
+            else if (rPath.startsWith('/admin/subjects/')) renderSubjectManagement(relevantPath.split('/').pop());
+            else if (rPath === '/admin/classes') renderSchoolClassManagement();
+            else if (rPath.startsWith('/admin/classes/')) renderSingleClassAdmin(relevantPath.split('/').pop(), 'Klasse');
+            else if (rPath === '/superadmin') renderSuperAdminDashboard();
+            else if (rPath === '/superadmin/shared') renderSharedContentManagement();
+            else if (rPath.includes('/settings') && rPath.includes('/admin/classes/')) {
                 const parts = relevantPath.split('/');
                 const id = parts[parts.indexOf('classes') + 1];
                 renderClassSettings(id);
             }
-            else if (relevantPath.startsWith('/subject/')) {
+            else if (rPath.startsWith('/subject/')) {
                 const sub = decodeURIComponent(relevantPath.split('/').pop());
                 renderSubjectDetails(sub, '?', '[]');
             }
-            else if (relevantPath === '/admin/untis') renderUntisConfig();
-            else if (relevantPath === '/admin/drive') renderDriveManagement();
-            else if (relevantPath === '/admin/blackboard') renderBlackboardManagement();
-            else if (relevantPath.startsWith('/drive')) {
-                if (relevantPath.startsWith('/drive/folder/')) {
+            else if (rPath === '/admin/untis') renderUntisConfig();
+            else if (rPath === '/admin/drive') renderDriveManagement();
+            else if (rPath === '/admin/blackboard') renderBlackboardManagement();
+            else if (rPath.startsWith('/drive')) {
+                if (rPath.startsWith('/drive/folder/')) {
                     const parts = relevantPath.split('/');
                     const folderId = parts[3];
                     const urlParams = new URLSearchParams(window.location.search);
@@ -8491,9 +8502,9 @@
                 } else {
                     renderDrive();
                 }
-            } else if (relevantPath === '/mealplan') {
+            } else if (rPath.startsWith('/mealplan')) {
                 renderMealPlan();
-            } else if (relevantPath === '/blackboard') {
+            } else if (rPath.startsWith('/blackboard')) {
                 renderBlackboard();
             } else {
                 renderHome();
@@ -8512,7 +8523,7 @@
         async function renderFlashcards() {
             currentView = 'flashcards';
 
-            const mainContent = document.getElementById('main-content');
+            const mainContent = document.getElementById('app-container');
             mainContent.innerHTML = `<div class="loading"></div>`;
             updateFabVisibility('flashcards');
 
@@ -8589,7 +8600,7 @@
 
         async function renderDeck(id) {
             window.currentDeckId = id;
-            const mainContent = document.getElementById('main-content');
+            const mainContent = document.getElementById('app-container');
             mainContent.innerHTML = `<div class="loading"></div>`;
 
             try {
@@ -8685,7 +8696,7 @@
 
         async function startStudy(deckId) {
             window.currentDeckId = deckId;
-            const mainContent = document.getElementById('main-content');
+            const mainContent = document.getElementById('app-container');
             mainContent.innerHTML = `<div class="loading"></div>`;
 
             try {
@@ -8709,7 +8720,7 @@
         }
 
         function renderStudyInterface() {
-            const mainContent = document.getElementById('main-content');
+            const mainContent = document.getElementById('app-container');
             mainContent.innerHTML = `
                 <div class="page-container" style="height: 100%; display:flex; flex-direction:column;">
                     <br>
