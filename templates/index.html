@@ -2356,24 +2356,18 @@
 
     <!-- STUDY NAV (Mobile Learning Mode) -->
     <div id="study-nav" class="study-nav">
-        <!-- Buttons will be injected here or static -->
-        <button class="rating-btn rate-1" onclick="rateCard(1)"
-            style="flex:1; height:48px; font-size:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
-            Nochmal <span style="font-size:10px; opacity:0.8;">
-                < 1m</span>
-        </button>
-        <button class="rating-btn rate-2" onclick="rateCard(2)"
-            style="flex:1; height:48px; font-size:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
-            Schwer <span style="font-size:10px; opacity:0.8;">2d</span>
-        </button>
-        <button class="rating-btn rate-3" onclick="rateCard(3)"
-            style="flex:1; height:48px; font-size:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
-            Gut <span style="font-size:10px; opacity:0.8;">4d</span>
-        </button>
-        <button class="rating-btn rate-4" onclick="rateCard(4)"
-            style="flex:1; height:48px; font-size:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;">
-            Einfach <span style="font-size:10px; opacity:0.8;">7d</span>
-        </button>
+        <div class="nav-link study-nav-item" onclick="rateCard(1)">
+            <i data-lucide="repeat" style="color:var(--danger)"></i><span>Nochmal</span>
+        </div>
+        <div class="nav-link study-nav-item" onclick="rateCard(2)">
+            <i data-lucide="alert-triangle" style="color:#ff9f0a"></i><span>Schwer</span>
+        </div>
+        <div class="nav-link study-nav-item" onclick="rateCard(3)">
+            <i data-lucide="thumbs-up" style="color:#30d158"></i><span>Gut</span>
+        </div>
+        <div class="nav-link study-nav-item" onclick="rateCard(4)">
+            <i data-lucide="party-popper" style="color:#0a84ff"></i><span>Einfach</span>
+        </div>
     </div>
 
     <!-- PRACTICE NAV (Mobile Free Practice Mode) -->
@@ -2945,7 +2939,8 @@
         }
 
         let _activeDialogResolve = null;
-        function confirmDialog(title, message) {
+        function confirmDialog(title, message, confirmBtnText = "OK", cancelBtnText) {
+            if (!cancelBtnText) cancelBtnText = t('cancel') || 'Abbrechen';
             return new Promise((resolve) => {
                 _activeDialogResolve = (val) => { _activeDialogResolve = null; resolve(!!val); };
                 const html = `
@@ -2953,8 +2948,8 @@
                         <h3 style="margin:0 0 10px 0;">${title}</h3>
                         <p style="color:var(--text-sec); margin-bottom:25px;">${message}</p>
                         <div style="display:flex; gap:12px;">
-                            <button onclick="closeSheet()" class="ios-btn" style="background:var(--tab-bg); color:var(--text-main); flex:1;">${t('cancel') || 'Abbrechen'}</button>
-                            <button id="dialog-confirm-btn" class="ios-btn" style="flex:1;">OK</button>
+                            <button onclick="closeSheet()" class="ios-btn" style="background:var(--tab-bg); color:var(--text-main); flex:1;">${cancelBtnText}</button>
+                            <button id="dialog-confirm-btn" class="ios-btn" style="flex:1;">${confirmBtnText}</button>
                         </div>
                     </div>
                 `;
@@ -8732,6 +8727,14 @@
 
         async function renderDeck(id) {
             window.currentDeckId = id;
+
+            // Ensure we exit learning mode cleanly
+            document.body.classList.remove('learning-mode');
+            const studyNav = document.getElementById('study-nav');
+            if (studyNav) studyNav.style.visibility = 'hidden';
+            const practiceNav = document.getElementById('practice-nav');
+            if (practiceNav) practiceNav.style.visibility = 'hidden';
+
             const mainContent = document.getElementById('app-container');
             mainContent.innerHTML = `<div class="loading"></div>`;
 
@@ -8741,13 +8744,13 @@
                 const deck = await res.json();
 
                 let cardsHtml = deck.cards.map(c => `
-                    <div class="list-item" style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                    <div class="list-item" onclick="previewCard('${c.front.replace(/'/g, "\\'")}', '${c.back.replace(/'/g, "\\'")}')" style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                         <div style="flex:1; margin-right:10px;">
                             <div style="font-weight:600; margin-bottom:4px;">${c.front}</div>
                             <div style="color:var(--text-sec); font-size:14px;">${c.back}</div>
                         </div>
                         ${deck.is_own ? `
-                        <div style="display:flex; gap:10px;">
+                        <div style="display:flex; gap:10px;" onclick="event.stopPropagation()">
                              <button onclick="editCard(${c.id}, '${c.front.replace(/'/g, "\\'")}', '${c.back.replace(/'/g, "\\'")}')" style="background:none; border:none; color:var(--text-sec); padding:5px;">
                                 <i data-lucide="pencil" style="width:16px; height:16px;"></i>
                             </button>
@@ -8861,15 +8864,40 @@
             await new Promise(r => setTimeout(r, 300));
 
             const description = await promptDialog("Stapel bearbeiten", "Beschreibung", currentDesc);
-            // Public Toggle? Hard to do with promptDialog. We'll skip or use confirm?
-            // Let's stick to title/desc for now as per promptDialog limits.
+            await new Promise(r => setTimeout(r, 300));
+
+            // Public Toggle
+            const isPublic = await confirmDialog("Sichtbarkeit", "Soll dieser Stapel öffentlich sichtbar sein?", "Öffentlich", "Privat");
 
             await fetch(`/api/decks/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, description })
+                body: JSON.stringify({ title, description, is_public: isPublic })
             });
             renderDeck(id);
+        }
+
+        function previewCard(front, back) {
+            const html = `
+                <div style="padding:10px 0; text-align:center;">
+                   <h3 style="margin-bottom:15px;">Vorschau</h3>
+                   <div style="perspective:1000px; width:100%; max-width:300px; aspect-ratio:3/4; margin:0 auto;" onclick="this.classList.toggle('flipped')">
+                        <div style="position:relative; width:100%; height:100%; transition:transform 0.6s; transform-style:preserve-3d;" class="preview-inner">
+                             <div style="position:absolute; width:100%; height:100%; backface-visibility:hidden; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:20px; font-weight:600; font-size:18px;">
+                                ${front}
+                                <div style="font-size:12px; color:var(--text-sec); margin-top:10px; font-weight:normal;">(Tippen zum Drehen)</div>
+                             </div>
+                             <div style="position:absolute; width:100%; height:100%; backface-visibility:hidden; background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:20px; font-weight:600; font-size:18px; transform: rotateY(180deg);">
+                                ${back}
+                             </div>
+                        </div>
+                   </div>
+                   <style>
+                      .flipped .preview-inner { transform: rotateY(180deg); }
+                   </style>
+                </div>
+            `;
+            openSheet(html);
         }
 
         async function editCard(id, currentFront, currentBack) {
@@ -9023,9 +9051,10 @@
             if (practiceNav) practiceNav.style.visibility = 'hidden';
         }
 
-        function showNextCard() {
+        async function showNextCard() {
             if (studyQueue.length === 0) {
-                alert("Lernsession abgeschlossen! Großartig.");
+                // Session finished
+                await confirmDialog("Lernsession abgeschlossen!", "Großartige Arbeit, du hast alle Karten erledigt.", "Super");
                 renderDeck(window.currentDeckId);
                 return;
             }
