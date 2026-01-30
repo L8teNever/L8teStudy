@@ -204,6 +204,7 @@ def browse_folders():
     
     return jsonify({
         'success': True,
+        'items': folders,
         'folders': folders
     })
 
@@ -335,13 +336,14 @@ def get_files():
     items, next_page_token = client.list_items(parent_id=parent_id, page_token=page_token)
     
     if items is None:
-        return jsonify({'success': False, 'message': 'Failed to fetch items'}), 500
+        return jsonify({'success': False, 'message': 'Google Drive not connected or inaccessible'}), 401
     
     return jsonify({
         'success': True,
+        'items': items,
         'files': items, # Keep key name 'files' for frontend compatibility
         'nextPageToken': next_page_token,
-        'parent_id': parent_id
+        'totalFiles': len(items)
     })
 
 @drive_bp.route('/search', methods=['GET'])

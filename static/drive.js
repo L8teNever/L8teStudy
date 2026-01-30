@@ -102,11 +102,13 @@ class DriveManager {
             const response = await fetch(url);
             const data = await response.json();
 
+            // Be resilient to different response formats
+            const items = data.items || data.files || data.folders || [];
             this.currentPageToken = data.nextPageToken || null;
             this.currentFolderId = parentId;
 
             return {
-                files: data.items || [],
+                files: items,
                 nextPageToken: data.nextPageToken || null
             };
         } catch (error) {
@@ -125,7 +127,7 @@ class DriveManager {
             const response = await fetch(`/api/drive/search?q=${encodeURIComponent(query)}`);
             const data = await response.json();
             this.currentPageToken = null; // No pagination in search results currently
-            return data.files || [];
+            return data.items || data.files || data.folders || data || [];
         } catch (error) {
             console.error('Error searching files:', error);
             return [];
@@ -138,14 +140,16 @@ class DriveManager {
             const data = await response.json();
 
             // Transform folder data to look like file items
-            const folders = data.folders || [];
+            // API returns either { folders: [] } or a direct list []
+            const folders = Array.isArray(data) ? data : (data.folders || data.items || []);
+
             return folders.map(folder => ({
-                id: folder.folder_id,
-                name: folder.name,
+                id: folder.folder_id || folder.id,
+                name: folder.folder_name || folder.name,
                 mimeType: 'application/vnd.google-apps.folder',
-                webViewLink: `https://drive.google.com/drive/folders/${folder.folder_id}`,
+                webViewLink: `https://drive.google.com/drive/folders/${folder.folder_id || folder.id}`,
                 isLinked: true,
-                subject: folder.subject_name,
+                subject: folder.subject_name || folder.subject,
                 fileCount: folder.file_count
             }));
         } catch (error) {

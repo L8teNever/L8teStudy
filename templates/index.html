@@ -2823,9 +2823,12 @@
                     container.style.animation = `${enterAnim} 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
                 } catch (err) {
-                    console.error("Navigation error:", err);
+                    console.error("[Router] Navigation error for view:", view, err);
                     // Fallback to home if critical failure
-                    if (view !== 'home') navigate('home');
+                    if (view !== 'home') {
+                        console.warn("[Router] Falling back to home due to error.");
+                        navigate('home');
+                    }
                 }
             }, 100);
         }
@@ -8498,7 +8501,7 @@
         }
 
 
-        window.onload = () => {
+        window.onload = async () => {
             const path = window.location.pathname;
             updateSidebarOverflow();
             if (window.currentUser && window.currentUser.language) {
@@ -8542,23 +8545,15 @@
 
             // Re-establish relevantPath for sub-routing logic later based on what we found, 
             // effectively acting as if we stripped the class.
-            // This is a bit hacky but ensures subsequent 'if (relevantPath === ...)' checks work 
-            // if we are NOT on home.
-            // If we are on home, relevantPath should ideally be '/' or '/home'
             if (initialView !== 'home') {
-                // Try to construct a relevant path that matches string checks below
-                // e.g. /settings/password -> /settings/password (even if prefix was there)
-                // The easiest way is to use the part of the string starting from the matched key.
                 const match = viewKeys.find(v => v.val === initialView);
                 if (match) {
                     const idx = fullPath.indexOf(match.key);
                     if (idx !== -1) {
-                        // Use the substring from the match, preserving original case from window.location.pathname
                         relevantPath = window.location.pathname.substring(idx);
                     }
                 }
             } else {
-                // If detected as home, force relevant path to / or /home for safety if it was bare class url
                 if (fullPath.endsWith('/home')) relevantPath = '/home';
                 else if (fullPath.split('/').length <= 2) relevantPath = '/';
             }
@@ -8594,12 +8589,17 @@
             document.querySelectorAll(`.nav-link[onclick*="'${activeViewForNav}'"]`).forEach(l => l.classList.add('active'));
 
             const rPath = relevantPath.toLowerCase();
+            console.log(`[Router] View: ${initialView}, RelevantPath: ${relevantPath}, RPath: ${rPath}`);
+
             if (rPath === '/' || rPath === '/home') renderHome();
             else if (rPath.startsWith('/tasks')) renderTasks();
             else if (rPath.startsWith('/calendar')) renderCalendar();
             else if (rPath.startsWith('/stundenplan')) renderStundenplan();
             else if (rPath.startsWith('/grades')) renderGrades();
-            else if (rPath.startsWith('/flashcards')) renderFlashcards();
+            else if (rPath.startsWith('/flashcards')) {
+                await loadScript('/static/flashcards.js?v=2.1.1');
+                renderFlashcards();
+            }
             else if (rPath === '/settings') renderSettingsPage();
             else if (rPath === '/settings/password') renderChangePassword();
             else if (rPath === '/settings/notifications') renderNotificationSettings();
@@ -8625,22 +8625,31 @@
                 renderSubjectDetails(sub, '?', '[]');
             }
             else if (rPath === '/admin/untis') renderUntisConfig();
-            else if (rPath === '/admin/drive') renderDriveManagement();
+            else if (rPath === '/admin/drive') {
+                await loadScript('/static/drive.js?v=2.1.1');
+                renderDriveManagement();
+            }
             else if (rPath === '/admin/blackboard') renderBlackboardManagement();
             else if (rPath.startsWith('/drive')) {
+                await loadScript('/static/drive.js?v=2.1.1');
                 if (rPath.startsWith('/drive/folder/')) {
                     const parts = relevantPath.split('/');
+                    // /drive/folder/ID/Name
                     const folderId = parts[3];
                     const urlParams = new URLSearchParams(window.location.search);
                     const googleId = urlParams.get('fid');
 
-                    renderDrive('folders').then(async () => {
+                    renderDrive().then(async () => {
                         try {
                             const res = await fetch('/api/drive/folders');
                             const folders = await res.json();
-                            const f = folders.find(x => x.id == folderId);
+                            // Handle both array and object responses
+                            const items = Array.isArray(folders) ? folders : (folders.folders || folders.items || []);
+                            const f = items.find(x => x.id == folderId || x.folder_id == folderId);
                             if (f) {
-                                browseRootFolder(folderId, f.folder_name, false, googleId);
+                                openDriveFolder(googleId || folderId, f.folder_name || f.name);
+                            } else if (googleId) {
+                                openDriveFolder(googleId, 'Ordner');
                             }
                         } catch (e) {
                             console.error("Restore drive state failed", e);
@@ -8654,6 +8663,7 @@
             } else if (rPath.startsWith('/blackboard')) {
                 renderBlackboard();
             } else {
+                console.warn(`[Router] No route matched rPath: ${rPath}, falling back to home.`);
                 renderHome();
             }
 
