@@ -2675,22 +2675,33 @@
         // DYNAMIC SCRIPT LOADER
         // ============================================
         const loadedScripts = new Set();
+        const scriptLoadPromises = new Map();
 
         async function loadScript(src) {
-            if (loadedScripts.has(src)) {
-                return Promise.resolve();
-            }
+            if (loadedScripts.has(src)) return Promise.resolve();
+            if (scriptLoadPromises.has(src)) return scriptLoadPromises.get(src);
 
-            return new Promise((resolve, reject) => {
+            console.log(`[Loader] Loading script: ${src}`);
+            const promise = new Promise((resolve, reject) => {
                 const script = document.createElement('script');
                 script.src = src;
+                script.async = true;
                 script.onload = () => {
+                    console.log(`[Loader] Script loaded successfully: ${src}`);
                     loadedScripts.add(src);
+                    scriptLoadPromises.delete(src);
                     resolve();
                 };
-                script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+                script.onerror = () => {
+                    console.error(`[Loader] Failed to load script: ${src}`);
+                    scriptLoadPromises.delete(src);
+                    reject(new Error(`Failed to load script: ${src}`));
+                };
                 document.head.appendChild(script);
             });
+
+            scriptLoadPromises.set(src, promise);
+            return promise;
         }
 
         async function navigate(view, el, title) {
@@ -2728,6 +2739,7 @@
 
             setTimeout(async () => {
                 try {
+                    console.log(`[Router] Navigating to: ${view}`);
                     previousView = (currentView === 'settings' || currentView.startsWith('sub_')) ? previousView : currentView;
                     currentView = view;
                     isSearchActive = false;
@@ -2769,8 +2781,7 @@
                     }
                     window.isPoppingState = false;
 
-                    // Render (Awaited to ensure lucide has something to process)
-                    // Load required scripts dynamically before rendering
+                    // Render
                     if (view === 'tasks') await renderTasks();
                     else if (view === 'calendar') await renderCalendar();
                     else if (view === 'stundenplan') await renderStundenplan();
@@ -2814,7 +2825,7 @@
                     }
 
                     lucide.createIcons();
-                    closeSheet();
+                    if (typeof closeSheet === 'function') closeSheet();
 
                     // Enter Animation
                     window.scrollTo(0, 0);
@@ -2823,11 +2834,15 @@
                     container.style.animation = `${enterAnim} 0.15s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
 
                 } catch (err) {
-                    console.error("[Router] Navigation error for view:", view, err);
-                    // Fallback to home if critical failure
+                    console.error("[Router] Critical navigation error for view:", view, err);
+                    // Fallback to home only if not already attempting home or login
                     if (view !== 'home') {
-                        console.warn("[Router] Falling back to home due to error.");
-                        navigate('home');
+                        console.warn("[Router] Attempting fallback to home view.");
+                        try {
+                            renderHome();
+                        } catch (e) {
+                            console.error("[Router] Even fallback to home failed:", e);
+                        }
                     }
                 }
             }, 100);
@@ -8502,148 +8517,115 @@
 
 
         window.onload = async () => {
-            const path = window.location.pathname;
+            const fullPath = window.location.pathname.toLowerCase();
             updateSidebarOverflow();
+
             if (window.currentUser && window.currentUser.language) {
                 localStorage.setItem('l8te_lang', window.currentUser.language);
             }
 
-
             if (window.currentUser.needs_password_change) {
+                console.log("[Router] Password change required, forcing view.");
                 renderForcePasswordChange();
                 return;
             }
 
+            // Robust View Detection
             let initialView = 'home';
-            const fullPath = window.location.pathname.toLowerCase();
-
-            // Robust View Detection: Check if keys exist in path regardless of prefix
             const viewKeys = [
-                { key: '/settings', val: 'settings' },
-                { key: '/account', val: 'account' },
                 { key: '/tasks', val: 'tasks' },
                 { key: '/calendar', val: 'calendar' },
                 { key: '/stundenplan', val: 'stundenplan' },
                 { key: '/grades', val: 'grades' },
-                { key: '/drive', val: 'drive' },
                 { key: '/flashcards', val: 'flashcards' },
-                { key: '/admin', val: 'sub_admin_menu' },
-                { key: '/superadmin', val: 'sub_super_admin' },
-                { key: '/blackboard', val: 'blackboard' },
+                { key: '/settings', val: 'settings' },
+                { key: '/account', val: 'account' },
+                { key: '/drive', val: 'drive' },
                 { key: '/mealplan', val: 'mealplan' },
-                { key: '/home', val: 'home' }
+                { key: '/blackboard', val: 'blackboard' },
+                { key: '/admin/users', val: 'sub_users' },
+                { key: '/admin/activity', val: 'sub_activity' },
+                { key: '/admin/subjects', val: 'sub_subjects' },
+                { key: '/admin/classes', val: 'sub_classes' },
+                { key: '/admin', val: 'sub_admin_menu' },
+                { key: '/superadmin/shared', val: 'sub_shared_content' },
+                { key: '/superadmin', val: 'sub_super_admin' },
+                { key: '/home', val: 'home' } // Check home last
             ];
 
-            for (let v of viewKeys) {
-                // We match if the path ends with the key OR contains the key followed by a slash
-                // e.g. /9a/grades matches /grades. /9a/grades/details matches /grades/
-                if (fullPath.endsWith(v.key) || fullPath.includes(v.key + '/')) {
+            for (const v of viewKeys) {
+                if (fullPath.endsWith(v.key) || fullPath.includes(v.key + '/') || fullPath.includes(v.key + '?')) {
                     initialView = v.val;
                     break;
                 }
             }
 
-            // Re-establish relevantPath for sub-routing logic later based on what we found, 
-            // effectively acting as if we stripped the class.
-            if (initialView !== 'home') {
-                const match = viewKeys.find(v => v.val === initialView);
-                if (match) {
-                    const idx = fullPath.indexOf(match.key);
-                    if (idx !== -1) {
-                        relevantPath = window.location.pathname.substring(idx);
-                    }
+            // Calculate relevantPath (path after class prefix)
+            let rPath = '/home';
+            const match = viewKeys.find(v => v.val === initialView);
+            if (match) {
+                const idx = fullPath.indexOf(match.key);
+                if (idx !== -1) {
+                    rPath = window.location.pathname.substring(idx).toLowerCase();
                 }
+            } else if (fullPath === '/' || fullPath === '') {
+                rPath = '/home';
             } else {
-                if (fullPath.endsWith('/home')) relevantPath = '/home';
-                else if (fullPath.split('/').length <= 2) relevantPath = '/';
+                rPath = fullPath;
             }
 
-            // Replace the initial null state with the correct view state
-            window.history.replaceState({ view: initialView }, '', window.location.pathname);
-            currentView = initialView; // Set core variable early
+            console.log(`[Router] Initial View: ${initialView}, rPath: ${rPath}`);
+            currentView = initialView;
 
-            updateAppLanguage(); // Initialize translations using correct currentView
+            try {
+                if (rPath === '/' || rPath === '/home') {
+                    await renderHome();
+                } else if (rPath.startsWith('/tasks')) {
+                    await renderTasks();
+                } else if (rPath.startsWith('/calendar')) {
+                    await renderCalendar();
+                } else if (rPath.startsWith('/stundenplan')) {
+                    await renderStundenplan();
+                } else if (rPath.startsWith('/grades')) {
+                    await renderGrades();
+                } else if (rPath.startsWith('/flashcards')) {
+                    await loadScript('/static/flashcards.js?v=2.1.1');
+                    await renderFlashcards();
+                } else if (rPath.startsWith('/settings')) {
+                    if (rPath === '/settings/password') await renderChangePassword();
+                    else if (rPath === '/settings/notifications') await renderNotificationSettings();
+                    else await renderSettingsPage();
+                } else if (rPath === '/account') {
+                    await renderAccountHub();
+                } else if (rPath.startsWith('/admin')) {
+                    if (rPath === '/admin') await renderAdminMenu();
+                    else if (rPath.startsWith('/admin/users')) await renderUserManagement(relevantPath.split('/').pop());
+                    else if (rPath.startsWith('/admin/activity')) await renderActivityLog(relevantPath.split('/').pop());
+                    else if (rPath.startsWith('/admin/subjects')) await renderSubjectManagement(relevantPath.split('/').pop());
+                    else if (rPath.startsWith('/admin/classes')) await renderSchoolClassManagement();
+                    else if (rPath === '/admin/drive') {
+                        await loadScript('/static/drive.js?v=2.1.1');
+                        await renderDriveManagement();
+                    } else if (rPath === '/admin/blackboard') {
+                        await renderBlackboardManagement();
+                    } else {
+                        await renderAdminMenu();
+                    }
+                } else if (rPath.startsWith('/superadmin')) {
+                    if (rPath === '/superadmin/shared') await renderSharedContentManagement();
+                    else await renderSuperAdminDashboard();
+                } else if (rPath.startsWith('/drive')) {
+                    await loadScript('/static/drive.js?v=2.1.1');
+                    if (rPath.startsWith('/drive/folder/')) {
+                        const parts = rPath.split('/');
+                        const folderId = parts[3];
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const googleId = urlParams.get('fid');
 
-
-            // Update Navigation Active State
-            let activeViewForNav = currentView;
-            if (currentView.startsWith('settings')) activeViewForNav = 'account';
-
-            const sidebarLinks = Array.from(document.querySelectorAll('#side-nav-primary .nav-link:not(#side-more-trigger)'));
-            const hiddenSidebarIds = sidebarLinks
-                .filter(link => link.style.display === 'none')
-                .map(link => link.getAttribute('data-nav-id'));
-
-            const isMobileMore = !['home', 'tasks', 'calendar'].includes(activeViewForNav) && activeViewForNav !== 'account' && !activeViewForNav.startsWith('sub_') && !activeViewForNav.includes('settings');
-            const isSidebarMore = hiddenSidebarIds.includes(activeViewForNav);
-
-            const moreBtnMobile = document.getElementById('nav-more');
-            const moreBtnSidebar = document.getElementById('side-more-trigger');
-
-            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-
-            if (moreBtnMobile && isMobileMore) moreBtnMobile.classList.add('active');
-            if (moreBtnSidebar && isSidebarMore) moreBtnSidebar.classList.add('active');
-
-            // Apply active class to direct links matching the view
-            document.querySelectorAll(`.nav-link[onclick*="'${activeViewForNav}'"]`).forEach(l => l.classList.add('active'));
-
-            const rPath = relevantPath.toLowerCase();
-            console.log(`[Router] View: ${initialView}, RelevantPath: ${relevantPath}, RPath: ${rPath}`);
-
-            if (rPath === '/' || rPath === '/home') renderHome();
-            else if (rPath.startsWith('/tasks')) renderTasks();
-            else if (rPath.startsWith('/calendar')) renderCalendar();
-            else if (rPath.startsWith('/stundenplan')) renderStundenplan();
-            else if (rPath.startsWith('/grades')) renderGrades();
-            else if (rPath.startsWith('/flashcards')) {
-                await loadScript('/static/flashcards.js?v=2.1.1');
-                renderFlashcards();
-            }
-            else if (rPath === '/settings') renderSettingsPage();
-            else if (rPath === '/settings/password') renderChangePassword();
-            else if (rPath === '/settings/notifications') renderNotificationSettings();
-            else if (rPath === '/account') renderAccountHub();
-            else if (rPath === '/admin') renderAdminMenu();
-            else if (rPath === '/admin/users') renderUserManagement();
-            else if (rPath.startsWith('/admin/users/')) renderUserManagement(relevantPath.split('/').pop());
-            else if (rPath === '/admin/activity') renderActivityLog();
-            else if (rPath.startsWith('/admin/activity/')) renderActivityLog(relevantPath.split('/').pop());
-            else if (rPath === '/admin/subjects') renderSubjectManagement();
-            else if (rPath.startsWith('/admin/subjects/')) renderSubjectManagement(relevantPath.split('/').pop());
-            else if (rPath === '/admin/classes') renderSchoolClassManagement();
-            else if (rPath.startsWith('/admin/classes/')) renderSingleClassAdmin(relevantPath.split('/').pop(), 'Klasse');
-            else if (rPath === '/superadmin') renderSuperAdminDashboard();
-            else if (rPath === '/superadmin/shared') renderSharedContentManagement();
-            else if (rPath.includes('/settings') && rPath.includes('/admin/classes/')) {
-                const parts = relevantPath.split('/');
-                const id = parts[parts.indexOf('classes') + 1];
-                renderClassSettings(id);
-            }
-            else if (rPath.startsWith('/subject/')) {
-                const sub = decodeURIComponent(relevantPath.split('/').pop());
-                renderSubjectDetails(sub, '?', '[]');
-            }
-            else if (rPath === '/admin/untis') renderUntisConfig();
-            else if (rPath === '/admin/drive') {
-                await loadScript('/static/drive.js?v=2.1.1');
-                renderDriveManagement();
-            }
-            else if (rPath === '/admin/blackboard') renderBlackboardManagement();
-            else if (rPath.startsWith('/drive')) {
-                await loadScript('/static/drive.js?v=2.1.1');
-                if (rPath.startsWith('/drive/folder/')) {
-                    const parts = relevantPath.split('/');
-                    // /drive/folder/ID/Name
-                    const folderId = parts[3];
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const googleId = urlParams.get('fid');
-
-                    renderDrive().then(async () => {
+                        await renderDrive();
                         try {
                             const res = await fetch('/api/drive/folders');
                             const folders = await res.json();
-                            // Handle both array and object responses
                             const items = Array.isArray(folders) ? folders : (folders.folders || folders.items || []);
                             const f = items.find(x => x.id == folderId || x.folder_id == folderId);
                             if (f) {
@@ -8652,22 +8634,25 @@
                                 openDriveFolder(googleId, 'Ordner');
                             }
                         } catch (e) {
-                            console.error("Restore drive state failed", e);
+                            console.error("[Router] Restore drive state failed", e);
                         }
-                    });
+                    } else {
+                        await renderDrive();
+                    }
+                } else if (rPath.startsWith('/mealplan')) {
+                    await renderMealPlan();
+                } else if (rPath.startsWith('/blackboard')) {
+                    await renderBlackboard();
                 } else {
-                    renderDrive();
+                    console.warn(`[Router] No route matched rPath: ${rPath}, falling back to home.`);
+                    await renderHome();
                 }
-            } else if (rPath.startsWith('/mealplan')) {
-                renderMealPlan();
-            } else if (rPath.startsWith('/blackboard')) {
-                renderBlackboard();
-            } else {
-                console.warn(`[Router] No route matched rPath: ${rPath}, falling back to home.`);
-                renderHome();
+            } catch (err) {
+                console.error("[Router] Error during initial load routing:", err);
+                await renderHome();
             }
 
-            updateFabVisibility(initialView);
+            updateFabVisibility(currentView);
 
             setTimeout(() => {
                 if (window.lucide) lucide.createIcons();
