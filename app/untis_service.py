@@ -15,7 +15,10 @@ def get_week_start(d):
 def fetch_timetable_live(creds, target_date):
     """Internal helper to fetch data from Untis API"""
     try:
-        server_url = creds.server.strip().replace('https://', '').replace('http://', '').split('/')[0]
+        # Safely extract server URL
+        server_url = creds.server.strip().replace('https://', '').replace('http://', '')
+        parts = server_url.split('/')
+        server_url = parts[0] if parts else server_url
         school_name = creds.school.strip()
         
         s = webuntis.Session(
@@ -47,17 +50,22 @@ def fetch_timetable_live(creds, target_date):
         
         results = []
         for period in timetable_data:
+            # Safely handle potentially empty lists
+            subjects = getattr(period, 'subjects', [])
+            teachers = getattr(period, 'teachers', [])
+            rooms = getattr(period, 'rooms', [])
+            
             results.append({
                 'id': period.id,
                 'start': period.start.isoformat(),
                 'end': period.end.isoformat(),
-                'subjects': [{'name': sub.name, 'long_name': sub.long_name} for sub in period.subjects],
-                'teachers': [{'name': t.name, 'long_name': t.long_name} for t in period.teachers],
-                'rooms': [{'name': r.name, 'long_name': r.long_name} for r in period.rooms],
-                'code': period.code,
-                'substText': getattr(period, 'substText', ""),
-                'activityType': getattr(period, 'activityType', ""),
-                'bkText': getattr(period, 'bkText', "")
+                'subjects': [{'name': sub.name, 'long_name': getattr(sub, 'long_name', sub.name)} for sub in subjects] if subjects else [],
+                'teachers': [{'name': t.name, 'long_name': getattr(t, 'long_name', t.name)} for t in teachers] if teachers else [],
+                'rooms': [{'name': r.name, 'long_name': getattr(r, 'long_name', r.name)} for r in rooms] if rooms else [],
+                'code': getattr(period, 'code', ''),
+                'substText': getattr(period, 'substText', ''),
+                'activityType': getattr(period, 'activityType', ''),
+                'bkText': getattr(period, 'bkText', '')
             })
             
         s.logout()
