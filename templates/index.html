@@ -16,8 +16,6 @@
     <link rel="apple-touch-icon" href="/static/icon-192.png">
     <link rel="icon" href="/static/icon-192.png">
     <script src="/static/translations.js?v=2.1.1"></script>
-    <script src="/static/drive.js?v=2.1.1"></script>
-    <script src="/static/flashcards.js?v=2.1.1"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         // Global Fetch Wrapper for CSRF
@@ -2673,6 +2671,28 @@
             }
         }
 
+        // ============================================
+        // DYNAMIC SCRIPT LOADER
+        // ============================================
+        const loadedScripts = new Set();
+
+        async function loadScript(src) {
+            if (loadedScripts.has(src)) {
+                return Promise.resolve();
+            }
+
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    loadedScripts.add(src);
+                    resolve();
+                };
+                script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+                document.head.appendChild(script);
+            });
+        }
+
         async function navigate(view, el, title) {
             if (view === currentView) return;
 
@@ -2750,15 +2770,22 @@
                     window.isPoppingState = false;
 
                     // Render (Awaited to ensure lucide has something to process)
+                    // Load required scripts dynamically before rendering
                     if (view === 'tasks') await renderTasks();
                     else if (view === 'calendar') await renderCalendar();
                     else if (view === 'stundenplan') await renderStundenplan();
                     else if (view === 'home') await renderHome();
                     else if (view === 'grades') await renderGrades();
-                    else if (view === 'flashcards') await renderFlashcards();
+                    else if (view === 'flashcards') {
+                        await loadScript('/static/flashcards.js?v=2.1.1');
+                        await renderFlashcardsView();
+                    }
                     else if (view === 'settings') await renderSettingsPage();
                     else if (view === 'account') await renderAccountHub();
-                    else if (view === 'drive') await renderDrive();
+                    else if (view === 'drive') {
+                        await loadScript('/static/drive.js?v=2.1.1');
+                        await renderDrive();
+                    }
                     else if (view === 'mealplan') await renderMealPlan();
                     else if (view === 'blackboard') await renderBlackboard();
                     else if (view === 'sub_admin_menu' || view === 'sub_admin') await renderAdminMenu();
@@ -3456,6 +3483,7 @@
 
 
         async function renderDriveAuthSettings() {
+            await loadScript('/static/drive.js?v=2.1.1');
             previousView = 'sub_super_admin';
             currentView = 'sub_drive_auth';
             setPageTitle('Google Drive Auth');
@@ -8005,6 +8033,7 @@
 
 
         async function renderDriveManagement() {
+            await loadScript('/static/drive.js?v=2.1.1');
             setPageTitle('Drive Verwaltung');
             currentView = 'sub_drive_mgmt';
             document.getElementById('header-back-btn').style.display = 'block';

@@ -6,6 +6,7 @@
 class DriveManager {
     constructor() {
         this.authenticated = false;
+        this.authMethod = 'oauth'; // Default
         this.currentFolderId = null;
         this.currentPageToken = null;
         this.history = [];
@@ -16,6 +17,7 @@ class DriveManager {
             const response = await fetch('/api/drive/auth/status');
             const data = await response.json();
             this.authenticated = data.authenticated || false;
+            this.authMethod = data.method || 'oauth';
             return this.authenticated;
         } catch (error) {
             console.error('Error checking auth status:', error);
@@ -24,7 +26,7 @@ class DriveManager {
         }
     }
 
-    async startAuth() {
+    async startOAuth() {
         try {
             const response = await fetch('/api/drive/auth/start');
             const data = await response.json();
@@ -52,10 +54,9 @@ class DriveManager {
                                     showToast('✅ Google Drive verbunden!', 'success');
                                 }
                                 // Reload current view if it's drive-related
-                                if (typeof currentView !== 'undefined' && currentView.includes('drive')) {
-                                    if (typeof renderDrive === 'function') {
-                                        renderDrive();
-                                    }
+                                if (typeof currentView !== 'undefined' && (currentView === 'drive' || currentView === 'sub_drive_auth')) {
+                                    if (currentView === 'drive') renderDrive();
+                                    else if (currentView === 'sub_drive_auth') renderDriveAuthSettings();
                                 }
                             }
                         });
@@ -101,6 +102,9 @@ class DriveManager {
             const response = await fetch(url);
             const data = await response.json();
 
+            this.currentPageToken = data.nextPageToken || null;
+            this.currentFolderId = parentId;
+
             return {
                 files: data.items || [],
                 nextPageToken: data.nextPageToken || null
@@ -111,10 +115,16 @@ class DriveManager {
         }
     }
 
+    async loadMoreFiles() {
+        if (!this.currentPageToken) return { files: [], nextPageToken: null };
+        return this.loadFiles(this.currentFolderId, this.currentPageToken);
+    }
+
     async searchFiles(query) {
         try {
             const response = await fetch(`/api/drive/search?q=${encodeURIComponent(query)}`);
             const data = await response.json();
+            this.currentPageToken = null; // No pagination in search results currently
             return data.files || [];
         } catch (error) {
             console.error('Error searching files:', error);
@@ -154,9 +164,36 @@ class DriveManager {
             return null;
         }
     }
+
+    getFileIcon(mimeType) {
+        if (!mimeType) return 'file';
+        if (mimeType.includes('folder')) return 'folder';
+        if (mimeType.includes('pdf')) return 'file-text';
+        if (mimeType.includes('image')) return 'image';
+        if (mimeType.includes('video')) return 'video';
+        if (mimeType.includes('audio')) return 'music';
+        if (mimeType.includes('word') || mimeType.includes('document')) return 'file-text';
+        if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'file-spreadsheet';
+        if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'monitor';
+        return 'file';
+    }
+
+    formatDate(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    formatFileSize(bytes) {
+        if (!bytes) return '';
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        if (bytes === 0) return '0 B';
+        const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+        return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+    }
 }
 
 // Create global instance
-const driveManager = new DriveManager();
+window.driveManager = new DriveManager();
 
 console.log('Drive Manager initialized');
