@@ -89,10 +89,14 @@ async function openDeck(deckId) {
         currentCards = deck.cards || [];
         dueCards = currentCards.filter(c => c.is_due);
 
-        previousView = currentView;
-        currentView = 'deck-detail';
-        updateBackButton();
-        updatePageTitle(deck.title);
+        // Update view state
+        if (typeof previousView !== 'undefined' && typeof currentView !== 'undefined') {
+            previousView = currentView;
+            currentView = 'deck-detail';
+        }
+        if (typeof setPageTitle === 'function') {
+            setPageTitle(deck.title);
+        }
 
         const isOwner = deck.is_own;
 
@@ -202,10 +206,14 @@ function startStudyMode(mode) {
     currentCardIndex = 0;
     isCardFlipped = false;
 
-    previousView = 'deck-detail';
-    currentView = 'study';
-    updateBackButton();
-    updatePageTitle(`${currentDeck.title} - Lernen`);
+    // Update view state
+    if (typeof previousView !== 'undefined' && typeof currentView !== 'undefined') {
+        previousView = 'deck-detail';
+        currentView = 'study';
+    }
+    if (typeof setPageTitle === 'function') {
+        setPageTitle(`${currentDeck.title} - Lernen`);
+    }
 
     // Hide bottom nav, show study nav
     document.querySelector('.bottom-nav').style.display = 'none';
@@ -359,35 +367,7 @@ function endStudySession() {
 
 function previewCard(index) {
     const card = currentCards[index];
-
-    openSheet(`
-        <div class="sheet-header">
-            <h3 style="margin:0; font-size:20px; font-weight:700;">Kartenvorschau</h3>
-            <div class="sheet-close-btn" onclick="closeSheet()">
-                <i data-lucide="x"></i>
-            </div>
-        </div>
-        
-        <div style="margin-bottom:20px;">
-            <label style="display:block; font-size:13px; font-weight:600; color:var(--text-sec); margin-bottom:8px; text-transform:uppercase;">
-                Vorderseite
-            </label>
-            <div style="background:var(--tab-bg); padding:16px; border-radius:12px; min-height:80px; font-size:16px;">
-                ${escapeHtml(card.front)}
-            </div>
-        </div>
-        
-        <div>
-            <label style="display:block; font-size:13px; font-weight:600; color:var(--text-sec); margin-bottom:8px; text-transform:uppercase;">
-                Rückseite
-            </label>
-            <div style="background:var(--tab-bg); padding:16px; border-radius:12px; min-height:80px; font-size:16px;">
-                ${escapeHtml(card.back)}
-            </div>
-        </div>
-    `);
-
-    lucide.createIcons();
+    alert(`Vorderseite:\n${card.front}\n\nRückseite:\n${card.back}`);
 }
 
 // ============================================
@@ -395,40 +375,16 @@ function previewCard(index) {
 // ============================================
 
 function openCreateDeckSheet() {
-    openSheet(`
-        <div class="sheet-header">
-            <h3 style="margin:0; font-size:20px; font-weight:700;">Neues Deck erstellen</h3>
-            <div class="sheet-close-btn" onclick="closeSheet()">
-                <i data-lucide="x"></i>
-            </div>
-        </div>
-        
-        <input type="text" id="deck-title" class="ios-input" placeholder="Deck-Titel" required>
-        <textarea id="deck-description" class="ios-input" placeholder="Beschreibung (optional)" rows="3"></textarea>
-        
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px; background:var(--tab-bg); border-radius:12px; margin-bottom:15px;">
-            <span style="font-weight:600;">Öffentlich teilen</span>
-            <div class="ios-toggle" id="deck-public-toggle" onclick="this.classList.toggle('active')">
-                <div class="ios-toggle-knob"></div>
-            </div>
-        </div>
-        
-        <button class="ios-btn" onclick="createDeck()">Deck erstellen</button>
-    `);
+    const title = prompt('Deck-Titel:');
+    if (!title || !title.trim()) return;
 
-    lucide.createIcons();
+    const description = prompt('Beschreibung (optional):') || '';
+    const isPublic = confirm('Soll das Deck öffentlich geteilt werden?');
+
+    createDeck(title.trim(), description.trim(), isPublic);
 }
 
-async function createDeck() {
-    const title = document.getElementById('deck-title').value.trim();
-    const description = document.getElementById('deck-description').value.trim();
-    const isPublic = document.getElementById('deck-public-toggle').classList.contains('active');
-
-    if (!title) {
-        showToast('Bitte gib einen Titel ein', 'error');
-        return;
-    }
-
+async function createDeck(title, description, isPublic) {
     try {
         const response = await fetch('/api/decks', {
             method: 'POST',
@@ -438,16 +394,29 @@ async function createDeck() {
 
         const data = await response.json();
 
-        if (data.success) {
-            showToast('Deck erstellt!', 'success');
-            closeSheet();
-            openDeck(data.id);
+        if (response.ok && data.id) {
+            if (typeof showToast === 'function') {
+                showToast('Deck erstellt!', 'success');
+            } else {
+                alert('Deck erstellt!');
+            }
+            // Reload deck list and open new deck
+            await renderFlashcardsView();
+            setTimeout(() => openDeck(data.id), 100);
         } else {
-            showToast(data.error || 'Fehler beim Erstellen', 'error');
+            if (typeof showToast === 'function') {
+                showToast(data.error || 'Fehler beim Erstellen', 'error');
+            } else {
+                alert(data.error || 'Fehler beim Erstellen');
+            }
         }
     } catch (error) {
         console.error('Error creating deck:', error);
-        showToast('Fehler beim Erstellen', 'error');
+        if (typeof showToast === 'function') {
+            showToast('Fehler beim Erstellen', 'error');
+        } else {
+            alert('Fehler beim Erstellen');
+        }
     }
 }
 
@@ -456,39 +425,16 @@ async function createDeck() {
 // ============================================
 
 function openAddCardSheet(deckId) {
-    openSheet(`
-        <div class="sheet-header">
-            <h3 style="margin:0; font-size:20px; font-weight:700;">Neue Karte hinzufügen</h3>
-            <div class="sheet-close-btn" onclick="closeSheet()">
-                <i data-lucide="x"></i>
-            </div>
-        </div>
-        
-        <label style="display:block; font-size:13px; font-weight:600; color:var(--text-sec); margin-bottom:8px;">
-            Vorderseite (Frage)
-        </label>
-        <textarea id="card-front" class="ios-input" placeholder="Was möchtest du lernen?" rows="4" required></textarea>
-        
-        <label style="display:block; font-size:13px; font-weight:600; color:var(--text-sec); margin-bottom:8px;">
-            Rückseite (Antwort)
-        </label>
-        <textarea id="card-back" class="ios-input" placeholder="Die Antwort..." rows="4" required></textarea>
-        
-        <button class="ios-btn" onclick="addCard(${deckId})">Karte hinzufügen</button>
-    `);
+    const front = prompt('Vorderseite (Frage):');
+    if (!front || !front.trim()) return;
 
-    lucide.createIcons();
+    const back = prompt('Rückseite (Antwort):');
+    if (!back || !back.trim()) return;
+
+    addCard(deckId, front.trim(), back.trim());
 }
 
-async function addCard(deckId) {
-    const front = document.getElementById('card-front').value.trim();
-    const back = document.getElementById('card-back').value.trim();
-
-    if (!front || !back) {
-        showToast('Bitte fülle beide Seiten aus', 'error');
-        return;
-    }
-
+async function addCard(deckId, front, back) {
     try {
         const response = await fetch(`/api/decks/${deckId}/cards`, {
             method: 'POST',
@@ -498,16 +444,27 @@ async function addCard(deckId) {
 
         const data = await response.json();
 
-        if (data.success) {
-            showToast('Karte hinzugefügt!', 'success');
-            closeSheet();
+        if (data.success || response.ok) {
+            if (typeof showToast === 'function') {
+                showToast('Karte hinzugefügt!', 'success');
+            } else {
+                alert('Karte hinzugefügt!');
+            }
             openDeck(deckId);
         } else {
-            showToast(data.error || 'Fehler beim Hinzufügen', 'error');
+            if (typeof showToast === 'function') {
+                showToast(data.error || 'Fehler beim Hinzufügen', 'error');
+            } else {
+                alert(data.error || 'Fehler beim Hinzufügen');
+            }
         }
     } catch (error) {
         console.error('Error adding card:', error);
-        showToast('Fehler beim Hinzufügen', 'error');
+        if (typeof showToast === 'function') {
+            showToast('Fehler beim Hinzufügen', 'error');
+        } else {
+            alert('Fehler beim Hinzufügen');
+        }
     }
 }
 
@@ -544,41 +501,16 @@ async function deleteCard(cardId) {
 function openDeckSettings(deckId) {
     const deck = currentDeck;
 
-    openSheet(`
-        <div class="sheet-header">
-            <h3 style="margin:0; font-size:20px; font-weight:700;">Deck-Einstellungen</h3>
-            <div class="sheet-close-btn" onclick="closeSheet()">
-                <i data-lucide="x"></i>
-            </div>
-        </div>
-        
-        <input type="text" id="edit-deck-title" class="ios-input" placeholder="Deck-Titel" value="${escapeHtml(deck.title)}" required>
-        <textarea id="edit-deck-description" class="ios-input" placeholder="Beschreibung (optional)" rows="3">${escapeHtml(deck.description || '')}</textarea>
-        
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:16px; background:var(--tab-bg); border-radius:12px; margin-bottom:15px;">
-            <span style="font-weight:600;">Öffentlich teilen</span>
-            <div class="ios-toggle ${deck.is_public ? 'active' : ''}" id="edit-deck-public-toggle" onclick="this.classList.toggle('active')">
-                <div class="ios-toggle-knob"></div>
-            </div>
-        </div>
-        
-        <button class="ios-btn" onclick="updateDeck(${deckId})" style="margin-bottom:10px;">Speichern</button>
-        <button class="ios-btn btn-danger-light" onclick="deleteDeck(${deckId})">Deck löschen</button>
-    `);
+    const newTitle = prompt('Deck-Titel:', deck.title);
+    if (!newTitle || !newTitle.trim()) return;
 
-    lucide.createIcons();
+    const newDescription = prompt('Beschreibung:', deck.description || '');
+    const isPublic = confirm('Soll das Deck öffentlich geteilt werden?');
+
+    updateDeck(deckId, newTitle.trim(), newDescription.trim(), isPublic);
 }
 
-async function updateDeck(deckId) {
-    const title = document.getElementById('edit-deck-title').value.trim();
-    const description = document.getElementById('edit-deck-description').value.trim();
-    const isPublic = document.getElementById('edit-deck-public-toggle').classList.contains('active');
-
-    if (!title) {
-        showToast('Bitte gib einen Titel ein', 'error');
-        return;
-    }
-
+async function updateDeck(deckId, title, description, isPublic) {
     try {
         const response = await fetch(`/api/decks/${deckId}`, {
             method: 'PUT',
@@ -588,16 +520,27 @@ async function updateDeck(deckId) {
 
         const data = await response.json();
 
-        if (data.success) {
-            showToast('Deck aktualisiert!', 'success');
-            closeSheet();
+        if (data.success || response.ok) {
+            if (typeof showToast === 'function') {
+                showToast('Deck aktualisiert!', 'success');
+            } else {
+                alert('Deck aktualisiert!');
+            }
             openDeck(deckId);
         } else {
-            showToast(data.error || 'Fehler beim Aktualisieren', 'error');
+            if (typeof showToast === 'function') {
+                showToast(data.error || 'Fehler beim Aktualisieren', 'error');
+            } else {
+                alert(data.error || 'Fehler beim Aktualisieren');
+            }
         }
     } catch (error) {
         console.error('Error updating deck:', error);
-        showToast('Fehler beim Aktualisieren', 'error');
+        if (typeof showToast === 'function') {
+            showToast('Fehler beim Aktualisieren', 'error');
+        } else {
+            alert('Fehler beim Aktualisieren');
+        }
     }
 }
 
@@ -611,16 +554,32 @@ async function deleteDeck(deckId) {
 
         const data = await response.json();
 
-        if (data.success) {
-            showToast('Deck gelöscht', 'success');
-            closeSheet();
-            navigate('flashcards', null, 'Lernkarten');
+        if (data.success || response.ok) {
+            if (typeof showToast === 'function') {
+                showToast('Deck gelöscht', 'success');
+            } else {
+                alert('Deck gelöscht');
+            }
+            // Navigate back to flashcards list
+            if (typeof navigate === 'function') {
+                navigate('flashcards', null, 'Lernkarten');
+            } else {
+                renderFlashcardsView();
+            }
         } else {
-            showToast(data.error || 'Fehler beim Löschen', 'error');
+            if (typeof showToast === 'function') {
+                showToast(data.error || 'Fehler beim Löschen', 'error');
+            } else {
+                alert(data.error || 'Fehler beim Löschen');
+            }
         }
     } catch (error) {
         console.error('Error deleting deck:', error);
-        showToast('Fehler beim Löschen', 'error');
+        if (typeof showToast === 'function') {
+            showToast('Fehler beim Löschen', 'error');
+        } else {
+            alert('Fehler beim Löschen');
+        }
     }
 }
 
