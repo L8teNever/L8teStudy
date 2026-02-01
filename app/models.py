@@ -40,6 +40,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default=UserRole.STUDENT)
     class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True) # Super admins don't need a class
     dark_mode = db.Column(db.Boolean, default=False)
+    theme = db.Column(db.String(32), default='standard')
     language = db.Column(db.String(5), default='de')
     needs_password_change = db.Column(db.Boolean, default=True) # Forced for new users
     has_seen_tutorial = db.Column(db.Boolean, default=False)

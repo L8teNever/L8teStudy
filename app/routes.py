@@ -1689,10 +1689,21 @@ def get_notification_settings():
 @login_required
 def update_theme():
     data = request.get_json()
-    if data and 'dark_mode' in data:
-        current_user.dark_mode = data['dark_mode']
+    if not data:
+        return jsonify({'success': False}), 400
+        
+    if 'theme' in data:
+        current_user.theme = data['theme']
+        # For backward compatibility, map 'dark' to dark_mode=True
+        current_user.dark_mode = (data['theme'] == 'dark')
         db.session.commit()
         return jsonify({'success': True})
+    elif 'dark_mode' in data:
+        current_user.dark_mode = data['dark_mode']
+        current_user.theme = 'dark' if data['dark_mode'] else 'standard'
+        db.session.commit()
+        return jsonify({'success': True})
+        
     return jsonify({'success': False}), 400
 
 @api_bp.route('/settings/language', methods=['POST'])

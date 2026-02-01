@@ -348,6 +348,9 @@ def create_app():
                     if 'has_accepted_privacy' not in cols:
                         app.logger.info("Migrating: Adding has_accepted_privacy to user")
                         conn.execute(text("ALTER TABLE user ADD COLUMN has_accepted_privacy BOOLEAN DEFAULT 0"))
+                    if 'theme' not in cols:
+                        app.logger.info("Migrating: Adding theme to user")
+                        conn.execute(text("ALTER TABLE user ADD COLUMN theme VARCHAR(32) DEFAULT 'standard'"))
                     conn.commit()
         except Exception as e:
             app.logger.error(f"User schema migration error: {e}")

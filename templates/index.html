@@ -44,7 +44,10 @@
         window.appVersion = "{{ version }}";
     </script>
     <style>
-        :root {
+        /* Theme Variables */
+        :root,
+        [data-theme="standard"],
+        [data-theme="light"] {
             --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
             --card-bg: rgba(255, 255, 255, 0.7);
             --text-main: #000000;
@@ -67,6 +70,14 @@
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             --tab-bg: rgba(255, 255, 255, 0.1);
         }
+
+        /* Add more themes here easily:
+        [data-theme="ocean"] {
+            --bg-gradient: linear-gradient(135deg, #004e92 0%, #000428 100%);
+            --accent: #00d2ff;
+            ...
+        }
+        */
 
         * {
             box-sizing: border-box;
@@ -2249,7 +2260,7 @@
     </style>
 </head>
 
-<body data-theme="{{ 'dark' if user.dark_mode else 'light' }}">
+<body data-theme="{{ user.theme or ('dark' if user.dark_mode else 'standard') }}">
     <a href="#app-container" class="skip-link">Zum Hauptinhalt springen</a>
 
     <nav class="side-nav" aria-label="Hauptnavigation">
@@ -2406,6 +2417,7 @@
             name: "{{ user.username }}",
             email: "{{ user.username }}@l8testudy.app",
             darkMode: "{{ 'true' if user.dark_mode else 'false' }}" === 'true',
+            theme: "{{ user.theme or 'standard' }}",
             language: "{{ user.language }}" || 'de',
             is_admin: "{{ 'true' if user.is_admin else 'false' }}" === 'true',
             is_super_admin: "{{ 'true' if user.is_super_admin else 'false' }}" === 'true',
@@ -2617,25 +2629,54 @@
             else if (currentView === 'sub_admin_menu') renderAdminMenu();
         }
 
-        async function toggleTheme() {
-            const body = document.body;
-            const isDark = body.getAttribute('data-theme') === 'dark';
-            const nextMode = !isDark;
-            body.setAttribute('data-theme', nextMode ? 'dark' : 'light');
+        function renderThemeSelection() {
+            const currentTheme = window.currentUser?.theme || 'standard';
+            const themes = [
+                { id: 'standard', name: 'Standard' },
+                { id: 'dark', name: 'Dunkel' }
+            ];
 
-            // Persist to server
+            document.getElementById('sheet-content').innerHTML = `
+                <div class="sheet-header">
+                    <h3 style="margin:0">${t('theme')}</h3>
+                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
+                </div>
+                ${themes.map(th => `
+                    <div class="account-item" onclick="setTheme('${th.id}')" style="cursor:pointer;">
+                        <div class="account-item-text">${th.name}</div>
+                        ${currentTheme === th.id ? '<i data-lucide="check" style="color:var(--accent); width:20px;"></i>' : ''}
+                    </div>
+                `).join('')}
+            `;
+            openSheetOverlay();
+            lucide.createIcons();
+        }
+
+        async function setTheme(themeId) {
+            document.body.setAttribute('data-theme', themeId);
+            localStorage.setItem('l8te_theme', themeId);
+            if (window.currentUser) {
+                window.currentUser.theme = themeId;
+                window.currentUser.darkMode = (themeId === 'dark');
+            }
+
             try {
                 await fetch('/api/settings/theme', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dark_mode: nextMode })
+                    body: JSON.stringify({ theme: themeId })
                 });
-                if (window.currentUser) window.currentUser.darkMode = nextMode;
             } catch (e) {
-                console.error("Failed to sync theme to server:", e);
+                console.error("Failed to sync theme:", e);
             }
 
+            closeSheet();
             if (currentView === 'settings') renderSettingsPage();
+        }
+
+        async function toggleTheme() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            await setTheme(isDark ? 'standard' : 'dark');
         }
 
         function goBackToPrevious() {
@@ -4583,15 +4624,18 @@
 
             document.getElementById('header-back-btn').onclick = () => { window.history.back(); };
 
-            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const currentTheme = window.currentUser?.theme || 'standard';
             const savedLang = localStorage.getItem('l8te_lang') || 'de';
 
             document.getElementById('app-container').innerHTML = `
                 <div class="floating-card">
                     <h4 style="margin:0 0 15px 0; font-size:17px; color:var(--accent);">${t('appearance')} & ${t('notifications')}</h4>
-                    <div class="account-item" onclick="toggleTheme()">
-                        <div class="account-item-text">${t('darkmode')}</div>
-                        <div class="ios-toggle ${isDark ? 'active' : ''}"><div class="ios-toggle-knob"></div></div>
+                    <div class="account-item" onclick="renderThemeSelection()">
+                        <div class="account-item-text">${t('theme')}</div>
+                        <div style="display:flex; align-items:center;">
+                            <span style="color:var(--text-sec); margin-right:10px; font-size:15px;" id="current-theme-display">${currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1)}</span>
+                            <i data-lucide="chevron-right" style="width:18px; color:var(--text-sec)"></i>
+                        </div>
                     </div>
                     <div class="account-item" onclick="renderNotificationSettings()">
                         <div class="account-item-text">${t('notifications')}</div>

@@ -108,9 +108,17 @@
             display: none;
         }
     </style>
+    <script>
+        // Apply theme early to prevent flash
+        const savedTheme = localStorage.getItem('l8te_theme') || 'standard';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.setAttribute('data-theme', savedTheme);
+        });
+    </script>
 </head>
 
-<body data-theme="light">
+<body data-theme="standard">
     <div class="login-card">
         <h1>{{ class_name if class_name else t('login_title') }}</h1>
         <p>{{ 'Login für ' + class_name if class_name else t('welcome_msg') }}</p>
