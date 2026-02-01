@@ -4114,43 +4114,47 @@
             currentView = 'calendar';
             currentCalendarTab = tab;
             const container = document.getElementById('app-container');
-            container.innerHTML = `
-                <div class="controls-row ${isSearchActive ? 'search-active' : ''}">
-                    <!-- Tab Bar -->
-                    <div class="tab-bar">
-                        <button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">${t('events')}</button>
-                        <button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">${t('month')}</button>
-                    </div>
-                     <!-- Search Button/Bar -->
-                     <div class="search-container ${isSearchActive ? 'active' : ''}" onclick="if(!isSearchActive) toggleSearch(event)">
-                        <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
-                        <input type="text" class="search-input" placeholder="${t('search')}">
-                        <div class="search-close-btn" onmousedown="toggleSearch(event, false)">${t('cancel')}</div>
-                    </div>
-                </div>
-                <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}</div>`;
-            lucide.createIcons();
 
-            // Re-attach search listener if active
-            if (isSearchActive) {
-                const searchInput = document.querySelector('.search-input');
-                if (searchInput) {
-                    searchInput.addEventListener('input', filterEvents);
-                    // If searching, keep focus in a real-world app, but here we just re-rendered.
-                    // The toggleSearch logic might need refinement for focus persistence, but this is functional.
-                }
+            // Re-render scaffold if it doesn't match current layout
+            // This prevents redundant fetch when just switching months or if already in calendar
+            const hasScaffold = document.getElementById('calendar-content') !== null;
+            if (!hasScaffold) {
+                container.innerHTML = `
+                    <div class="controls-row ${isSearchActive ? 'search-active' : ''}">
+                        <!-- Tab Bar -->
+                        <div class="tab-bar">
+                            <button class="tab-btn ${tab === 'termine' ? 'active' : ''}" onclick="renderCalendar('termine')">${t('events')}</button>
+                            <button class="tab-btn ${tab === 'monat' ? 'active' : ''}" onclick="renderCalendar('monat')">${t('month')}</button>
+                        </div>
+                         <!-- Search Button/Bar -->
+                         <div class="search-container ${isSearchActive ? 'active' : ''}" onclick="if(!isSearchActive) toggleSearch(event)">
+                            <div class="search-icon-box"><i data-lucide="search" style="width:20px"></i></div>
+                            <input type="text" class="search-input" placeholder="${t('search')}">
+                            <div class="search-close-btn" onmousedown="toggleSearch(event, false)">${t('cancel')}</div>
+                        </div>
+                    </div>
+                    <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}</div>`;
+                lucide.createIcons();
+            } else {
+                // Update active tab button style
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.innerText === t(tab === 'termine' ? 'events' : 'month'));
+                });
             }
 
             try {
-                let query = '';
-                if (window.currentUser?.class_id) query = `?class_id=${window.currentUser.class_id}`;
-                const response = await fetch(`/api/events${query}`);
-                const events = await response.json();
+                // Use cached events if available to speed up navigation
+                let events = cachedEvents;
+                if (!events.length || !hasScaffold) {
+                    let query = '';
+                    if (window.currentUser?.class_id) query = `?class_id=${window.currentUser.class_id}`;
+                    const response = await fetch(`/api/events${query}`);
+                    events = await response.json();
+                    cachedEvents = events;
+                }
 
                 // Safety check: if view changed while fetching, abort
                 if (currentView !== 'calendar') return;
-
-                cachedEvents = events;
 
                 if (tab === 'termine') {
                     renderEventList(events);
@@ -4160,9 +4164,9 @@
                     contentContainer.innerHTML = `
                         <div class="floating-card">
                             <div class="calendar-header">
-                                <div style="padding:10px" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
+                                <div style="padding:10px; cursor:pointer;" onclick="changeViewMonth(-1)"><i data-lucide="chevron-left"></i></div>
                                 <span id="main-calendar-month-year" style="font-weight:700"></span>
-                                <div style="padding:10px" onclick="changeViewMonth(1)"><i data-lucide="chevron-right"></i></div>
+                                <div style="padding:10px; cursor:pointer;" onclick="changeViewMonth(1)"><i data-lucide="chevron-right"></i></div>
                             </div>
                             <div class="calendar-days-grid" id="main-calendar-grid"></div>
                         </div>`;
@@ -5026,6 +5030,7 @@
         initTimetableDate();
 
         async function renderStundenplan() {
+            currentView = 'stundenplan';
             setPageTitle(t('timetable'));
             const container = document.getElementById('app-container');
 
@@ -5039,13 +5044,13 @@
             container.innerHTML = `
                 <div class="controls-row">
                     <div class="tab-bar" style="display:flex; align-items:center; gap:5px; padding:4px;">
-                        <button class="tab-btn" style="flex:0 0 40px; height:40px; display:flex; align-items:center; justify-content:center;" onclick="changeStundenplanWeek(-1)">
+                        <button class="tab-btn" style="flex:0 0 40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="changeStundenplanWeek(-1)">
                             <i data-lucide="chevron-left" style="width:18px;"></i>
                         </button>
                         <div style="flex:1; text-align:center; font-weight:700; font-size:14px; color:var(--text-main);">
                             ${formatDate(monday)} - ${formatDate(friday)}
                         </div>
-                        <button class="tab-btn" style="flex:0 0 40px; height:40px; display:flex; align-items:center; justify-content:center;" onclick="changeStundenplanWeek(1)">
+                        <button class="tab-btn" style="flex:0 0 40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="changeStundenplanWeek(1)">
                             <i data-lucide="chevron-right" style="width:18px;"></i>
                         </button>
                     </div>
@@ -5062,7 +5067,9 @@
 
             try {
                 const classId = window.currentUser.class_id;
-                const dateStr = monday.toISOString().split('T')[0];
+                // Fix: Avoid UTC shift by using local date parts
+                const dateStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+
                 const res = await fetch(`/api/untis/schedule?class_id=${classId}&date=${dateStr}`);
                 const data = await res.json();
 
