@@ -94,9 +94,9 @@ class DriveManager {
 
     async loadFiles(parentId = 'root', pageToken = null) {
         try {
-            let url = `/api/drive/browse?parent_id=${parentId}`;
+            let url = `/api/drive/files?parent_id=${parentId}`;
             if (pageToken) {
-                url += `&page_token=${pageToken}`;
+                url += `&pageToken=${pageToken}`;
             }
 
             const response = await fetch(url);
