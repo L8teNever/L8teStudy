@@ -15,24 +15,36 @@ def get_week_start(d):
 def fetch_timetable_live(creds, target_date):
     """Internal helper to fetch data from Untis API"""
     try:
-        # Safely extract server URL
-        server_url = creds.server.strip().replace('https://', '').replace('http://', '')
-        parts = server_url.split('/')
-        server_url = parts[0] if parts else server_url
-        school_name = creds.school.strip()
+        raw_server = creds.server or ""
+        server_url = raw_server.strip().replace('https://', '').replace('http://', '')
+        # Extract only the domain part (e.g., 'hebe.webuntis.com' from 'hebe.webuntis.com/WebUntis')
+        server_url = server_url.split('/')[0].split('?')[0]
+        
+        school_name = (creds.school or "").strip()
+        user_name = (creds.username or "").strip()
+        pwd = creds.get_password()
+        
+        if not all([server_url, school_name, user_name, pwd]):
+            return None, "Untis config incomplete (missing server, school, user or password)"
+            
+        logger.debug(f"Untis creds for class {creds.class_id}: server='{server_url}', school='{school_name}', user='{user_name}', target_class='{creds.untis_class_name}'")
         
         s = webuntis.Session(
             server=server_url,
-            username=creds.username,
-            password=creds.get_password(),
+            username=user_name,
+            password=pwd,
             school=school_name,
             useragent='L8teStudy'
         )
+        logger.debug(f"Attempting Untis login: server={server_url}, school={school_name}, user={creds.username}")
         s.login()
+        logger.debug("Untis login successful")
         
         # Find class
         untis_class = None
+        logger.debug(f"Fetching classes to find: {creds.untis_class_name}")
         all_klassen = s.klassen()
+        logger.debug(f"Found {len(all_klassen)} classes")
         for c in all_klassen:
             if c.name.lower() == creds.untis_class_name.lower():
                 untis_class = c
@@ -70,8 +82,13 @@ def fetch_timetable_live(creds, target_date):
             
         s.logout()
         return results, None
+    except IndexError as e:
+        import traceback
+        logger.error(f"Untis fetch failed with IndexError: {e}\n{traceback.format_exc()}")
+        return None, "IndexError during Untis fetch - possible library issue or unexpected server response"
     except Exception as e:
-        logger.error(f"Untis fetch failed: {e}")
+        import traceback
+        logger.error(f"Untis fetch failed: {e}\n{traceback.format_exc()}")
         return None, str(e)
 
 def get_timetable(creds, target_date):
