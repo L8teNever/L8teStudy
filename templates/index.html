@@ -1687,9 +1687,9 @@
                 right: 0;
                 width: auto;
                 max-width: 60%;
-                min-width: 320px;
                 margin-bottom: 0 !important;
-                z-index: 1001;
+                z-index: 5000;
+                /* High enough to be above header/content */
                 background: transparent !important;
                 border: none !important;
                 height: 48px;
@@ -1697,11 +1697,6 @@
                 align-items: center;
                 justify-content: flex-end;
                 gap: 12px;
-                pointer-events: none;
-            }
-
-            .controls-row>* {
-                pointer-events: auto;
             }
 
             .controls-row .tab-bar {
@@ -4136,9 +4131,17 @@
                     <div id="calendar-content" style="color:var(--text-sec); padding-top: 20px; padding-bottom: 40px;">${t('loading')}</div>`;
                 lucide.createIcons();
             } else {
+                // Update search state in existing DOM
+                const row = document.querySelector('.controls-row');
+                const search = document.querySelector('.search-container');
+                if (row) row.classList.toggle('search-active', isSearchActive);
+                if (search) search.classList.toggle('active', isSearchActive);
+
                 // Update active tab button style
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.innerText === t(tab === 'termine' ? 'events' : 'month'));
+                document.querySelectorAll('.tab-bar .tab-btn').forEach(btn => {
+                    // Check translated text or a data attribute would be safer, but text is what we have
+                    const isTermine = btn.innerText === t('events');
+                    btn.classList.toggle('active', (tab === 'termine' && isTermine) || (tab === 'monat' && !isTermine));
                 });
             }
 
