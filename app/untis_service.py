@@ -40,6 +40,16 @@ def fetch_timetable_live(creds, target_date):
         s.login()
         logger.debug("Untis login successful")
         
+        # Prime caches to avoid IndexError in library when accessing lazy properties later
+        # Some WebUntis versions crash if a property is accessed that isn't already in the local session cache
+        try:
+            s.teachers()
+            s.subjects()
+            s.rooms()
+            s.klassen()
+        except:
+            pass
+        
         # Find class
         untis_class = None
         logger.debug(f"Fetching classes to find: {creds.untis_class_name}")
@@ -62,10 +72,22 @@ def fetch_timetable_live(creds, target_date):
         
         results = []
         for period in timetable_data:
-            # Safely handle potentially empty lists
-            subjects = getattr(period, 'subjects', [])
-            teachers = getattr(period, 'teachers', [])
-            rooms = getattr(period, 'rooms', [])
+            # Safely handle potentially empty lists and library-level IndexErrors
+            subjects, teachers, rooms = [], [], []
+            try:
+                subjects = getattr(period, 'subjects', [])
+            except Exception as e:
+                logger.debug(f"Period {period.id}: could not load subjects: {e}")
+                
+            try:
+                teachers = getattr(period, 'teachers', [])
+            except Exception as e:
+                logger.debug(f"Period {period.id}: could not load teachers: {e}")
+                
+            try:
+                rooms = getattr(period, 'rooms', [])
+            except Exception as e:
+                logger.debug(f"Period {period.id}: could not load rooms: {e}")
             
             results.append({
                 'id': period.id,
