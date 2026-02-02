@@ -147,32 +147,32 @@ async function openDeck(deckId) {
                 </div>
                 
                 ${isOwner ? `
-                    <button class="ios-btn btn-sec" onclick="openAddCardSheet(${deckId})" style="width:100%; margin-bottom:20px;">
+                    <button class="ios-btn btn-sec" onclick="openAddCardSheet(${deckId})" style="width:100%; margin-bottom:24px;">
                         <i data-lucide="plus" style="width:18px; height:18px; margin-right:8px;"></i>
                         Karte hinzufügen
                     </button>
                 ` : ''}
-            </div>
-            
-            <!-- Card List -->
-            ${currentCards.length > 0 ? `
-                <div class="floating-card">
-                    <h3 style="margin:0 0 16px 0; font-size:18px; font-weight:600;">Alle Karten</h3>
-                    ${currentCards.map((card, idx) => `
-                        <div class="list-item" onclick="previewCard(${idx})" style="cursor:pointer; padding:16px 0;">
-                            <div class="item-content">
-                                <div class="item-title" style="font-size:15px;">${escapeHtml(card.front.substring(0, 60))}${card.front.length > 60 ? '...' : ''}</div>
-                                ${card.is_due ? `<div class="item-sub" style="color:#ff9f0a;">● Fällig</div>` : ''}
+
+                <!-- Card List -->
+                ${currentCards.length > 0 ? `
+                    <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px;">
+                        <h3 style="margin:0 0 16px 0; font-size:18px; font-weight:600;">Alle Karten</h3>
+                        ${currentCards.map((card, idx) => `
+                            <div class="list-item" onclick="previewCard(${idx})" style="cursor:pointer; padding:16px 0;">
+                                <div class="item-content">
+                                    <div class="item-title" style="font-size:15px;">${escapeHtml(card.front.substring(0, 60))}${card.front.length > 60 ? '...' : ''}</div>
+                                    ${card.is_due ? `<div class="item-sub" style="color:#ff9f0a;">● Fällig</div>` : ''}
+                                </div>
+                                ${isOwner ? `
+                                    <button class="ios-btn btn-small btn-danger-light" onclick="event.stopPropagation(); deleteCard(${card.id})" style="min-width:auto; padding:6px 12px; margin-left:8px;">
+                                        <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+                                    </button>
+                                ` : ''}
                             </div>
-                            ${isOwner ? `
-                                <button class="ios-btn btn-small btn-danger-light" onclick="event.stopPropagation(); deleteCard(${card.id})" style="min-width:auto; padding:6px 12px; margin-left:8px;">
-                                    <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
-                                </button>
-                            ` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            ` : ''}
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
         `;
 
         document.getElementById('app-container').innerHTML = html;
