@@ -352,8 +352,8 @@ function endStudySession() {
     showToast('🎉 Lernsession abgeschlossen!', 'success');
 
     // Reset UI
-    document.querySelector('.bottom-nav').style.display = 'flex';
-    document.querySelector('.side-nav').style.display = 'flex';
+    document.querySelector('.bottom-nav').style.display = '';
+    document.querySelector('.side-nav').style.display = '';
     document.getElementById('study-nav').style.display = 'none';
     document.getElementById('practice-nav').style.display = 'none';
 
