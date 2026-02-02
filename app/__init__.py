@@ -99,8 +99,6 @@ def create_app():
         'script-src': [
             '\'self\'',
             '\'unsafe-inline\'',
-            '\'unsafe-eval\'',
-            'https://unpkg.com',
             'https://static.cloudflareinsights.com',
         ],
         'style-src': [
@@ -117,8 +115,7 @@ def create_app():
             'data:'
         ],
         'connect-src': [
-            '\'self\'',
-            'https://unpkg.com'
+            '\'self\''
         ],
         'frame-ancestors': '\'none\'',  # Prevent clickjacking attacks
         'base-uri': '\'self\'',         # Restrict base tag URLs
