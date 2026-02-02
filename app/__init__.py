@@ -99,7 +99,6 @@ def create_app():
         'script-src': [
             '\'self\'',
             '\'unsafe-inline\'',
-            'https://static.cloudflareinsights.com',
         ],
         'style-src': [
             '\'self\'',
