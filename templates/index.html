@@ -2237,7 +2237,15 @@
             text-align: center;
         }
 
-        /* Responsive */
+        /* Refined Responsive Flashcards */
+        .study-mode-container {
+            margin-top: 20px;
+            min-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
         @media (max-width: 480px) {
             .flashcard-content {
                 font-size: 18px;
@@ -2245,16 +2253,59 @@
 
             .flashcard-container {
                 aspect-ratio: 2/3;
+                max-width: 320px;
+            }
+
+            .study-mode-container {
+                padding: 20px;
+                min-height: 50vh;
             }
         }
 
         @media (min-width: 769px) {
+
+            /* DECK DETAIL CONSTRAINT */
+            .deck-detail-container {
+                max-width: 700px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .study-mode-container {
+                max-width: 480px;
+                /* Much smaller wrapper for PC to avoid giant cards */
+                margin: 40px auto;
+                /* Center on screen */
+                min-height: auto;
+                padding: 40px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+                /* Enhanced shadow for floating effect on PC */
+            }
+
+            .floating-card.study-mode-container {
+                /* Override default floating-card margin */
+                margin-left: auto;
+                margin-right: auto;
+            }
+
             .flashcard-container {
-                max-width: 600px;
+                max-width: 100%;
+                aspect-ratio: 3/4;
+                margin-bottom: 20px;
             }
 
             .flashcard-content {
-                font-size: 24px;
+                font-size: 22px;
+            }
+
+            /* Buttons layout on PC */
+            .study-nav #study-nav,
+            .study-nav #practice-nav {
+                position: relative;
+                background: transparent;
+                box-shadow: none;
+                border: none;
+                padding: 0;
             }
         }
     </style>

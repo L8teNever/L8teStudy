@@ -22,47 +22,54 @@ async function renderFlashcardsView() {
         const publicDecks = data.public_decks || [];
 
         let html = `
-            <div class="floating-card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <h2 style="margin:0; font-size:24px; font-weight:700;">${t('my_decks') || 'Meine Decks'}</h2>
-                    <button class="ios-btn btn-small" onclick="openCreateDeckSheet()" style="background:var(--accent); color:white;">
-                        <i data-lucide="plus" style="width:16px; height:16px;"></i> Neu
-                    </button>
+            <div style="margin-bottom: 30px; animation: fadeIn 0.3s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h2 style="margin:0; font-size:24px; font-weight:700;">${(typeof t === 'function' ? t('my_decks') : 'Meine Decks')}</h2>
                 </div>
+                
                 ${myDecks.length === 0 ? `
-                    <div style="text-align:center; padding:40px 20px; color:var(--text-sec);">
+                    <div class="floating-card" style="text-align:center; padding:40px 20px;">
                         <i data-lucide="layers" style="width:48px; height:48px; margin-bottom:16px; opacity:0.3;"></i>
-                        <p style="margin:0;">${t('no_decks_yet') || 'Noch keine Decks erstellt'}</p>
-                        <p style="margin:8px 0 0 0; font-size:14px;">${t('create_first_deck') || 'Erstelle dein erstes Deck!'}</p>
+                        <p style="margin:0; color:var(--text-sec);">${(typeof t === 'function' ? t('create_first_deck') : 'Erstelle dein erstes Deck!')}</p>
+                        <button class="ios-btn btn-small" onclick="openCreateDeckSheet()" style="margin-top:15px; width:auto; display:inline-flex; align-items:center;">
+                            <i data-lucide="plus" style="width:16px; height:16px; margin-right:6px;"></i> Neu
+                        </button>
                     </div>
-                ` : myDecks.map(deck => `
-                    <div class="list-item" onclick="openDeck(${deck.id})" style="cursor:pointer; padding:16px 0;">
-                        <div class="item-content">
-                            <div class="item-title">${escapeHtml(deck.title)}</div>
-                            <div class="item-sub">
-                                ${deck.card_count} ${deck.card_count === 1 ? 'Karte' : 'Karten'}
-                                ${deck.is_public ? ' • Öffentlich' : ''}
+                ` : `
+                    <div class="deck-grid">
+                        ${myDecks.map(deck => `
+                            <div class="deck-card" onclick="openDeck(${deck.id})">
+                                <div class="deck-title">${escapeHtml(deck.title)}</div>
+                                <div class="deck-stats">
+                                    ${deck.card_count} ${(deck.card_count === 1 ? 'Karte' : 'Karten')}
+                                </div>
+                                ${deck.is_public ? '<div class="deck-badge" style="background:rgba(0,0,0,0.05); color:var(--text-sec); top:auto; bottom:15px; right:15px; font-weight:600;">Öffentlich</div>' : ''}
+                                ${deck.new_count > 0 ? `<div class="deck-badge" style="background:var(--accent);">${deck.new_count}</div>` : ''}
+                            </div>
+                        `).join('')}
+                         <div class="deck-card add-deck-card" onclick="openCreateDeckSheet()">
+                            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                                <i data-lucide="plus" style="width:24px; height:24px;"></i>
+                                <span style="font-size:13px; font-weight:600;">Neues Deck</span>
                             </div>
                         </div>
-                        <i data-lucide="chevron-right" style="color:var(--text-sec); width:20px; height:20px;"></i>
                     </div>
-                `).join('')}
+                `}
             </div>
-            
+
             ${publicDecks.length > 0 ? `
-                <div class="floating-card">
-                    <h2 style="margin:0 0 20px 0; font-size:24px; font-weight:700;">${t('public_decks') || 'Öffentliche Decks'}</h2>
-                    ${publicDecks.map(deck => `
-                        <div class="list-item" onclick="openDeck(${deck.id})" style="cursor:pointer; padding:16px 0;">
-                            <div class="item-content">
-                                <div class="item-title">${escapeHtml(deck.title)}</div>
-                                <div class="item-sub">
-                                    ${deck.card_count} ${deck.card_count === 1 ? 'Karte' : 'Karten'} • ${escapeHtml(deck.author_name)}
+                <div style="margin-bottom: 30px; animation: fadeIn 0.4s ease;">
+                    <h2 style="margin:0 0 15px 0; font-size:24px; font-weight:700;">${(typeof t === 'function' ? t('public_decks') : 'Öffentliche Decks')}</h2>
+                    <div class="deck-grid">
+                        ${publicDecks.map(deck => `
+                            <div class="deck-card" onclick="openDeck(${deck.id})">
+                                <div class="deck-title">${escapeHtml(deck.title)}</div>
+                                <div class="deck-stats">
+                                    ${deck.card_count} Karten • ${escapeHtml(deck.author_name)}
                                 </div>
                             </div>
-                            <i data-lucide="chevron-right" style="color:var(--text-sec); width:20px; height:20px;"></i>
-                        </div>
-                    `).join('')}
+                        `).join('')}
+                    </div>
                 </div>
             ` : ''}
         `;
@@ -72,7 +79,7 @@ async function renderFlashcardsView() {
 
     } catch (error) {
         console.error('Error loading decks:', error);
-        showToast('Fehler beim Laden der Decks', 'error');
+        if (typeof showToast === 'function') showToast('Fehler beim Laden der Decks', 'error');
     }
 }
 
@@ -101,7 +108,7 @@ async function openDeck(deckId) {
         const isOwner = deck.is_own;
 
         let html = `
-            <div class="floating-card">
+            <div class="floating-card deck-detail-container">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
                     <div>
                         <h2 style="margin:0 0 8px 0; font-size:28px; font-weight:700;">${escapeHtml(deck.title)}</h2>
@@ -241,7 +248,7 @@ function renderStudyCard() {
     const progress = ((currentCardIndex + 1) / currentCards.length * 100).toFixed(0);
 
     let html = `
-        <div class="floating-card" style="margin-top:20px; min-height:60vh;">
+        <div class="floating-card study-mode-container">
             <!-- Progress -->
             <div style="margin-bottom:24px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
