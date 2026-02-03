@@ -2272,26 +2272,26 @@
             }
 
             .study-mode-container {
-                max-width: 480px;
-                /* Much smaller wrapper for PC to avoid giant cards */
+                max-width: 600px;
+                /* Reduced width */
                 margin: 40px auto;
-                /* Center on screen */
                 min-height: auto;
                 padding: 40px;
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-                /* Enhanced shadow for floating effect on PC */
             }
 
             .floating-card.study-mode-container {
-                /* Override default floating-card margin */
                 margin-left: auto;
                 margin-right: auto;
             }
 
             .flashcard-container {
                 max-width: 100%;
-                aspect-ratio: 3/4;
+                /* aspect-ratio: 3/4; REMOVED to stop stretching height */
+                height: 400px;
+                /* Fixed height for better proportion on landscape */
                 margin-bottom: 20px;
+                perspective: 1500px;
             }
 
             .flashcard-content {

@@ -108,19 +108,23 @@ async function openDeck(deckId) {
         const isOwner = deck.is_own;
 
         let html = `
-            <div class="floating-card deck-detail-container">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
-                    <div>
-                        <h2 style="margin:0 0 8px 0; font-size:28px; font-weight:700;">${escapeHtml(deck.title)}</h2>
-                        ${deck.description ? `<p style="margin:0; color:var(--text-sec); font-size:15px;">${escapeHtml(deck.description)}</p>` : ''}
+            <div class="floating-card deck-detail-container" style="position: relative;">
+                <div style="margin-bottom: 20px;">
+                    <button onclick="renderFlashcardsView()" style="background:none; border:none; padding:0; color:var(--accent); font-weight:600; display:flex; align-items:center; cursor:pointer; font-size:15px; margin-bottom:10px;">
+                        <i data-lucide="chevron-left" style="width:20px; height:20px; margin-right:4px;"></i> Zurück
+                    </button>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <h2 style="margin:0 0 8px 0; font-size:28px; font-weight:700;">${escapeHtml(deck.title)}</h2>
+                            ${deck.description ? `<p style="margin:0; color:var(--text-sec); font-size:15px;">${escapeHtml(deck.description)}</p>` : ''}
+                        </div>
+                        ${isOwner ? `
+                            <button class="ios-btn btn-small btn-sec" onclick="openDeckSettings(${deckId})" style="min-width:auto; padding:8px 12px; margin-left:10px;">
+                                <i data-lucide="settings" style="width:18px; height:18px;"></i>
+                            </button>
+                        ` : ''}
                     </div>
-                    ${isOwner ? `
-                        <button class="ios-btn btn-small btn-sec" onclick="openDeckSettings(${deckId})" style="min-width:auto; padding:8px 12px;">
-                            <i data-lucide="settings" style="width:18px; height:18px;"></i>
-                        </button>
-                    ` : ''}
                 </div>
-                
                 <!-- Stats -->
                 <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-bottom:24px;">
                     <div style="background:var(--tab-bg); padding:16px; border-radius:16px; text-align:center;">
@@ -137,31 +141,32 @@ async function openDeck(deckId) {
                     </div>
                 </div>
                 
-                <!-- Study Buttons -->
-                <div style="display:flex; gap:12px; margin-bottom:24px;">
-                    <button class="ios-btn" onclick="startStudyMode('spaced')" 
-                        style="flex:1; background:var(--accent); color:white; font-size:16px; padding:16px;"
-                        ${dueCards.length === 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-                        <i data-lucide="brain" style="width:20px; height:20px; margin-right:8px;"></i>
-                        Lernen (${dueCards.length})
-                    </button>
-                    <button class="ios-btn btn-sec" onclick="startStudyMode('free')" 
-                        style="flex:1; font-size:16px; padding:16px;"
-                        ${currentCards.length === 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-                        <i data-lucide="shuffle" style="width:20px; height:20px; margin-right:8px;"></i>
-                        Üben
-                    </button>
-                </div>
+                <!--Study Buttons-- >
+        <div style="display:flex; gap:12px; margin-bottom:24px;">
+            <button class="ios-btn" onclick="startStudyMode('spaced')"
+                style="flex:1; background:var(--accent); color:white; font-size:16px; padding:16px;"
+                ${dueCards.length === 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+                <i data-lucide="brain" style="width:20px; height:20px; margin-right:8px;"></i>
+                Lernen (${dueCards.length})
+            </button>
+            <button class="ios-btn btn-sec" onclick="startStudyMode('free')"
+                style="flex:1; font-size:16px; padding:16px;"
+                ${currentCards.length === 0 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+                <i data-lucide="shuffle" style="width:20px; height:20px; margin-right:8px;"></i>
+                Üben
+            </button>
+        </div>
                 
                 ${isOwner ? `
                     <button class="ios-btn btn-sec" onclick="openAddCardSheet(${deckId})" style="width:100%; margin-bottom:24px;">
                         <i data-lucide="plus" style="width:18px; height:18px; margin-right:8px;"></i>
                         Karte hinzufügen
                     </button>
-                ` : ''}
+                ` : ''
+            }
 
-                <!-- Card List -->
-                ${currentCards.length > 0 ? `
+                < !--Card List-- >
+        ${currentCards.length > 0 ? `
                     <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px;">
                         <h3 style="margin:0 0 16px 0; font-size:18px; font-weight:600;">Alle Karten</h3>
                         ${currentCards.map((card, idx) => `
@@ -178,8 +183,9 @@ async function openDeck(deckId) {
                             </div>
                         `).join('')}
                     </div>
-                ` : ''}
-            </div>
+                ` : ''
+            }
+            </div >
         `;
 
         document.getElementById('app-container').innerHTML = html;
@@ -248,9 +254,16 @@ function renderStudyCard() {
     const progress = ((currentCardIndex + 1) / currentCards.length * 100).toFixed(0);
 
     let html = `
-        <div class="floating-card study-mode-container">
-            <!-- Progress -->
-            <div style="margin-bottom:24px;">
+        < div class="floating-card study-mode-container" style = "position: relative;" >
+            < !--Header with Close Button-- >
+            <div style="position: absolute; top: 15px; right: 15px; z-index: 10;">
+                <button onclick="quitStudySession()" style="background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-sec);">
+                    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
+
+            <!--Progress -->
+            <div style="margin-bottom:24px; margin-top: 10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-size:14px; font-weight:600; color:var(--text-sec);">
                         ${currentCardIndex + 1} / ${currentCards.length}
@@ -262,39 +275,40 @@ function renderStudyCard() {
                 </div>
             </div>
             
-            <!-- Card -->
-            <div class="flashcard-container" onclick="flipCard()" style="cursor:pointer;">
-                <div class="flashcard ${isCardFlipped ? 'flipped' : ''}" id="study-card">
-                    <div class="flashcard-front">
-                        <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
-                            Frage
-                        </div>
-                        <div class="flashcard-content">
-                            ${escapeHtml(card.front)}
-                        </div>
-                        <div style="position:absolute; bottom:16px; right:16px; color:var(--text-sec); opacity:0.5;">
-                            <i data-lucide="rotate-cw" style="width:20px; height:20px;"></i>
-                        </div>
+            <!--Card -->
+        <div class="flashcard-container" onclick="flipCard()" style="cursor:pointer;">
+            <div class="flashcard ${isCardFlipped ? 'flipped' : ''}" id="study-card">
+                <div class="flashcard-front">
+                    <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
+                        Frage
                     </div>
-                    <div class="flashcard-back">
-                        <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
-                            Antwort
-                        </div>
-                        <div class="flashcard-content">
-                            ${escapeHtml(card.back)}
-                        </div>
+                    <div class="flashcard-content">
+                        ${escapeHtml(card.front)}
+                    </div>
+                    <div style="position:absolute; bottom:16px; right:16px; color:var(--text-sec); opacity:0.5;">
+                        <i data-lucide="rotate-cw" style="width:20px; height:20px;"></i>
+                    </div>
+                </div>
+                <div class="flashcard-back">
+                    <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
+                        Antwort
+                    </div>
+                    <div class="flashcard-content">
+                        ${escapeHtml(card.back)}
                     </div>
                 </div>
             </div>
+        </div>
             
             ${!isCardFlipped ? `
                 <div style="text-align:center; margin-top:24px; color:var(--text-sec); font-size:14px;">
                     <i data-lucide="hand-metal" style="width:18px; height:18px; vertical-align:middle; margin-right:4px;"></i>
                     Tippe zum Umdrehen
                 </div>
-            ` : ''}
-        </div>
-    `;
+            ` : ''
+        }
+        </div >
+        `;
 
     document.getElementById('app-container').innerHTML = html;
     lucide.createIcons();
@@ -323,7 +337,7 @@ async function rateCard(quality) {
             const qualityMap = { 1: 1, 2: 2, 3: 4, 4: 5 };
             const sm2Quality = qualityMap[quality];
 
-            await fetch(`/api/cards/${card.id}/review`, {
+            await fetch(`/ api / cards / ${card.id}/review`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quality: sm2Quality })
@@ -357,15 +371,28 @@ function nextFreePracticeCard() {
 
 function endStudySession() {
     showToast('🎉 Lernsession abgeschlossen!', 'success');
+    quitStudySession();
+}
 
+function quitStudySession() {
     // Reset UI
     document.querySelector('.bottom-nav').style.display = '';
     document.querySelector('.side-nav').style.display = '';
     document.getElementById('study-nav').style.display = 'none';
     document.getElementById('practice-nav').style.display = 'none';
 
+    // Always remove from document flow if possible, though currently just hidding
+    // Restore sidebar if on desktop
+    if (window.innerWidth >= 768) {
+        document.querySelector('.side-nav').style.display = 'flex';
+    }
+
     // Return to deck
-    openDeck(currentDeck.id);
+    if (currentDeck) {
+        openDeck(currentDeck.id);
+    } else {
+        renderFlashcardsView();
+    }
 }
 
 // ============================================
