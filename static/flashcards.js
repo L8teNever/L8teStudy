@@ -141,7 +141,7 @@ async function openDeck(deckId) {
                     </div>
                 </div>
                 
-                <!--Study Buttons-- >
+                <!--Study Buttons-->
         <div style="display:flex; gap:12px; margin-bottom:24px;">
             <button class="ios-btn" onclick="startStudyMode('spaced')"
                 style="flex:1; background:var(--accent); color:white; font-size:16px; padding:16px;"
@@ -165,7 +165,7 @@ async function openDeck(deckId) {
                 ` : ''
             }
 
-                < !--Card List-- >
+                <!--Card List-->
         ${currentCards.length > 0 ? `
                     <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px;">
                         <h3 style="margin:0 0 16px 0; font-size:18px; font-weight:600;">Alle Karten</h3>
@@ -185,7 +185,7 @@ async function openDeck(deckId) {
                     </div>
                 ` : ''
             }
-            </div >
+            </div>
         `;
 
         document.getElementById('app-container').innerHTML = html;
@@ -254,8 +254,8 @@ function renderStudyCard() {
     const progress = ((currentCardIndex + 1) / currentCards.length * 100).toFixed(0);
 
     let html = `
-        < div class="floating-card study-mode-container" style = "position: relative;" >
-            < !--Header with Close Button-- >
+        <div class="floating-card study-mode-container" style="position: relative;">
+            <!--Header with Close Button-->
             <div style="position: absolute; top: 15px; right: 15px; z-index: 10;">
                 <button onclick="quitStudySession()" style="background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-sec);">
                     <i data-lucide="x" style="width: 20px; height: 20px;"></i>
@@ -307,7 +307,7 @@ function renderStudyCard() {
                 </div>
             ` : ''
         }
-        </div >
+        </div>
         `;
 
     document.getElementById('app-container').innerHTML = html;
@@ -337,7 +337,7 @@ async function rateCard(quality) {
             const qualityMap = { 1: 1, 2: 2, 3: 4, 4: 5 };
             const sm2Quality = qualityMap[quality];
 
-            await fetch(`/ api / cards / ${card.id}/review`, {
+            await fetch(`/api/cards/${card.id}/review`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ quality: sm2Quality })
