@@ -25,6 +25,9 @@ async function renderFlashcardsView() {
             <div style="margin-bottom: 30px; animation: fadeIn 0.3s ease;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h2 style="margin:0; font-size:24px; font-weight:700;">${(typeof t === 'function' ? t('my_decks') : 'Meine Decks')}</h2>
+                    <button class="ios-btn btn-small btn-sec" onclick="openImportDeckSheet()" style="width:auto; padding: 6px 12px; height: 32px; display: inline-flex; align-items: center;">
+                        <i data-lucide="upload" style="width:16px; height:16px; margin-right:6px;"></i> Import
+                    </button>
                 </div>
                 
                 ${myDecks.length === 0 ? `
@@ -626,4 +629,68 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ============================================
+// IMPORT DECK
+// ============================================
+
+function openImportDeckSheet() {
+    let input = document.getElementById('deck-import-input');
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'file';
+        input.id = 'deck-import-input';
+        input.accept = '.csv,.txt,.apkg';
+        input.style.display = 'none';
+        input.onchange = (e) => {
+            if (e.target.files.length > 0) {
+                uploadDeckFile(e.target.files[0]);
+            }
+            e.target.value = '';
+        };
+        document.body.appendChild(input);
+    }
+    input.click();
+}
+
+async function uploadDeckFile(file) {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Initial user feedback
+    if (typeof showToast === 'function') showToast('Importiere Deck...', 'info');
+
+    try {
+        const response = await fetch('/api/decks/import', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            if (typeof showToast === 'function') {
+                showToast(`Deck importiert! (${data.count} Karten)`, 'success');
+            } else {
+                alert(`Deck importiert! (${data.count} Karten)`);
+            }
+            await renderFlashcardsView();
+        } else {
+            if (typeof showToast === 'function') {
+                showToast(data.error || 'Fehler beim Import', 'error');
+            } else {
+                alert(data.error || 'Fehler beim Import');
+            }
+        }
+    } catch (error) {
+        console.error('Import Error:', error);
+        if (typeof showToast === 'function') {
+            showToast('Verbindungsfehler beim Import', 'error');
+        } else {
+            alert('Verbindungsfehler beim Import');
+        }
+    }
 }
