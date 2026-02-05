@@ -3033,6 +3033,12 @@
                     };
 
                     let path = pathMap[view] || '/home';
+                    // Special handling for sub-paths if we have extra state
+                    if (view === 'flashcards' && window.historySubPath) {
+                        path = window.historySubPath;
+                        window.historySubPath = null;
+                    }
+
                     if (window.currentUser && window.currentUser.className) {
                         path = '/' + window.currentUser.className + path;
                     }
@@ -3201,6 +3207,17 @@
                 if (event.state.view === 'grades') title = t('grades');
                 if (event.state.view === 'drive') title = t('drive');
                 if (event.state.view === 'settings') title = t('settings');
+
+                if (event.state.view === 'flashcards') {
+                    const fullPath = window.location.pathname.toLowerCase();
+                    if (fullPath.includes('/flashcards/')) {
+                        // Let flashcards module handle sub-path routing
+                        await loadScript('/static/flashcards.js?v=2.1.1');
+                        await renderFlashcardsView(); // This function should check window.location
+                        return;
+                    }
+                }
+
                 navigate(event.state.view, navLink, title);
             } else if (event.state && event.state.modal) {
                 return;
@@ -8876,7 +8893,7 @@
                     await renderGrades();
                 } else if (rPath.startsWith('/flashcards')) {
                     await loadScript('/static/flashcards.js?v=2.1.1');
-                    await renderFlashcards();
+                    await renderFlashcardsView(); // Refactored to handle its own rPath internally if needed
                 } else if (rPath.startsWith('/settings')) {
                     if (rPath === '/settings/password') await renderChangePassword();
                     else if (rPath === '/settings/notifications') await renderNotificationSettings();

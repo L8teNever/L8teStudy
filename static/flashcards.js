@@ -14,6 +14,40 @@ let dueCards = [];
 // ============================================
 
 async function renderFlashcardsView() {
+    // Check for deep links
+    const relevantPath = window.location.pathname.toLowerCase();
+    const classPrefix = '/' + (window.currentUser?.className || '').toLowerCase();
+    let rPath = relevantPath;
+    if (relevantPath.startsWith(classPrefix)) {
+        rPath = relevantPath.substring(classPrefix.length);
+    }
+
+    // Routing Logic
+    if (rPath.includes('/flashcards/deck/')) {
+        const parts = rPath.split('/');
+        // Path: /flashcards/deck/:id or /flashcards/deck/:id/study
+        const deckId = parseInt(parts[3]);
+        if (parts.length > 4) {
+            const sub = parts[4];
+            if (sub === 'study') {
+                await openDeck(deckId, false);
+                startStudyMode('spaced');
+                return;
+            } else if (sub === 'practice') {
+                await openDeck(deckId, false);
+                startStudyMode('free');
+                return;
+            } else if (sub === 'card' && parts.length > 5) {
+                const cardId = parseInt(parts[5]);
+                await openDeck(deckId, false);
+                previewCardById(cardId);
+                return;
+            }
+        }
+        await openDeck(deckId, false);
+        return;
+    }
+
     try {
         const response = await fetch('/api/decks');
         const data = await response.json();
@@ -90,10 +124,15 @@ async function renderFlashcardsView() {
 // DECK DETAIL VIEW
 // ============================================
 
-async function openDeck(deckId) {
+async function openDeck(deckId, pushState = true) {
     try {
         const response = await fetch(`/api/decks/${deckId}`);
         const deck = await response.json();
+
+        if (pushState && !window.isPoppingState) {
+            const path = `/flashcards/deck/${deckId}`;
+            window.history.pushState({ view: 'flashcards' }, '', '/' + (window.currentUser?.className || '') + path);
+        }
 
         currentDeck = deck;
         currentCards = deck.cards || [];
@@ -234,6 +273,19 @@ function startStudyMode(mode) {
         currentView = 'study';
     }
 
+    // Set Header Title with Ellipsis
+    if (typeof setPageTitle === 'function') {
+        const truncatedTitle = currentDeck.title.length > 25 ? currentDeck.title.substring(0, 22) + '...' : currentDeck.title;
+        setPageTitle(truncatedTitle);
+    }
+
+    // Update URL
+    if (!window.isPoppingState) {
+        const subModePath = mode === 'spaced' ? 'study' : 'practice';
+        const path = `/flashcards/deck/${currentDeck.id}/${subModePath}`;
+        window.history.pushState({ view: 'flashcards' }, '', '/' + (window.currentUser?.className || '') + path);
+    }
+
     // Replace Account icons with exit button
     const profileBtn = document.querySelector('.profile-btn');
     if (profileBtn && !originalHeaderProfileContent) {
@@ -291,17 +343,13 @@ function renderStudyCard() {
     }
 
     const progress = ((currentCardIndex + 1) / currentCards.length * 100).toFixed(0);
-    const truncatedTitle = currentDeck.title.length > 30 ? currentDeck.title.substring(0, 27) + '...' : currentDeck.title;
 
     let html = `
         <div class="study-mode-main" style="max-width: 800px; margin: 40px auto; padding: 0 20px;">
-            <!-- Title and Progress Header -->
-            <div style="text-align: center; margin-bottom: 40px;">
-                <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(currentDeck.title)}">
-                    ${escapeHtml(truncatedTitle)}
-                </h1>
-                <h2 style="margin: 8px 0 0 0; font-size: 18px; font-weight: 600; color: var(--accent);">
-                    ${progress}% abgeschlossen
+            <!-- Progress Header -->
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: var(--accent);">
+                    ${progress}% (${currentCardIndex + 1} / ${currentCards.length})
                 </h2>
             </div>
             
@@ -684,7 +732,62 @@ function quitStudySession() {
 
 function previewCard(index) {
     const card = currentCards[index];
-    alert(`Vorderseite:\n${card.front}\n\nRückseite:\n${card.back}`);
+    if (!card) return;
+
+    previewCardById(card.id);
+}
+
+function previewCardById(cardId) {
+    const card = currentCards.find(c => c.id === cardId);
+    if (!card) return;
+
+    // Update URL
+    if (!window.isPoppingState) {
+        const path = `/flashcards/deck/${currentDeck.id}/card/${card.id}`;
+        window.history.pushState({ view: 'flashcards' }, '', '/' + (window.currentUser?.className || '') + path);
+    }
+
+    const sheetContent = `
+        <div class="sheet-header">
+            <h3 style="margin:0; font-size:20px; font-weight:700;">Karte Vorschau</h3>
+            <div class="sheet-close-btn" onclick="closeSheet()">
+                <i data-lucide="x" style="width:20px; height:20px;"></i>
+            </div>
+        </div>
+        
+        <div style="margin-top: 24px;">
+            <div style="margin-bottom: 24px;">
+                <div style="font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase; margin-bottom:8px;">Vorderseite</div>
+                <div style="font-size:18px; line-height:1.6; color:var(--text-main); background:var(--tab-bg); padding:20px; border-radius:16px;">
+                    ${escapeHtml(card.front)}
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <div style="font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase; margin-bottom:8px;">Rückseite</div>
+                <div style="font-size:18px; line-height:1.6; color:var(--text-main); background:var(--tab-bg); padding:20px; border-radius:16px;">
+                    ${escapeHtml(card.back)}
+                </div>
+            </div>
+            
+            ${currentDeck.is_own ? `
+                <div style="display:flex; gap:12px; margin-top:32px;">
+                    <button class="ios-btn btn-sec" onclick="closeSheet(); editCard(${card.id}, '${card.front.replace(/'/g, "\\'")}', '${card.back.replace(/'/g, "\\'")}')" style="flex:1;">
+                        <i data-lucide="edit-3" style="width:18px; height:18px; margin-right:8px;"></i> Bearbeiten
+                    </button>
+                    <button class="ios-btn btn-danger-light" onclick="closeSheet(); deleteCard(${card.id})" style="flex:1;">
+                        <i data-lucide="trash-2" style="width:18px; height:18px; margin-right:8px;"></i> Löschen
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    if (typeof openSheet === 'function') {
+        openSheet(sheetContent);
+    } else {
+        alert(`Vorderseite:\n${card.front}\n\nRückseite:\n${card.back}`);
+    }
 }
 
 // ============================================
