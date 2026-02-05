@@ -2046,6 +2046,21 @@
             padding-bottom: 20px;
         }
 
+        /* Desktop/Tablet deck grid improvements */
+        @media (min-width: 768px) {
+            .deck-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 20px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .deck-grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 24px;
+            }
+        }
+
         .deck-card {
             background: var(--card-bg);
             border-radius: 20px;
@@ -2057,12 +2072,24 @@
             box-shadow: var(--shadow);
             border: 1px solid var(--border);
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
             position: relative;
         }
 
         .deck-card:active {
             transform: scale(0.96);
+        }
+
+        /* Desktop hover effects */
+        @media (min-width: 768px) {
+            .deck-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+            }
+
+            .deck-card:active {
+                transform: translateY(-2px);
+            }
         }
 
         .deck-title {
@@ -2346,13 +2373,14 @@
                 margin-right: auto;
             }
 
+            /* Desktop/Tablet Study Mode - Improved Layout */
             .study-mode-container {
-                max-width: 600px;
-                /* Reduced width */
-                margin: 40px auto;
+                max-width: 800px;
+                margin: 60px auto;
                 min-height: auto;
-                padding: 40px;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+                padding: 50px 60px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+                border-radius: 32px;
             }
 
             .floating-card.study-mode-container {
@@ -2360,17 +2388,93 @@
                 margin-right: auto;
             }
 
+            /* Larger, more prominent flashcard */
             .flashcard-container {
                 max-width: 100%;
-                /* aspect-ratio: 3/4; REMOVED to stop stretching height */
-                height: 400px;
-                /* Fixed height for better proportion on landscape */
-                margin-bottom: 20px;
-                perspective: 1500px;
+                height: 480px;
+                margin-bottom: 30px;
+                perspective: 1800px;
+            }
+
+            .flashcard-front,
+            .flashcard-back {
+                padding: 50px 40px;
             }
 
             .flashcard-content {
-                font-size: 22px;
+                font-size: 26px;
+                line-height: 1.6;
+                font-weight: 500;
+            }
+
+            /* Progress bar styling */
+            .study-mode-container>div:first-of-type {
+                margin-bottom: 40px !important;
+            }
+
+            /* Close button positioning */
+            .study-mode-container>div[style*="position: absolute"] {
+                top: 20px !important;
+                right: 20px !important;
+            }
+
+            /* Hint text styling */
+            .study-mode-container>div:last-child {
+                margin-top: 30px !important;
+                font-size: 15px !important;
+            }
+        }
+
+        /* Tablet-specific optimizations (768px - 1024px) */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .study-mode-container {
+                max-width: 90%;
+                padding: 40px 50px;
+                margin: 40px auto;
+            }
+
+            .flashcard-container {
+                height: 420px;
+            }
+
+            .flashcard-content {
+                font-size: 24px;
+            }
+
+            /* Study nav adjustments for tablet */
+            .study-nav {
+                width: 70px;
+            }
+
+            .study-nav-item {
+                height: 70px;
+                min-height: 70px;
+            }
+
+            .study-nav-item span {
+                font-size: 10px;
+            }
+
+            /* Adjust body padding for smaller sidebar */
+            body {
+                padding-left: 110px !important;
+            }
+        }
+
+        /* Large desktop optimizations (> 1400px) */
+        @media (min-width: 1400px) {
+            .study-mode-container {
+                max-width: 900px;
+                padding: 60px 80px;
+            }
+
+            .flashcard-container {
+                height: 520px;
+            }
+
+            .flashcard-content {
+                font-size: 28px;
+                line-height: 1.7;
             }
         }
     </style>
