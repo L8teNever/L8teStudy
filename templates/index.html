@@ -2237,6 +2237,66 @@
             text-align: center;
         }
 
+        /* Desktop/Tablet: Study Nav as Left Sidebar */
+        @media (min-width: 768px) {
+            .study-nav {
+                /* Transform to vertical sidebar */
+                top: 20px;
+                bottom: 20px;
+                left: 20px;
+                right: auto;
+                width: 80px;
+                height: auto;
+                min-height: auto;
+                flex-direction: column;
+                padding: 20px 0;
+                border-radius: 24px;
+                gap: 10px;
+            }
+
+            .study-nav-item {
+                width: 100%;
+                height: 80px;
+                min-height: 80px;
+                flex: none;
+                padding: 12px 8px;
+            }
+
+            .study-nav-item:hover {
+                opacity: 0.8;
+                background: var(--tab-bg);
+            }
+
+            .study-nav-item:active {
+                transform: scale(0.98);
+            }
+
+            /* Practice nav button on desktop */
+            #practice-nav {
+                padding: 20px 12px;
+            }
+
+            #practice-nav .ios-btn {
+                width: 100%;
+                height: auto;
+                min-height: 80px;
+                padding: 16px 8px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                font-size: 11px;
+                border-radius: 16px;
+            }
+
+            #practice-nav .ios-btn i {
+                margin: 0;
+                width: 24px;
+                height: 24px;
+            }
+        }
+
         /* Refined Responsive Flashcards */
         .study-mode-container {
             margin-top: 20px;
@@ -2296,16 +2356,6 @@
 
             .flashcard-content {
                 font-size: 22px;
-            }
-
-            /* Buttons layout on PC */
-            .study-nav #study-nav,
-            .study-nav #practice-nav {
-                position: relative;
-                background: transparent;
-                box-shadow: none;
-                border: none;
-                padding: 0;
             }
         }
     </style>
