@@ -2096,7 +2096,9 @@
             font-weight: 700;
             font-size: 18px;
             margin-bottom: 5px;
-            word-break: break-word;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .deck-stats {
@@ -3210,7 +3212,7 @@
 
                 if (event.state.view === 'flashcards') {
                     const fullPath = window.location.pathname.toLowerCase();
-                    if (fullPath.includes('/flashcards/')) {
+                    if (fullPath.includes('/flashcards')) {
                         // Let flashcards module handle sub-path routing
                         await loadScript('/static/flashcards.js?v=2.1.1');
                         await renderFlashcardsView(); // This function should check window.location

@@ -48,6 +48,9 @@ async function renderFlashcardsView() {
         return;
     }
 
+    const mainContent = document.getElementById('app-container');
+    mainContent.innerHTML = '<div class="loading"></div>';
+
     try {
         const response = await fetch('/api/decks');
         const data = await response.json();
@@ -152,7 +155,7 @@ async function openDeck(deckId, pushState = true) {
         let html = `
             <div class="floating-card deck-detail-container" style="position: relative;">
                 <div style="margin-bottom: 20px;">
-                    <button onclick="renderFlashcardsView()" style="background:none; border:none; padding:0; color:var(--accent); font-weight:600; display:flex; align-items:center; cursor:pointer; font-size:15px; margin-bottom:10px;">
+                    <button onclick="navigate('flashcards', null, null, true)" style="background:none; border:none; padding:0; color:var(--accent); font-weight:600; display:flex; align-items:center; cursor:pointer; font-size:15px; margin-bottom:10px;">
                         <i data-lucide="chevron-left" style="width:20px; height:20px; margin-right:4px;"></i> Zurück
                     </button>
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
