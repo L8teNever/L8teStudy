@@ -329,9 +329,12 @@ function renderStudyCard() {
     }
 }
 
-function handleCardClick() {
+function handleCardClick(e) {
     // Don't flip if we just finished a swipe
-    if (isSwiping) return;
+    if (isSwiping || hasMoved) {
+        if (e && e.preventDefault) e.preventDefault();
+        return;
+    }
     flipCard();
 }
 
@@ -352,6 +355,8 @@ let touchStartY = 0;
 let touchCurrentX = 0;
 let touchCurrentY = 0;
 let isSwiping = false;
+let touchStartTime = 0;
+let hasMoved = false;
 
 function initCardSwipe() {
     const cardContainer = document.querySelector('.flashcard-container');
@@ -367,22 +372,32 @@ function handleTouchStart(e) {
 
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-    isSwiping = true;
+    touchStartTime = Date.now();
+    isSwiping = false;
+    hasMoved = false;
 }
 
 function handleTouchMove(e) {
-    if (!isSwiping || !isCardFlipped) return;
+    if (!isCardFlipped) return;
 
     touchCurrentX = e.touches[0].clientX;
     touchCurrentY = e.touches[0].clientY;
 
     const deltaX = touchCurrentX - touchStartX;
     const deltaY = touchCurrentY - touchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
 
-    // Prevent default scrolling when swiping horizontally or down
-    if (Math.abs(deltaX) > 10 || deltaY > 10) {
-        e.preventDefault();
+    // Mark as swipe if moved more than 10px
+    if (absX > 10 || absY > 10) {
+        isSwiping = true;
+        hasMoved = true;
     }
+
+    if (!isSwiping) return;
+
+    // Prevent default scrolling when swiping
+    e.preventDefault();
 
     const card = document.getElementById('study-card');
     if (!card) return;
@@ -400,8 +415,7 @@ function handleTouchMove(e) {
     }
 
     // Determine swipe direction and color
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
+    // absX and absY already declared above
 
     if (absY > absX && deltaY > 50) {
         // Swipe down
@@ -489,7 +503,17 @@ function handleTouchEnd(e) {
         }
     }
 
-    isSwiping = false;
+    // Reset after a short delay to prevent click event
+    if (hasMoved) {
+        setTimeout(() => {
+            isSwiping = false;
+            hasMoved = false;
+        }, 100);
+    } else {
+        isSwiping = false;
+        hasMoved = false;
+    }
+
     touchStartX = 0;
     touchStartY = 0;
     touchCurrentX = 0;
