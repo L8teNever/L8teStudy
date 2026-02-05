@@ -279,7 +279,7 @@ function renderStudyCard() {
             </div>
             
             <!--Card -->
-        <div class="flashcard-container" onclick="flipCard()" style="cursor:pointer;">
+        <div class="flashcard-container" onclick="handleCardClick()" style="cursor:pointer;">
             <div class="flashcard ${isCardFlipped ? 'flipped' : ''}" id="study-card">
                 <div class="flashcard-front">
                     <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
@@ -308,6 +308,11 @@ function renderStudyCard() {
                     <i data-lucide="hand-metal" style="width:18px; height:18px; vertical-align:middle; margin-right:4px;"></i>
                     Tippe zum Umdrehen
                 </div>
+            ` : (window.innerWidth < 1024 && studyMode === 'spaced') ? `
+                <div style="text-align:center; margin-top:24px; color:var(--text-sec); font-size:13px;">
+                    <i data-lucide="swipe" style="width:16px; height:16px; vertical-align:middle; margin-right:4px;"></i>
+                    Wische: ← Schwer | → Gut | ↓ Nochmal
+                </div>
             ` : ''
         }
         </div>
@@ -315,6 +320,17 @@ function renderStudyCard() {
 
     document.getElementById('app-container').innerHTML = html;
     lucide.createIcons();
+
+    // Initialize swipe gestures on mobile/tablet
+    if (window.innerWidth < 1024) {
+        initCardSwipe();
+    }
+}
+
+function handleCardClick() {
+    // Don't flip if we just finished a swipe
+    if (isSwiping) return;
+    flipCard();
 }
 
 function flipCard() {
@@ -324,6 +340,185 @@ function flipCard() {
         cardEl.classList.toggle('flipped');
     }
 }
+
+// ============================================
+// SWIPE GESTURES FOR CARDS
+// ============================================
+
+let touchStartX = 0;
+let touchStartY = 0;
+let touchCurrentX = 0;
+let touchCurrentY = 0;
+let isSwiping = false;
+
+function initCardSwipe() {
+    const cardContainer = document.querySelector('.flashcard-container');
+    if (!cardContainer) return;
+
+    cardContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+    cardContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+    cardContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+}
+
+function handleTouchStart(e) {
+    if (!isCardFlipped) return; // Only allow swipe on flipped cards
+
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    isSwiping = true;
+}
+
+function handleTouchMove(e) {
+    if (!isSwiping || !isCardFlipped) return;
+
+    touchCurrentX = e.touches[0].clientX;
+    touchCurrentY = e.touches[0].clientY;
+
+    const deltaX = touchCurrentX - touchStartX;
+    const deltaY = touchCurrentY - touchStartY;
+
+    // Prevent default scrolling when swiping horizontally or down
+    if (Math.abs(deltaX) > 10 || deltaY > 10) {
+        e.preventDefault();
+    }
+
+    const card = document.getElementById('study-card');
+    if (!card) return;
+
+    // Apply transform to card
+    card.style.transform = `translate(${deltaX}px, ${deltaY}px) rotateZ(${deltaX * 0.1}deg)`;
+    card.style.transition = 'none';
+
+    // Show color overlay based on swipe direction
+    let overlay = card.querySelector('.swipe-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'swipe-overlay';
+        card.appendChild(overlay);
+    }
+
+    // Determine swipe direction and color
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (absY > absX && deltaY > 50) {
+        // Swipe down
+        if (deltaX < -30) {
+            // Down-left = Again (1)
+            overlay.style.background = 'rgba(255, 59, 48, 0.3)';
+            overlay.style.opacity = Math.min(deltaY / 150, 0.5);
+        } else if (deltaX > 30) {
+            // Down-right = Easy (4)
+            overlay.style.background = 'rgba(10, 132, 255, 0.3)';
+            overlay.style.opacity = Math.min(deltaY / 150, 0.5);
+        } else {
+            // Straight down = Again (1) by default
+            overlay.style.background = 'rgba(255, 59, 48, 0.3)';
+            overlay.style.opacity = Math.min(deltaY / 150, 0.5);
+        }
+    } else if (absX > absY) {
+        // Horizontal swipe
+        if (deltaX < -50) {
+            // Swipe left = Hard (2)
+            overlay.style.background = 'rgba(255, 159, 10, 0.3)';
+            overlay.style.opacity = Math.min(absX / 150, 0.5);
+        } else if (deltaX > 50) {
+            // Swipe right = Good (3)
+            overlay.style.background = 'rgba(48, 209, 88, 0.3)';
+            overlay.style.opacity = Math.min(absX / 150, 0.5);
+        }
+    } else {
+        overlay.style.opacity = 0;
+    }
+}
+
+function handleTouchEnd(e) {
+    if (!isSwiping || !isCardFlipped) return;
+
+    const deltaX = touchCurrentX - touchStartX;
+    const deltaY = touchCurrentY - touchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    const card = document.getElementById('study-card');
+    if (!card) return;
+
+    // Determine if swipe was strong enough
+    const swipeThreshold = 80;
+    let rating = null;
+
+    if (absY > absX && deltaY > swipeThreshold) {
+        // Swipe down
+        if (deltaX < -30) {
+            rating = 1; // Down-left = Again
+        } else if (deltaX > 30) {
+            rating = 4; // Down-right = Easy
+        } else {
+            rating = 1; // Straight down = Again
+        }
+    } else if (absX > swipeThreshold && absX > absY) {
+        // Horizontal swipe
+        if (deltaX < 0) {
+            rating = 2; // Left = Hard
+        } else {
+            rating = 3; // Right = Good
+        }
+    }
+
+    if (rating !== null && studyMode === 'spaced') {
+        // Animate card out
+        const direction = absX > absY ? (deltaX > 0 ? 'right' : 'left') : 'down';
+        animateCardOut(card, direction, () => {
+            rateCard(rating);
+        });
+    } else if (rating !== null && studyMode === 'free') {
+        // In free mode, any swipe goes to next card
+        animateCardOut(card, 'right', () => {
+            nextFreePracticeCard();
+        });
+    } else {
+        // Reset card position
+        card.style.transform = '';
+        card.style.transition = 'transform 0.3s ease';
+
+        const overlay = card.querySelector('.swipe-overlay');
+        if (overlay) {
+            overlay.style.opacity = 0;
+        }
+    }
+
+    isSwiping = false;
+    touchStartX = 0;
+    touchStartY = 0;
+    touchCurrentX = 0;
+    touchCurrentY = 0;
+}
+
+function animateCardOut(card, direction, callback) {
+    const distance = window.innerWidth;
+    let transform = '';
+
+    switch (direction) {
+        case 'left':
+            transform = `translateX(-${distance}px) rotateZ(-30deg)`;
+            break;
+        case 'right':
+            transform = `translateX(${distance}px) rotateZ(30deg)`;
+            break;
+        case 'down':
+            transform = `translateY(${distance}px) rotateZ(10deg)`;
+            break;
+    }
+
+    card.style.transform = transform;
+    card.style.transition = 'transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1)';
+    card.style.opacity = '0';
+
+    setTimeout(() => {
+        callback();
+    }, 400);
+}
+
 
 async function rateCard(quality) {
     if (!isCardFlipped) {
