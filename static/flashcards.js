@@ -204,6 +204,12 @@ async function openDeck(deckId) {
 // STUDY MODE
 // ============================================
 
+// Store original header/sidebar states to restore them later
+let originalHeaderProfileContent = '';
+let originalHeaderProfileOnClick = null;
+let originalSideAccountContent = '';
+let originalSideAccountOnClick = null;
+
 function startStudyMode(mode) {
     studyMode = mode;
 
@@ -227,13 +233,42 @@ function startStudyMode(mode) {
         previousView = 'deck-detail';
         currentView = 'study';
     }
-    if (typeof setPageTitle === 'function') {
-        setPageTitle(`${currentDeck.title} - Lernen`);
+
+    // Replace Account icons with exit button
+    const profileBtn = document.querySelector('.profile-btn');
+    if (profileBtn && !originalHeaderProfileContent) {
+        originalHeaderProfileContent = profileBtn.innerHTML;
+        originalHeaderProfileOnClick = profileBtn.onclick;
+        profileBtn.innerHTML = '<i data-lucide="x"></i>';
+        profileBtn.onclick = (e) => {
+            e.preventDefault();
+            quitStudySession();
+        };
     }
 
-    // Hide bottom nav, show study nav
+    const sideAcc = document.querySelector('#side-nav-account .nav-link');
+    if (sideAcc && !originalSideAccountContent) {
+        originalSideAccountContent = sideAcc.innerHTML;
+        originalSideAccountOnClick = sideAcc.onclick;
+        sideAcc.innerHTML = '<i data-lucide="x"></i><span>Beenden</span>';
+        sideAcc.onclick = (e) => {
+            e.preventDefault();
+            quitStudySession();
+        };
+    }
+
+    // Hide bottom nav, side nav (actually we want the sidebar icon to stay but change)
+    // The user said "x icon in the sidebar", so we keep the side nav visible but modified
     document.querySelector('.bottom-nav').style.display = 'none';
-    document.querySelector('.side-nav').style.display = 'none';
+
+    // On mobile, the side-nav is hidden anyway. On desktop, we want it to stay for the exit button.
+    if (window.innerWidth < 768) {
+        document.querySelector('.side-nav').style.display = 'none';
+    } else {
+        // Hide regular links, only show exit
+        document.querySelectorAll('.side-nav .nav-link:not([data-nav-id="account"])').forEach(el => el.style.display = 'none');
+    }
+
     document.getElementById('main-fab').classList.remove('visible');
 
     if (mode === 'spaced') {
@@ -244,6 +279,7 @@ function startStudyMode(mode) {
         document.getElementById('practice-nav').style.display = 'flex';
     }
 
+    lucide.createIcons();
     renderStudyCard();
 }
 
@@ -255,61 +291,52 @@ function renderStudyCard() {
     }
 
     const progress = ((currentCardIndex + 1) / currentCards.length * 100).toFixed(0);
+    const truncatedTitle = currentDeck.title.length > 30 ? currentDeck.title.substring(0, 27) + '...' : currentDeck.title;
 
     let html = `
-        <div class="floating-card study-mode-container" style="position: relative;">
-            <!--Header with Close Button-->
-            <div style="position: absolute; top: 15px; right: 15px; z-index: 10;">
-                <button onclick="quitStudySession()" style="background: rgba(0,0,0,0.05); border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-sec);">
-                    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-                </button>
-            </div>
-
-            <!--Progress -->
-            <div style="margin-bottom:24px; margin-top: 10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-size:14px; font-weight:600; color:var(--text-sec);">
-                        ${currentCardIndex + 1} / ${currentCards.length}
-                    </span>
-                    <span style="font-size:14px; font-weight:600; color:var(--accent);">${progress}%</span>
-                </div>
-                <div style="height:6px; background:var(--tab-bg); border-radius:10px; overflow:hidden;">
-                    <div style="height:100%; background:var(--accent); width:${progress}%; transition:width 0.3s ease;"></div>
-                </div>
+        <div class="study-mode-main" style="max-width: 800px; margin: 40px auto; padding: 0 20px;">
+            <!-- Title and Progress Header -->
+            <div style="text-align: center; margin-bottom: 40px;">
+                <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(currentDeck.title)}">
+                    ${escapeHtml(truncatedTitle)}
+                </h1>
+                <h2 style="margin: 8px 0 0 0; font-size: 18px; font-weight: 600; color: var(--accent);">
+                    ${progress}% abgeschlossen
+                </h2>
             </div>
             
             <!--Card -->
-        <div class="flashcard-container" onclick="handleCardClick()" style="cursor:pointer;">
-            <div class="flashcard ${isCardFlipped ? 'flipped' : ''}" id="study-card">
-                <div class="flashcard-front">
-                    <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
-                        Frage
+            <div class="flashcard-container" onclick="handleCardClick()" style="cursor:pointer; margin: 0 auto;">
+                <div class="flashcard ${isCardFlipped ? 'flipped' : ''}" id="study-card">
+                    <div class="flashcard-front">
+                        <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
+                            Frage
+                        </div>
+                        <div class="flashcard-content">
+                            ${escapeHtml(card.front)}
+                        </div>
+                        <div style="position:absolute; bottom:16px; right:16px; color:var(--text-sec); opacity:0.5;">
+                            <i data-lucide="rotate-cw" style="width:20px; height:20px;"></i>
+                        </div>
                     </div>
-                    <div class="flashcard-content">
-                        ${escapeHtml(card.front)}
-                    </div>
-                    <div style="position:absolute; bottom:16px; right:16px; color:var(--text-sec); opacity:0.5;">
-                        <i data-lucide="rotate-cw" style="width:20px; height:20px;"></i>
-                    </div>
-                </div>
-                <div class="flashcard-back">
-                    <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
-                        Antwort
-                    </div>
-                    <div class="flashcard-content">
-                        ${escapeHtml(card.back)}
+                    <div class="flashcard-back">
+                        <div style="position:absolute; top:16px; left:16px; font-size:12px; font-weight:600; color:var(--text-sec); text-transform:uppercase;">
+                            Antwort
+                        </div>
+                        <div class="flashcard-content">
+                            ${escapeHtml(card.back)}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
             
             ${!isCardFlipped ? `
-                <div style="text-align:center; margin-top:24px; color:var(--text-sec); font-size:14px;">
+                <div style="text-align:center; margin-top:30px; color:var(--text-sec); font-size:14px;">
                     <i data-lucide="hand-metal" style="width:18px; height:18px; vertical-align:middle; margin-right:4px;"></i>
                     Tippe zum Umdrehen
                 </div>
             ` : (window.innerWidth < 1024) ? `
-                <div style="text-align:center; margin-top:24px; color:var(--text-sec); font-size:13px;">
+                <div style="text-align:center; margin-top:30px; color:var(--text-sec); font-size:13px;">
                     <i data-lucide="swipe" style="width:16px; height:16px; vertical-align:middle; margin-right:4px;"></i>
                     ${studyMode === 'spaced'
                 ? 'Wische: ← Schwer | → Gut | ↓ Nochmal'
@@ -613,17 +640,35 @@ function endStudySession() {
 }
 
 function quitStudySession() {
+    // Restore header/sidebar
+    const profileBtn = document.querySelector('.profile-btn');
+    if (profileBtn && originalHeaderProfileContent) {
+        profileBtn.innerHTML = originalHeaderProfileContent;
+        profileBtn.onclick = originalHeaderProfileOnClick;
+        originalHeaderProfileContent = '';
+    }
+
+    const sideAcc = document.querySelector('#side-nav-account .nav-link');
+    if (sideAcc && originalSideAccountContent) {
+        sideAcc.innerHTML = originalSideAccountContent;
+        sideAcc.onclick = originalSideAccountOnClick;
+        originalSideAccountContent = '';
+    }
+
     // Reset UI
     document.querySelector('.bottom-nav').style.display = '';
     document.querySelector('.side-nav').style.display = '';
+    document.querySelectorAll('.side-nav .nav-link').forEach(el => el.style.display = '');
+
     document.getElementById('study-nav').style.display = 'none';
     document.getElementById('practice-nav').style.display = 'none';
 
-    // Always remove from document flow if possible, though currently just hidding
     // Restore sidebar if on desktop
     if (window.innerWidth >= 768) {
         document.querySelector('.side-nav').style.display = 'flex';
     }
+
+    lucide.createIcons();
 
     // Return to deck
     if (currentDeck) {
