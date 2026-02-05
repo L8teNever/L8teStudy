@@ -308,10 +308,12 @@ function renderStudyCard() {
                     <i data-lucide="hand-metal" style="width:18px; height:18px; vertical-align:middle; margin-right:4px;"></i>
                     Tippe zum Umdrehen
                 </div>
-            ` : (window.innerWidth < 1024 && studyMode === 'spaced') ? `
+            ` : (window.innerWidth < 1024) ? `
                 <div style="text-align:center; margin-top:24px; color:var(--text-sec); font-size:13px;">
                     <i data-lucide="swipe" style="width:16px; height:16px; vertical-align:middle; margin-right:4px;"></i>
-                    Wische: ← Schwer | → Gut | ↓ Nochmal
+                    ${studyMode === 'spaced'
+                ? 'Wische: ← Schwer | → Gut | ↓ Nochmal'
+                : 'Wische nach rechts für nächste Karte'}
                 </div>
             ` : ''
         }
