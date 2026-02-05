@@ -360,14 +360,26 @@ let hasMoved = false;
 
 function initCardSwipe() {
     const cardContainer = document.querySelector('.flashcard-container');
-    if (!cardContainer) return;
+    if (!cardContainer) {
+        console.warn('Flashcard container not found for swipe init');
+        return;
+    }
 
+    // Remove old listeners if they exist
+    cardContainer.removeEventListener('touchstart', handleTouchStart);
+    cardContainer.removeEventListener('touchmove', handleTouchMove);
+    cardContainer.removeEventListener('touchend', handleTouchEnd);
+
+    // Add new listeners
     cardContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
     cardContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
     cardContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    console.log('Swipe gestures initialized for card container');
 }
 
 function handleTouchStart(e) {
+    console.log('Touch start - isCardFlipped:', isCardFlipped);
     if (!isCardFlipped) return; // Only allow swipe on flipped cards
 
     touchStartX = e.touches[0].clientX;
@@ -375,10 +387,12 @@ function handleTouchStart(e) {
     touchStartTime = Date.now();
     isSwiping = false;
     hasMoved = false;
+    console.log('Touch start registered at:', touchStartX, touchStartY);
 }
 
 function handleTouchMove(e) {
     if (!isCardFlipped) return;
+    console.log('Touch move detected');
 
     touchCurrentX = e.touches[0].clientX;
     touchCurrentY = e.touches[0].clientY;
