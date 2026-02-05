@@ -607,13 +607,72 @@ function previewCard(index) {
 // ============================================
 
 function openCreateDeckSheet() {
-    const title = prompt('Deck-Titel:');
-    if (!title || !title.trim()) return;
+    const sheetContent = `
+        <div class="sheet-header">
+            <h3 style="margin:0; font-size:20px; font-weight:700;">Neues Deck erstellen</h3>
+            <div class="sheet-close-btn" onclick="closeSheet()">
+                <i data-lucide="x" style="width:20px; height:20px;"></i>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <input type="text" class="ios-input" id="new-deck-title" placeholder="Deck-Titel" autofocus>
+            <textarea class="ios-input" id="new-deck-description" placeholder="Beschreibung (optional)" rows="3"></textarea>
+            
+            <!-- Visibility Toggle -->
+            <div class="account-item" onclick="toggleCreateDeckVisibility()" style="margin-bottom: 20px; border-bottom: none; padding: 16px 0;">
+                <div class="account-item-icon">
+                    <i data-lucide="eye-off" id="create-visibility-icon" style="width:20px; height:20px;"></i>
+                </div>
+                <div class="account-item-text" id="create-visibility-text">Privat</div>
+                <div class="ios-toggle" id="create-visibility-toggle">
+                    <div class="ios-toggle-knob"></div>
+                </div>
+            </div>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="ios-btn btn-sec btn-small" onclick="closeSheet()">Abbrechen</button>
+                <button class="ios-btn btn-small" onclick="submitCreateDeck()">Erstellen</button>
+            </div>
+        </div>
+    `;
 
-    const description = prompt('Beschreibung (optional):') || '';
-    const isPublic = confirm('Soll das Deck öffentlich geteilt werden?');
+    openSheet(sheetContent);
+    setTimeout(() => document.getElementById('new-deck-title')?.focus(), 100);
+}
 
-    createDeck(title.trim(), description.trim(), isPublic);
+let createDeckIsPublic = false;
+
+function toggleCreateDeckVisibility() {
+    createDeckIsPublic = !createDeckIsPublic;
+    const toggle = document.getElementById('create-visibility-toggle');
+    const icon = document.getElementById('create-visibility-icon');
+    const text = document.getElementById('create-visibility-text');
+
+    if (createDeckIsPublic) {
+        toggle.classList.add('active');
+        icon.setAttribute('data-lucide', 'eye');
+        text.textContent = 'Öffentlich';
+    } else {
+        toggle.classList.remove('active');
+        icon.setAttribute('data-lucide', 'eye-off');
+        text.textContent = 'Privat';
+    }
+    lucide.createIcons();
+}
+
+function submitCreateDeck() {
+    const title = document.getElementById('new-deck-title')?.value.trim();
+    const description = document.getElementById('new-deck-description')?.value.trim();
+
+    if (!title) {
+        showToast('Bitte gib einen Titel ein', 'error');
+        return;
+    }
+
+    createDeck(title, description, createDeckIsPublic);
+    closeSheet();
+    createDeckIsPublic = false; // Reset for next time
 }
 
 async function createDeck(title, description, isPublic) {
@@ -657,13 +716,48 @@ async function createDeck(title, description, isPublic) {
 // ============================================
 
 function openAddCardSheet(deckId) {
-    const front = prompt('Vorderseite (Frage):');
-    if (!front || !front.trim()) return;
+    const sheetContent = `
+        <div class="sheet-header">
+            <h3 style="margin:0; font-size:20px; font-weight:700;">Neue Karte hinzufügen</h3>
+            <div class="sheet-close-btn" onclick="closeSheet()">
+                <i data-lucide="x" style="width:20px; height:20px;"></i>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-sec); margin-bottom: 8px;">Vorderseite (Frage)</label>
+            <textarea class="ios-input" id="card-front" placeholder="Was möchtest du lernen?" rows="3" autofocus></textarea>
+            
+            <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-sec); margin-bottom: 8px; margin-top: 15px;">Rückseite (Antwort)</label>
+            <textarea class="ios-input" id="card-back" placeholder="Die Antwort..." rows="3"></textarea>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="ios-btn btn-sec btn-small" onclick="closeSheet()">Abbrechen</button>
+                <button class="ios-btn btn-small" onclick="submitAddCard(${deckId})">Hinzufügen</button>
+            </div>
+        </div>
+    `;
 
-    const back = prompt('Rückseite (Antwort):');
-    if (!back || !back.trim()) return;
+    openSheet(sheetContent);
+    setTimeout(() => document.getElementById('card-front')?.focus(), 100);
+}
 
-    addCard(deckId, front.trim(), back.trim());
+function submitAddCard(deckId) {
+    const front = document.getElementById('card-front')?.value.trim();
+    const back = document.getElementById('card-back')?.value.trim();
+
+    if (!front) {
+        showToast('Bitte gib eine Frage ein', 'error');
+        return;
+    }
+
+    if (!back) {
+        showToast('Bitte gib eine Antwort ein', 'error');
+        return;
+    }
+
+    addCard(deckId, front, back);
+    closeSheet();
 }
 
 async function addCard(deckId, front, back) {
@@ -733,13 +827,158 @@ async function deleteCard(cardId) {
 function openDeckSettings(deckId) {
     const deck = currentDeck;
 
-    const newTitle = prompt('Deck-Titel:', deck.title);
-    if (!newTitle || !newTitle.trim()) return;
+    const sheetContent = `
+        <div class="sheet-header">
+            <h3 style="margin:0; font-size:20px; font-weight:700;">Deck-Einstellungen</h3>
+            <div class="sheet-close-btn" onclick="closeSheet()">
+                <i data-lucide="x" style="width:20px; height:20px;"></i>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <!-- Rename Option -->
+            <div class="account-item" onclick="renameDeck(${deckId})">
+                <div class="account-item-icon">
+                    <i data-lucide="edit-3" style="width:20px; height:20px;"></i>
+                </div>
+                <div class="account-item-text">Umbenennen</div>
+                <i data-lucide="chevron-right" style="width:20px; height:20px; color:var(--text-sec);"></i>
+            </div>
+            
+            <!-- Description Option -->
+            <div class="account-item" onclick="editDeckDescription(${deckId})">
+                <div class="account-item-icon">
+                    <i data-lucide="file-text" style="width:20px; height:20px;"></i>
+                </div>
+                <div class="account-item-text">Beschreibung bearbeiten</div>
+                <i data-lucide="chevron-right" style="width:20px; height:20px; color:var(--text-sec);"></i>
+            </div>
+            
+            <!-- Visibility Toggle -->
+            <div class="account-item" onclick="toggleDeckVisibility(${deckId})">
+                <div class="account-item-icon">
+                    <i data-lucide="${deck.is_public ? 'eye' : 'eye-off'}" style="width:20px; height:20px;"></i>
+                </div>
+                <div class="account-item-text">
+                    ${deck.is_public ? 'Öffentlich' : 'Privat'}
+                </div>
+                <div class="ios-toggle ${deck.is_public ? 'active' : ''}" id="visibility-toggle">
+                    <div class="ios-toggle-knob"></div>
+                </div>
+            </div>
+            
+            <!-- Delete Option -->
+            <div class="account-item" onclick="confirmDeleteDeck(${deckId})" style="border-bottom: none;">
+                <div class="account-item-icon" style="background: rgba(255, 59, 48, 0.1);">
+                    <i data-lucide="trash-2" style="width:20px; height:20px; color: var(--danger);"></i>
+                </div>
+                <div class="account-item-text" style="color: var(--danger);">Deck löschen</div>
+                <i data-lucide="chevron-right" style="width:20px; height:20px; color:var(--danger);"></i>
+            </div>
+        </div>
+    `;
 
-    const newDescription = prompt('Beschreibung:', deck.description || '');
-    const isPublic = confirm('Soll das Deck öffentlich geteilt werden?');
+    openSheet(sheetContent);
+}
 
-    updateDeck(deckId, newTitle.trim(), newDescription.trim(), isPublic);
+function renameDeck(deckId) {
+    const deck = currentDeck;
+
+    const sheetContent = `
+        <div class="sheet-header">
+            <h3 style="margin:0; font-size:20px; font-weight:700;">Deck umbenennen</h3>
+            <div class="sheet-close-btn" onclick="closeSheet()">
+                <i data-lucide="x" style="width:20px; height:20px;"></i>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <input type="text" class="ios-input" id="rename-input" placeholder="Deck-Titel" value="${escapeHtml(deck.title)}" autofocus>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="ios-btn btn-sec btn-small" onclick="closeSheet()">Abbrechen</button>
+                <button class="ios-btn btn-small" onclick="submitRename(${deckId})">Speichern</button>
+            </div>
+        </div>
+    `;
+
+    openSheet(sheetContent);
+    setTimeout(() => document.getElementById('rename-input')?.focus(), 100);
+}
+
+function submitRename(deckId) {
+    const newTitle = document.getElementById('rename-input')?.value.trim();
+    if (!newTitle) {
+        showToast('Bitte gib einen Titel ein', 'error');
+        return;
+    }
+
+    updateDeck(deckId, newTitle, currentDeck.description || '', currentDeck.is_public);
+    closeSheet();
+}
+
+function editDeckDescription(deckId) {
+    const deck = currentDeck;
+
+    const sheetContent = `
+        <div class="sheet-header">
+            <h3 style="margin:0; font-size:20px; font-weight:700;">Beschreibung bearbeiten</h3>
+            <div class="sheet-close-btn" onclick="closeSheet()">
+                <i data-lucide="x" style="width:20px; height:20px;"></i>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <textarea class="ios-input" id="description-input" placeholder="Beschreibung (optional)" rows="4">${escapeHtml(deck.description || '')}</textarea>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="ios-btn btn-sec btn-small" onclick="closeSheet()">Abbrechen</button>
+                <button class="ios-btn btn-small" onclick="submitDescription(${deckId})">Speichern</button>
+            </div>
+        </div>
+    `;
+
+    openSheet(sheetContent);
+    setTimeout(() => document.getElementById('description-input')?.focus(), 100);
+}
+
+function submitDescription(deckId) {
+    const newDescription = document.getElementById('description-input')?.value.trim();
+    updateDeck(deckId, currentDeck.title, newDescription, currentDeck.is_public);
+    closeSheet();
+}
+
+function toggleDeckVisibility(deckId) {
+    const newVisibility = !currentDeck.is_public;
+    updateDeck(deckId, currentDeck.title, currentDeck.description || '', newVisibility);
+    closeSheet();
+}
+
+function confirmDeleteDeck(deckId) {
+    const sheetContent = `
+        <div class="sheet-header">
+            <h3 style="margin:0; font-size:20px; font-weight:700; color: var(--danger);">Deck löschen?</h3>
+            <div class="sheet-close-btn" onclick="closeSheet()">
+                <i data-lucide="x" style="width:20px; height:20px;"></i>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <p style="color: var(--text-sec); margin: 0 0 20px 0; line-height: 1.5;">
+                Möchtest du dieses Deck wirklich löschen? Alle Karten werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+            </p>
+            
+            <div class="button-group" style="margin-top: 20px; flex-direction: column; gap: 10px;">
+                <button class="ios-btn" style="background: var(--danger);" onclick="deleteDeck(${deckId})">
+                    <i data-lucide="trash-2" style="width:18px; height:18px; margin-right:8px;"></i>
+                    Deck löschen
+                </button>
+                <button class="ios-btn btn-sec" onclick="closeSheet()">Abbrechen</button>
+            </div>
+        </div>
+    `;
+
+    openSheet(sheetContent);
 }
 
 async function updateDeck(deckId, title, description, isPublic) {
@@ -777,7 +1016,7 @@ async function updateDeck(deckId, title, description, isPublic) {
 }
 
 async function deleteDeck(deckId) {
-    if (!confirm('Möchtest du dieses Deck wirklich löschen? Alle Karten werden ebenfalls gelöscht!')) return;
+    closeSheet(); // Close the confirmation sheet
 
     try {
         const response = await fetch(`/api/decks/${deckId}/delete`, {
