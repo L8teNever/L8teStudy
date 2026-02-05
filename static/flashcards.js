@@ -79,19 +79,25 @@ async function renderFlashcardsView() {
                     <div class="deck-grid">
                         ${myDecks.map(deck => `
                             <div class="deck-card" onclick="openDeck(${deck.id})">
-                                <div class="deck-title">${escapeHtml(deck.title)}</div>
-                                <div class="deck-stats">
-                                    ${deck.card_count} ${(deck.card_count === 1 ? 'Karte' : 'Karten')}
+                                <div class="deck-top">
+                                    <div class="deck-title" title="${escapeHtml(deck.title)}">${escapeHtml(deck.title)}</div>
+                                    ${deck.description ? `<div style="font-size:13px; color:var(--text-sec); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtml(deck.description)}</div>` : ''}
                                 </div>
-                                ${deck.is_public ? '<div class="deck-badge" style="background:rgba(0,0,0,0.05); color:var(--text-sec); top:auto; bottom:15px; right:15px; font-weight:600;">Öffentlich</div>' : ''}
-                                ${deck.new_count > 0 ? `<div class="deck-badge" style="background:var(--accent);">${deck.new_count}</div>` : ''}
+                                <div class="deck-stats">
+                                    <div class="deck-count">
+                                        <i data-lucide="layers" style="width:14px; height:14px;"></i>
+                                        ${deck.card_count} Karten
+                                    </div>
+                                    <div style="display:flex; gap:6px; align-items:center;">
+                                        ${deck.is_public ? '<div class="deck-badge public">Öffentlich</div>' : ''}
+                                        ${deck.new_count > 0 ? `<div class="deck-badge">${deck.new_count}</div>` : ''}
+                                    </div>
+                                </div>
                             </div>
                         `).join('')}
                          <div class="deck-card add-deck-card" onclick="openCreateDeckSheet()">
-                            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
-                                <i data-lucide="plus" style="width:24px; height:24px;"></i>
-                                <span style="font-size:13px; font-weight:600;">Neues Deck</span>
-                            </div>
+                            <i data-lucide="plus"></i>
+                            <span style="font-size:14px; font-weight:600;">Neues Deck</span>
                         </div>
                     </div>
                 `}
@@ -103,9 +109,16 @@ async function renderFlashcardsView() {
                     <div class="deck-grid">
                         ${publicDecks.map(deck => `
                             <div class="deck-card" onclick="openDeck(${deck.id})">
-                                <div class="deck-title">${escapeHtml(deck.title)}</div>
+                                <div class="deck-top">
+                                    <div class="deck-title" title="${escapeHtml(deck.title)}">${escapeHtml(deck.title)}</div>
+                                    <div class="deck-author" style="font-size:12px; color:var(--text-sec); margin-top:-4px;">von ${escapeHtml(deck.author_name)}</div>
+                                </div>
                                 <div class="deck-stats">
-                                    ${deck.card_count} Karten • ${escapeHtml(deck.author_name)}
+                                    <div class="deck-count">
+                                        <i data-lucide="layers" style="width:14px; height:14px;"></i>
+                                        ${deck.card_count} Karten
+                                    </div>
+                                    <div class="deck-badge public">Öffentlich</div>
                                 </div>
                             </div>
                         `).join('')}
