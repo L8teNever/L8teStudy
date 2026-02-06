@@ -8,6 +8,13 @@ import random
 def generate_class_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+class TimetableImage(db.Model):
+    __tablename__ = 'timetable_image'
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('school_class.id'), nullable=True)
+    image_path = db.Column(db.String(512), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 # Junction table for subjects shared between classes
 subject_classes = db.Table('subject_classes',
     db.Column('subject_id', db.Integer, db.ForeignKey('subject.id'), primary_key=True),

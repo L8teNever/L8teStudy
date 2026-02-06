@@ -6,7 +6,7 @@ from .models import (
     GlobalSetting, SchoolClass, TaskCompletion, UserRole,
     DriveOAuthToken, SubjectTeacher, UntisCredential, DriveFolder, 
     DriveFile, DriveFileContent, BlackboardItem, AuditLog,
-    subject_classes, db, MealPlan
+    subject_classes, db, MealPlan, TimetableImage
 )
 from app.notifications import notify_new_task, notify_new_event
 from werkzeug.utils import secure_filename
@@ -2463,9 +2463,68 @@ def get_latest_meal_plan():
         'found': True,
         'image_url': f'/uploads/{plan.image_path}',
         'text': plan.extracted_text,
-        'week_start': plan.week_start.isoformat(),
-        'created_at': plan.created_at.isoformat()
     })
+
+# --- Timetable Image Routes ---
+
+@api_bp.route('/stundenplan/latest', methods=['GET'])
+@login_required
+def get_latest_stundenplan_image():
+    query = TimetableImage.query
+    if current_user.class_id:
+        query = query.filter_by(class_id=current_user.class_id)
+    
+    img = query.order_by(TimetableImage.created_at.desc()).first()
+    
+    if not img:
+        return jsonify({'success': False, 'found': False})
+        
+    return jsonify({
+        'success': True,
+        'found': True,
+        'image_url': f'/uploads/{img.image_path}',
+        'created_at': img.created_at.isoformat()
+    })
+
+@api_bp.route('/stundenplan/upload', methods=['POST'])
+@login_required
+def upload_stundenplan_image():
+    if not current_user.is_admin and not current_user.is_super_admin:
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+
+    if 'image' not in request.files:
+        return jsonify({'success': False, 'message': 'No image provided'}), 400
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'No selected file'}), 400
+        
+    if file:
+        try:
+            filename = secure_filename(f"timetable_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg")
+            upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+            
+            if not process_and_save_image(file, upload_path):
+                return jsonify({'success': False, 'message': 'Image processing failed'}), 500
+            
+            class_id = current_user.class_id
+            if not class_id and current_user.is_super_admin:
+                 class_id = None 
+
+            img = TimetableImage(
+                class_id=class_id,
+                image_path=filename
+            )
+            db.session.add(img)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True, 
+                'image_url': f'/uploads/{filename}'
+            })
+        except Exception as e:
+            current_app.logger.error(f"Timetable upload error: {e}")
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
 # --- Blackboard Routes ---
 
