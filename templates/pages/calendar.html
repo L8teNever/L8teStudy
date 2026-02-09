@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Aufgaben - L8teStudy{% endblock %}
-{% block current_page %}tasks{% endblock %}
-{% block page_title %}Aufgaben{% endblock %}
+{% block title %}Kalender - L8teStudy{% endblock %}
+{% block current_page %}calendar{% endblock %}
+{% block page_title %}Kalender{% endblock %}
 
 {% block fab %}
-<button class="fab visible" id="main-fab" onclick="openCreateTaskSheet()" aria-label="Neue Aufgabe erstellen">
+<button class="fab visible" id="main-fab" onclick="openCreateEventSheet()" aria-label="Neues Ereignis erstellen">
     <i data-lucide="plus" aria-hidden="true"></i>
 </button>
 {% endblock %}
@@ -15,7 +15,6 @@
     document.addEventListener('DOMContentLoaded', async function () {
         try {
             lucide.createIcons();
-            // Initialize user data
             window.currentUser = {
                 name: "{{ user.username }}",
                 email: "{{ user.username }}@l8testudy.app",
@@ -26,17 +25,13 @@
                 is_admin: { { 'true' if user.is_admin else 'false' } },
         is_super_admin: { { 'true' if user.is_super_admin else 'false' } },
         role: "{{ user.role }}",
-            needs_password_change: { { 'true' if user.needs_password_change else 'false' } },
-        has_seen_tutorial: { { 'true' if user.has_seen_tutorial else 'false' } },
-        className: "{{ active_class.name if active_class else (user.school_class.name if user.school_class else '') }}",
-            class_id: { { active_class.id if active_class else (user.class_id if user.class_id else 0) }}
+            className: "{{ active_class.name if active_class else (user.school_class.name if user.school_class else '') }}",
+                class_id: { { active_class.id if active_class else (user.class_id if user.class_id else 0) }}
             };
     window.currentUserId = {{ user.id }};
-
-    // Render tasks
-    await renderTasks();
+    await renderCalendar();
         } catch (e) {
-        console.error('Error initializing tasks page:', e);
+        console.error('Error initializing calendar page:', e);
     }
     });
 </script>

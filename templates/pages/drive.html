@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Drive - L8teStudy{% endblock %}
+{% block current_page %}drive{% endblock %}
+{% block page_title %}Drive{% endblock %}
+
+{% block extra_head %}
+<script src="/static/drive.js?v=2.1.1"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        try {
+            lucide.createIcons();
+            window.currentUser = {
+                name: "{{ user.username }}",
+                is_admin: {{ 'true' if user.is_admin else 'false' }
+        },
+        is_super_admin: { { 'true' if user.is_super_admin else 'false' } },
+        className: "{{ active_class.name if active_class else (user.school_class.name if user.school_class else '') }}",
+            class_id: { { active_class.id if active_class else (user.class_id if user.class_id else 0) }}
+            };
+    await renderDrive();
+        } catch (e) {
+        console.error('Error initializing drive page:', e);
+    }
+    });
+</script>
+{% endblock %}

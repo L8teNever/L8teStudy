@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>{% block title %}L8teStudy{% endblock %}</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0071e3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="L8teStudy">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="icon" href="/static/icon-192.png">
+
+    <!-- External Scripts -->
+    <script src="/static/translations.js?v=2.1.1"></script>
+    <script src="/static/lucide.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/app.css?v=2.1.1">
+
+    <!-- Global CSRF Setup -->
+    <script>
+        (function () {
+            const originalFetch = window.fetch;
+            window.fetch = async function (input, init) {
+                init = init || {};
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                if (init.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(init.method.toUpperCase())) {
+                    if (!init.headers) {
+                        init.headers = {};
+                    }
+
+                    if (init.headers instanceof Headers) {
+                        if (csrfToken) init.headers.append('X-CSRFToken', csrfToken);
+                        init.headers.append('X-Requested-With', 'XMLHttpRequest');
+                    } else {
+                        if (csrfToken) init.headers['X-CSRFToken'] = csrfToken;
+                        init.headers['X-Requested-With'] = 'XMLHttpRequest';
+                    }
+                }
+                return originalFetch(input, init);
+            };
+        })();
+        window.appVersion = "{{ version }}";
+        window.currentPage = "{% block current_page %}home{% endblock %}";
+    </script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body data-theme="{{ user.theme or ('dark' if user.dark_mode else 'standard') }}">
+    <!-- Skip Link for Accessibility -->
+    <a href="#app-container" class="skip-link">Zum Hauptinhalt springen</a>
+
+    <!-- Side Navigation (Desktop) -->
+    {% include 'components/side_nav.html' %}
+
+    <!-- Header -->
+    <header>
+        <div class="header-left">
+            {% block header_back %}{% endblock %}
+            <div class="header-title" id="current-page-title">{% block page_title %}L8teStudy{% endblock %}</div>
+        </div>
+        <div class="profile-btn"
+            onclick="window.location.href='/{{ user.school_class.name if user.school_class else '' }}/account'"
+            role="button" tabindex="0" aria-label="Account Menü">
+            <i data-lucide="user" aria-hidden="true"></i>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main id="app-container">
+        {% block content %}
+        <div class="loading">Lädt...</div>
+        {% endblock %}
+    </main>
+
+    <!-- Floating Action Button -->
+    {% block fab %}{% endblock %}
+
+    <!-- More Menu Dropdown (Mobile) -->
+    <div id="more-menu" class="more-menu" role="menu" aria-label="Erweitertes Menü">
+        <!-- Will be populated dynamically by JS -->
+    </div>
+
+    <!-- Bottom Navigation (Mobile) -->
+    <nav class="bottom-nav" aria-label="Mobile Navigation">
+        {% set class_name = user.school_class.name if user.school_class else '' %}
+        <a href="/{{ class_name }}/home" class="nav-link {% if request.path.endswith('/home') %}active{% endif %}"
+            id="nav-home">
+            <i data-lucide="house"></i><span>Home</span>
+        </a>
+        <a href="/{{ class_name }}/tasks" class="nav-link {% if request.path.endswith('/tasks') %}active{% endif %}"
+            id="nav-tasks">
+            <i data-lucide="check-circle-2"></i><span>Aufgaben</span>
+        </a>
+        <a href="/{{ class_name }}/calendar"
+            class="nav-link {% if request.path.endswith('/calendar') %}active{% endif %}" id="nav-calendar">
+            <i data-lucide="calendar-days"></i><span>Plan</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" id="nav-more" onclick="toggleMoreMenu(event)">
+            <i data-lucide="more-horizontal"></i><span>Mehr</span>
+        </a>
+    </nav>
+
+    <!-- Sheet Overlay for Modals -->
+    {% include 'components/sheets.html' %}
+
+    <!-- Message Menu Overlay -->
+    <div id="message-menu-overlay" class="message-menu-overlay" onclick="closeMessageMenu()">
+        <div class="message-menu" id="message-menu-content" onclick="event.stopPropagation()">
+            <!-- Dynamic items -->
+        </div>
+    </div>
+
+    <!-- Main Application Script -->
+    <script src="/static/js/app.js?v=2.1.1"></script>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

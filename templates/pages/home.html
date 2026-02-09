@@ -1,21 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Aufgaben - L8teStudy{% endblock %}
-{% block current_page %}tasks{% endblock %}
-{% block page_title %}Aufgaben{% endblock %}
-
-{% block fab %}
-<button class="fab visible" id="main-fab" onclick="openCreateTaskSheet()" aria-label="Neue Aufgabe erstellen">
-    <i data-lucide="plus" aria-hidden="true"></i>
-</button>
-{% endblock %}
+{% block title %}Home - L8teStudy{% endblock %}
+{% block current_page %}home{% endblock %}
+{% block page_title %}Home{% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', async function () {
         try {
             lucide.createIcons();
-            // Initialize user data
             window.currentUser = {
                 name: "{{ user.username }}",
                 email: "{{ user.username }}@l8testudy.app",
@@ -32,11 +25,9 @@
             class_id: { { active_class.id if active_class else (user.class_id if user.class_id else 0) }}
             };
     window.currentUserId = {{ user.id }};
-
-    // Render tasks
-    await renderTasks();
+    await renderHome();
         } catch (e) {
-        console.error('Error initializing tasks page:', e);
+        console.error('Error initializing home page:', e);
     }
     });
 </script>
