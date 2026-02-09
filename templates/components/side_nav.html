@@ -1,0 +1,49 @@
+<nav class="side-nav" aria-label="Hauptnavigation">
+        <div class="nav-group" id="side-nav-primary">
+            <a href="javascript:void(0)" class="nav-link active" onclick="navigate('home', this, 'Home')"
+                data-nav-id="home">
+                <i data-lucide="house"></i><span>Home</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('tasks', this, 'Aufgaben')"
+                data-nav-id="tasks">
+                <i data-lucide="check-circle-2"></i><span>Aufgaben</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('calendar', this, 'Plan')"
+                data-nav-id="calendar">
+                <i data-lucide="calendar-days"></i><span>Plan</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('stundenplan', this, 'Stundenplan')"
+                data-nav-id="stundenplan">
+                <i data-lucide="clock-4"></i><span>Stundenplan</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('grades', this, 'Noten')"
+                data-nav-id="grades">
+                <i data-lucide="bar-chart-3"></i><span>Noten</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('flashcards', this, 'Lernkarten')"
+                data-nav-id="flashcards">
+                <i data-lucide="layers"></i><span>Lernkarten</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('drive', this, 'Drive')"
+                data-nav-id="drive">
+                <i data-lucide="hard-drive"></i><span>Drive</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('mealplan', this, 'Essen')"
+                data-nav-id="mealplan">
+                <i data-lucide="utensils"></i><span>Essen</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="navigate('blackboard', this, 'Infos')"
+                data-nav-id="blackboard">
+                <i data-lucide="clipboard-list"></i><span>Infos</span>
+            </a>
+            <a href="javascript:void(0)" class="nav-link" onclick="toggleMoreMenu(event)" id="side-more-trigger"
+                data-nav-id="more" style="display:none;">
+                <i data-lucide="more-horizontal"></i><span>Mehr</span>
+            </a>
+        </div>
+        <div class="nav-group" id="side-nav-account">
+            <a href="javascript:void(0)" class="nav-link" onclick="openAccountMenu()" data-nav-id="account">
+                <i data-lucide="user"></i><span>Account</span>
+            </a>
+        </div>
+    </nav>
