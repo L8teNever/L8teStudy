@@ -193,7 +193,8 @@ def create_app():
             'api.setup_create_admin',
             'drive.oauth_callback',
             'main.privacy_policy',
-            'main.imprint'
+            'main.imprint',
+            'main.index'
         ]
         
         # Also allow if it's a request to static folder directly (outside of blueprint)

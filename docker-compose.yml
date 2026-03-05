@@ -5,7 +5,7 @@ services:
     ports:
       - 10.66.66.1:5000:5000
     volumes:
-      - ./data:/data
+      - ./data-final-fresh:/data
     env_file:
       - .env
     environment:
