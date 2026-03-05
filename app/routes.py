@@ -144,7 +144,7 @@ def setup_create_admin():
     if not username or not password:
         return jsonify({'success': False, 'message': 'Missing data'}), 400
         
-    user = User(username=username, role=UserRole.SUPER_ADMIN, needs_password_change=False)
+    user = User(username=username, role=UserRole.SUPER_ADMIN, needs_password_change=False, has_accepted_privacy=True)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()

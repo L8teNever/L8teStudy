@@ -218,7 +218,9 @@ def create_app():
                 'api.accept_privacy',
                 'auth.logout',
                 'main.privacy_policy',
-                'main.imprint'
+                'main.imprint',
+                'main.setup',
+                'main.index'
             ]
             if not current_user.has_accepted_privacy and request.endpoint not in privacy_exempt:
                 if request.is_json or request.path.startswith('/api/'):
