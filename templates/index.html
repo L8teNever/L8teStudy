@@ -3615,54 +3615,6 @@
 
         /* --- DRIVE INTEGRATION --- */
         /* --- DRIVE INTEGRATION (Simplified: Show All Files) --- */
-        /* --- STUNDENPLAN IMAGE UPLOAD --- */
-
-
-        function openUploadStundenplan() {
-            const html = `
-                <div class="sheet-header">
-                    <h3 style="margin:0;">Stundenplan Bild hochladen</h3>
-                    <div class="sheet-close-btn" onclick="closeSheet()"><i data-lucide="x"></i></div>
-                </div>
-                <div style="padding: 10px 0;">
-                    <p style="font-size:14px; color:var(--text-sec); margin-bottom:15px;">Du kannst ein Bild deines Stundenplans hochladen. Dieses wird angezeigt, falls keine Untis-Verbindung besteht oder du es bevorzugst.</p>
-                    <input type="file" id="stundenplan-file" accept="image/*" class="ios-input">
-                    <button class="ios-btn" onclick="uploadStundenplanFile()">Hochladen</button>
-                </div>
-            `;
-            openSheet(html);
-            lucide.createIcons();
-        }
-
-        async function uploadStundenplanFile() {
-            const input = document.getElementById('stundenplan-file');
-            if (input.files.length === 0) return alert("Bitte Bild wählen");
-
-            const file = input.files[0];
-            const formData = new FormData();
-            formData.append('image', file);
-
-            const btn = document.querySelector('button[onclick="uploadStundenplanFile()"]');
-            btn.innerText = "Hochladen...";
-            btn.disabled = true;
-
-            try {
-                const res = await fetch('/api/stundenplan/upload', { method: 'POST', body: formData });
-                const data = await res.json();
-                if (data.success) {
-                    closeSheet();
-                    renderStundenplan();
-                } else {
-                    alert("Fehler: " + (data.message || 'Unbekannt'));
-                    btn.innerText = "Hochladen";
-                    btn.disabled = false;
-                }
-            } catch (e) {
-                alert("Verbindungsfehler");
-                btn.innerText = "Hochladen";
-                btn.disabled = false;
-            }
-        }
 
 
         async function renderDrive() {
@@ -5370,19 +5322,6 @@
             setPageTitle(t('timetable'));
             const container = document.getElementById('app-container');
 
-            // Try to fetch latest uploaded image
-            let latestImg = null;
-            try {
-                const resImg = await fetch('/api/stundenplan/latest');
-                const dataImg = await resImg.json();
-                if (dataImg.success && dataImg.found) {
-                    latestImg = dataImg.image_url;
-                    window.latestTimetableImg = latestImg;
-                }
-            } catch (e) { }
-
-            const isAdmin = window.currentUser.is_admin || window.currentUser.is_super_admin;
-
             // Format dates for display
             const monday = new Date(currentTimetableDate);
             const friday = new Date(currentTimetableDate);
@@ -5403,19 +5342,7 @@
                             <i data-lucide="chevron-right" style="width:18px;"></i>
                         </button>
                     </div>
-                    ${isAdmin ? `
-                        <button class="tab-btn" style="flex:0 0 44px; height:44px; display:flex; align-items:center; justify-content:center; border-radius:12px;" onclick="openUploadStundenplan()">
-                            <i data-lucide="image-plus" style="width:20px;"></i>
-                        </button>
-                    ` : ''}
                 </div>
-
-                ${latestImg ? `
-                    <div id="timetable-view-toggle" style="display:flex; gap:8px; margin: 10px 0;">
-                        <button id="toggle-list" class="tab-btn active" style="flex:1; font-size:13px; height:36px; font-weight:600;" onclick="switchTimetableView('list')">Auto Liste</button>
-                        <button id="toggle-image" class="tab-btn" style="flex:1; font-size:13px; height:36px; font-weight:600;" onclick="switchTimetableView('image')">Bild-Ansicht</button>
-                    </div>
-                ` : ''}
 
                 <div id="timetable-tabs-container"></div>
                 <div id="timetable-content" style="animation: fadeIn 0.3s ease;">
@@ -5436,10 +5363,6 @@
                 const data = await res.json();
 
                 if (!data.success) {
-                    if (latestImg) {
-                        switchTimetableView('image');
-                        return;
-                    }
                     document.getElementById('timetable-content').innerHTML = `
                         <div class="floating-card" style="text-align:center; padding:30px; color:var(--text-sec)">
                             <i data-lucide="info" width="40" height="40" style="margin-bottom:10px;"></i>
@@ -5459,32 +5382,6 @@
         async function changeStundenplanWeek(weeks) {
             currentTimetableDate.setDate(currentTimetableDate.getDate() + (weeks * 7));
             renderStundenplan();
-        }
-
-        function switchTimetableView(mode) {
-            const listBtn = document.getElementById('toggle-list');
-            const imgBtn = document.getElementById('toggle-image');
-            const content = document.getElementById('timetable-content');
-            const tabs = document.getElementById('timetable-tabs-container');
-
-            if (mode === 'image') {
-                if (listBtn) listBtn.classList.remove('active');
-                if (imgBtn) imgBtn.classList.add('active');
-                if (tabs) tabs.style.display = 'none';
-                if (content) {
-                    content.innerHTML = `
-                        <div class="floating-card" style="padding:10px; text-align:center;">
-                            <img src="${window.latestTimetableImg}" style="width:100%; border-radius:12px; cursor:zoom-in;" onclick="window.open('${window.latestTimetableImg}', '_blank')">
-                            <p class="item-sub" style="margin-top:10px;">Stundenplan Bild vom ${new Date().toLocaleDateString()}</p>
-                        </div>
-                    `;
-                }
-            } else {
-                if (imgBtn) imgBtn.classList.remove('active');
-                if (listBtn) listBtn.classList.add('active');
-                if (tabs) tabs.style.display = '';
-                renderStundenplan(); // Re-render to show list
-            }
         }
 
         let currentDayTabIdx = -1;
