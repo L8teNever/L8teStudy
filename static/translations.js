@@ -282,14 +282,7 @@ const translations = {
         back_to_root: "Zurück zum Hauptverzeichnis",
         mealplan: "Essen",
         upload_mealplan_title: "Essensplan hochladen",
-        blackboard: "Infos",
-        flashcards: "Lernkarten",
-        my_decks: "Meine Decks",
-        public_decks: "Öffentliche Decks",
-        no_decks_yet: "Noch keine Decks erstellt",
-        create_first_deck: "Erstelle dein erstes Deck!",
-        no_cards_yet: "Noch keine Karten",
-        add_first_card: "Füge deine erste Karte hinzu"
+        blackboard: "Infos"
     },
     en: {
         home: "Home",
@@ -574,13 +567,6 @@ const translations = {
         back_to_root: "Back to root",
         mealplan: "Meal",
         upload_mealplan_title: "Upload Meal Plan",
-        blackboard: "Infos",
-        flashcards: "Flashcards",
-        my_decks: "My Decks",
-        public_decks: "Public Decks",
-        no_decks_yet: "No decks created yet",
-        create_first_deck: "Create your first deck!",
-        no_cards_yet: "No cards yet",
-        add_first_card: "Add your first card"
+        blackboard: "Infos"
     }
 };
