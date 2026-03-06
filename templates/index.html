@@ -6977,7 +6977,7 @@
 
             if (isProcessing) return;
             isProcessing = true;
-            const btn = event.currentTarget;
+            const btn = window.event?.currentTarget;
             if (btn) btn.classList.add('loading');
 
             try {
@@ -7009,7 +7009,7 @@
                 if (data.success) {
                     imagesToDelete.clear();
                     closeSheet();
-                    refreshCurrentView();
+                    await refreshCurrentView();
                 } else {
                     alert(data.message || t('error'));
                 }
@@ -7036,7 +7036,7 @@
 
             if (isProcessing) return;
             isProcessing = true;
-            const btn = event.currentTarget;
+            const btn = window.event?.currentTarget;
             if (btn) btn.classList.add('loading');
 
             try {
@@ -7049,7 +7049,7 @@
 
                 if (data.success) {
                     closeSheet();
-                    refreshCurrentView();
+                    await refreshCurrentView();
                 } else {
                     alert(data.message || t('error'));
                 }
