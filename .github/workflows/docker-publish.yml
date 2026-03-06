@@ -2,7 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev, 'backup/**' ]
   workflow_dispatch:
 
 jobs:
@@ -26,13 +26,22 @@ jobs:
       id: version
       run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
       
+    - name: Determine Docker tags
+      id: tags
+      run: |
+        BRANCH="${GITHUB_REF#refs/heads/}"
+        if [ "$BRANCH" = "main" ]; then
+          echo "TAGS=${{ secrets.DOCKER_USERNAME }}/l8testudy:latest,${{ secrets.DOCKER_USERNAME }}/l8testudy:${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+        else
+          SAFE_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          echo "TAGS=${{ secrets.DOCKER_USERNAME }}/l8testudy:${SAFE_BRANCH}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Build and push
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: |
-          ${{ secrets.DOCKER_USERNAME }}/l8testudy:latest
-          ${{ secrets.DOCKER_USERNAME }}/l8testudy:${{ steps.version.outputs.VERSION }}
+        tags: ${{ steps.tags.outputs.TAGS }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
